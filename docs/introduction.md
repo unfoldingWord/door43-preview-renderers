@@ -21,7 +21,7 @@ Converters handle format-specific transformations, such as Markdown to HTML or U
 
 ## Getting Started
 
-```javascript
+```js static
 import { fetchResource, renderHTML } from 'door43-preview-renderers';
 
 // Fetch content from a Door43 repository

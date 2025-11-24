@@ -8,7 +8,7 @@ The HTML renderer provides flexible options for generating HTML snippets.
 
 ### Basic Usage
 
-```javascript
+```js static
 import { renderHTML } from 'door43-preview-renderers';
 
 // Simple string rendering
@@ -17,7 +17,7 @@ const html = renderHTML('Your content here');
 
 ### With Options
 
-```javascript
+```js static
 const html = renderHTML(content, {
   className: 'custom-preview',
   styles: {
@@ -31,7 +31,7 @@ const html = renderHTML(content, {
 
 Create complete HTML documents with metadata:
 
-```javascript
+```js static
 import { createHTMLSnippet } from 'door43-preview-renderers';
 
 const snippet = createHTMLSnippet({

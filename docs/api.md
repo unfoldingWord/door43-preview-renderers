@@ -6,7 +6,7 @@ The API client provides methods for fetching content from remote repositories.
 
 Fetch repository content using the GitHub API:
 
-```javascript
+```js static
 import { fetchResource } from 'door43-preview-renderers';
 
 const content = await fetchResource({
@@ -28,7 +28,7 @@ const content = await fetchResource({
 
 Get raw file content directly:
 
-```javascript
+```js static
 import { fetchRawContent } from 'door43-preview-renderers';
 
 const rawContent = await fetchRawContent({
@@ -43,7 +43,7 @@ const rawContent = await fetchRawContent({
 
 All API methods throw descriptive errors:
 
-```javascript
+```js static
 try {
   const content = await fetchResource({
     owner: 'invalid',
