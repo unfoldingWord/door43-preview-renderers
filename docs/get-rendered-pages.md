@@ -4,7 +4,7 @@ The `get_rendered_pages()` function fetches catalog entry information from the D
 
 ## Function Signature
 
-```javascript
+```js static
 async function get_rendered_pages(owner, repo, ref, options = {})
 ```
 
@@ -22,7 +22,7 @@ Returns a Promise that resolves to a JSON object containing the catalog entry da
 
 ## Usage Example
 
-```javascript
+```js static
 import { get_rendered_pages } from 'door43-preview-renderers';
 
 const catalogEntry = await get_rendered_pages(
