@@ -15,7 +15,7 @@
     "lint": "eslint src --ext .js,.jsx",
     "format": "prettier --write \"src/**/*.{js,jsx,json,md}\"",
     "styleguide": "styleguidist server",
-    "styleguide:build": "styleguidist build",
+    "styleguide:build": "pnpm run build && styleguidist build",
     "prepare": "pnpm run build"
   },
   "keywords": [
@@ -48,6 +48,7 @@
     "css-loader": "^6.8.1",
     "eslint": "^8.51.0",
     "jest": "^29.7.0",
+    "netlify-cli": "^23.11.1",
     "prettier": "^3.0.3",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",

@@ -11,6 +11,7 @@ The HTML renderer provides flexible options for generating HTML snippets.
 ```javascript
 import { renderHTML } from 'door43-preview-renderers';
 
+// Simple string rendering
 const html = renderHTML('Your content here');
 ```
 

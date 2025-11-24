@@ -24,12 +24,14 @@ Converters handle format-specific transformations, such as Markdown to HTML or U
 ```javascript
 import { fetchResource, renderHTML } from 'door43-preview-renderers';
 
+// Fetch content from a Door43 repository
 const content = await fetchResource({
   owner: 'unfoldingWord',
   repo: 'en_ult',
   ref: 'master',
 });
 
+// Render the content as HTML
 const html = renderHTML(content);
 ```
 

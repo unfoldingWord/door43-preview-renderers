@@ -15,14 +15,23 @@ module.exports = {
         },
       ],
     },
+    resolve: {
+      alias: {
+        'door43-preview-renderers': require('path').resolve(__dirname, 'src/index.js'),
+      },
+    },
   },
   styleguideDir: 'styleguide',
-  assetsDir: 'public',
   pagePerSection: true,
   sections: [
     {
       name: 'Introduction',
       content: 'docs/introduction.md',
+    },
+    {
+      name: 'Get Rendered Pages',
+      content: 'docs/get-rendered-pages.md',
+      components: 'src/GetRenderedPagesDemo.jsx',
     },
     {
       name: 'Renderers',

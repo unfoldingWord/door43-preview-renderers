@@ -9,6 +9,7 @@ Convert Markdown content to HTML:
 ```javascript
 import { convertMarkdown } from 'door43-preview-renderers';
 
+// Convert markdown to HTML
 const markdown = '# Hello World\n\nThis is **bold** text.';
 const html = convertMarkdown(markdown);
 ```
