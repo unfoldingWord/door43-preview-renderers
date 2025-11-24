@@ -1,0 +1,11 @@
+[build]
+  command = "pnpm run styleguide:build"
+  publish = "styleguide"
+
+[build.environment]
+  NODE_VERSION = "18"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
