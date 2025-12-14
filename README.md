@@ -95,13 +95,21 @@ Visit the [live documentation](https://door43-preview-renderers.netlify.app) to 
 ```
 door43-preview-renderers/
 ├── src/
-│   ├── index.js              # Main entry point
-│   ├── api/                  # API client modules
-│   ├── renderers/            # HTML rendering components
-│   └── converters/           # Content format converters
-├── docs/                     # Documentation markdown files
-├── dist/                     # Built library files (generated)
-├── styleguide/              # Built style guide (generated)
+│   ├── index.js                              # Main entry point
+│   ├── constants.js                          # Bible books and resource constants
+│   ├── getResourceData.js                    # Core resource data fetching
+│   ├── getAllCatalogEntriesForRendering.js   # Catalog entries with dependencies
+│   ├── api/                                  # API client modules
+│   ├── renderers/                            # HTML rendering components
+│   └── converters/                           # Content format converters
+├── docs/                                     # Documentation markdown files
+│   ├── introduction.md
+│   ├── constants.md                          # Constants documentation
+│   ├── get-resource-data.md
+│   ├── get-all-catalog-entries-for-rendering.md
+│   └── ...
+├── dist/                                     # Built library files (generated)
+├── styleguide/                               # Built style guide (generated)
 └── package.json
 ```
 

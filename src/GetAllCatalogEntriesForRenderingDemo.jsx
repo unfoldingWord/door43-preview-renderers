@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
-import { getAllCatalogEntriesForRendering } from './getResourceData';
+import { getAllCatalogEntriesForRendering } from './getAllCatalogEntriesForRendering';
 
 /**
  * Demo component for getAllCatalogEntriesForRendering function
+ *
+ * @example
+ * <GetAllCatalogEntriesForRenderingDemo />
  */
 export default function GetAllCatalogEntriesForRenderingDemo() {
   const [owner, setOwner] = useState('unfoldingWord');
@@ -250,9 +253,12 @@ export default function GetAllCatalogEntriesForRenderingDemo() {
           <h3>Result:</h3>
           <div style={{ marginBottom: '15px' }}>
             <p>
-              <strong>Found {result.length} catalog entries:</strong>
+              <strong>Version:</strong> {result.version}
             </p>
-            {result.map((entry, index) => (
+            <p>
+              <strong>Found {result.catalogEntries.length} catalog entries:</strong>
+            </p>
+            {result.catalogEntries.map((entry, index) => (
               <div
                 key={index}
                 style={{

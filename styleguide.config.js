@@ -29,6 +29,10 @@ module.exports = {
       content: 'docs/introduction.md',
     },
     {
+      name: 'Constants',
+      content: 'docs/constants.md',
+    },
+    {
       name: 'Get Resource Data',
       content: 'docs/get-resource-data.md',
       components: 'src/GetResourceDataDemo.jsx',
@@ -41,17 +45,14 @@ module.exports = {
     {
       name: 'Renderers',
       content: 'docs/renderers.md',
-      components: 'src/renderers/**/*.{js,jsx}',
     },
     {
       name: 'Converters',
       content: 'docs/converters.md',
-      components: 'src/converters/**/*.{js,jsx}',
     },
     {
       name: 'API Client',
       content: 'docs/api.md',
-      components: 'src/api/**/*.{js,jsx}',
     },
   ],
   template: {

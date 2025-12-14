@@ -39,8 +39,31 @@ const html = renderHTML(content);
 
 The library is designed with modularity in mind:
 
+- **src/constants.js** - Bible book data and resource constants
+- **src/getResourceData.js** - Core resource data fetching
+- **src/getAllCatalogEntriesForRendering.js** - Catalog entries with dependencies
 - **src/api/** - API communication layer
 - **src/renderers/** - HTML rendering logic
 - **src/converters/** - Format conversion utilities
 
 This separation allows you to use only the parts you need and extend functionality easily.
+
+## Core Functions
+
+### getAllCatalogEntriesForRendering()
+
+Fetches all catalog entries needed for rendering a resource, including dependencies. Features intelligent version matching using the `relations` field and date-based fallback.
+
+[Learn more →](get-all-catalog-entries-for-rendering.md)
+
+### getResourceData()
+
+Main function for fetching resource data from DCS (Door43 Content Service).
+
+[Learn more →](get-resource-data.md)
+
+### Constants
+
+Export of Bible book data and resource mappings for use in your application.
+
+[Learn more →](constants.md)

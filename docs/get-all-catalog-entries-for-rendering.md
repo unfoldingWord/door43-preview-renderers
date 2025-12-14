@@ -2,6 +2,8 @@
 
 The `getAllCatalogEntriesForRendering()` function fetches all catalog entries needed to render a resource, including the main entry and all required dependency entries.
 
+**Source:** `src/getAllCatalogEntriesForRendering.js`
+
 ## Function Signature
 
 ```js static
@@ -46,9 +48,23 @@ getAllCatalogEntriesForRendering(catalogEntry, books?, options?)
 
 ## Returns
 
-Returns a Promise that resolves to an array of catalog entry objects:
-- **[0]**: The main catalog entry (the one requested)
-- **[1..n]**: Required catalog entries in the order they are needed
+Returns a Promise that resolves to an object with the following structure:
+
+```js static
+{
+  version: string,        // The package version (e.g., "1.4.0")
+  catalogEntries: [       // Array of catalog entry objects
+    {...},                // [0]: The main catalog entry (the one requested)
+    {...},                // [1..n]: Required catalog entries in the order needed
+  ]
+}
+```
+
+**Properties:**
+- **version** (string): The version of the door43-preview-renderers package
+- **catalogEntries** (Array): Array of catalog entry objects
+  - **catalogEntries[0]**: The main catalog entry (the one requested)
+  - **catalogEntries[1..n]**: Required catalog entries in the order they are needed
 
 ## How It Works
 
@@ -129,16 +145,17 @@ When books are specified, the function intelligently determines which testaments
 ```js static
 import { getAllCatalogEntriesForRendering } from 'door43-preview-renderers';
 
-const entries = await getAllCatalogEntriesForRendering(
+const result = await getAllCatalogEntriesForRendering(
   'unfoldingWord',
   'en_tn',
   'v87',
   ['1th']
 );
 
-console.log(`Found ${entries.length} entries`);
-console.log(`Main: ${entries[0].title}`);
-entries.slice(1).forEach((entry, i) => {
+console.log(`Package version: ${result.version}`);
+console.log(`Found ${result.catalogEntries.length} entries`);
+console.log(`Main: ${result.catalogEntries[0].title}`);
+result.catalogEntries.slice(1).forEach((entry, i) => {
   console.log(`Required ${i + 1}: ${entry.title}`);
 });
 ```
@@ -149,15 +166,16 @@ entries.slice(1).forEach((entry, i) => {
 import { getCatalogEntry, getAllCatalogEntriesForRendering } from 'door43-preview-renderers';
 
 const mainEntry = await getCatalogEntry('BSOJ', 'en_tn', 'master');
-const entries = await getAllCatalogEntriesForRendering(mainEntry, ['tit']);
+const result = await getAllCatalogEntriesForRendering(mainEntry, ['tit']);
 
-console.log(entries);
+console.log(`Version: ${result.version}`);
+console.log(`Catalog entries:`, result.catalogEntries);
 ```
 
 ### Example 3: Multiple books
 
 ```js static
-const entries = await getAllCatalogEntriesForRendering(
+const result = await getAllCatalogEntriesForRendering(
   'unfoldingWord',
   'en_tn',
   'v66',
@@ -169,7 +187,7 @@ const entries = await getAllCatalogEntriesForRendering(
 ### Example 4: Old Testament only
 
 ```js static
-const entries = await getAllCatalogEntriesForRendering(
+const result = await getAllCatalogEntriesForRendering(
   'unfoldingWord',
   'en_tn',
   'v87',
@@ -181,7 +199,7 @@ const entries = await getAllCatalogEntriesForRendering(
 ### Example 5: Mixed testaments
 
 ```js static
-const entries = await getAllCatalogEntriesForRendering(
+const result = await getAllCatalogEntriesForRendering(
   'unfoldingWord',
   'en_tn',
   'v87',
@@ -190,14 +208,16 @@ const entries = await getAllCatalogEntriesForRendering(
 // Fetches both Hebrew OT and Greek NT (mixed testaments)
 ```
 
-### Example 4: OBS Translation Notes
+### Example 6: OBS Translation Notes
 
 ```js static
-const entries = await getAllCatalogEntriesForRendering(
+const result = await getAllCatalogEntriesForRendering(
   'unfoldingWord',
   'en_obs-tn',
   'v11'
 );
+console.log(result.version); // "1.4.0"
+console.log(result.catalogEntries.length); // Number of entries found
 ```
 
 ## Error Handling
@@ -217,4 +237,44 @@ Try the function below with the examples:
 import GetAllCatalogEntriesForRenderingDemo from '../src/GetAllCatalogEntriesForRenderingDemo';
 
 <GetAllCatalogEntriesForRenderingDemo />
+```
+
+## Related Constants
+
+The function uses several constants exported from `src/constants.js`:
+
+### BibleBookData
+
+Contains all 66 canonical Bible books with testament classification:
+
+```js static
+import { BibleBookData } from 'door43-preview-renderers';
+
+// Example usage
+const bookInfo = BibleBookData['gen'];
+// { id: 'gen', title: 'Genesis', usfm: '01-GEN', testament: 'old' }
+```
+
+### requiredSubjectsMap
+
+Maps subjects to their required dependencies:
+
+```js static
+import { requiredSubjectsMap } from 'door43-preview-renderers';
+
+// Example usage
+const requirements = requiredSubjectsMap['TSV Translation Notes'];
+// ['Aligned Bible', 'Translation Academy', 'Translation Words', ...]
+```
+
+### subjectIdentifierMap
+
+Maps subject names to repository identifiers:
+
+```js static
+import { subjectIdentifierMap } from 'door43-preview-renderers';
+
+// Example usage
+const identifier = subjectIdentifierMap['Translation Academy'];
+// 'ta'
 ```
