@@ -1,6 +1,7 @@
 {
   "name": "door43-preview-renderers",
   "version": "1.4.0",
+  "type": "module",
   "description": "JavaScript library for gathering content from various repositories and rendering HTML snippets for web previews and PDFs",
   "main": "dist/index.js",
   "module": "dist/index.esm.js",

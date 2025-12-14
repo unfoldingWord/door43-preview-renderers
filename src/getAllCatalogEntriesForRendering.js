@@ -5,6 +5,19 @@ import pkg from '../package.json' with { type: 'json' };
 
 const { version } = pkg;
 
+// Global quiet flag for logging
+let isQuiet = false;
+
+/**
+ * Logging function that respects quiet flag
+ * @param {...any} args - Arguments to log
+ */
+function log(...args) {
+  if (!isQuiet) {
+    console.log(...args);
+  }
+}
+
 /**
  * Determine which testaments are needed based on the books array
  * @param {Array} books - Array of book identifiers
@@ -159,7 +172,7 @@ async function fetchCatalogEntryFromRelation(relation, mainCatalogEntry, dcs_api
       searchUrl = `${dcs_api_url}/catalog/search?owner=${owner}&abbreviation=${relation.identifier}&lang=${relation.lang}&stage=${stage}&includeHistory=1`;
     }
 
-    console.log(searchUrl);
+    log(searchUrl);
     const response = await axios.get(searchUrl);
 
     if (response.data && response.data.data && response.data.data.length > 0) {
@@ -175,6 +188,65 @@ async function fetchCatalogEntryFromRelation(relation, mainCatalogEntry, dcs_api
     return null;
   } catch (error) {
     console.warn(`Failed to fetch relation ${relation.identifier}:`, error.message);
+    return null;
+  }
+}
+
+/**
+ * Search for Aligned Bible entries by subject
+ * @param {Object} catalogEntry - The main catalog entry
+ * @param {string} dcs_api_url - DCS API base URL
+ * @param {Array} books - Array of book identifiers to check
+ * @returns {Promise<Object|null>} The best matching Aligned Bible entry or null
+ */
+async function searchAlignedBibleBySubject(catalogEntry, dcs_api_url, books) {
+  try {
+    const owner =
+      catalogEntry.repo?.owner?.username || catalogEntry.repo?.owner?.login || catalogEntry.owner;
+    const lang = catalogEntry.language;
+    const stage = catalogEntry.stage || 'latest';
+    const isMainBranch = catalogEntry.ref_type === 'branch';
+
+    const searchUrl = `${dcs_api_url}/catalog/search?owner=${owner}&lang=${lang}&subject=Aligned%20Bible&stage=${stage}&includeHistory=1`;
+    log(searchUrl);
+    const response = await axios.get(searchUrl);
+
+    if (response.data && response.data.data && response.data.data.length > 0) {
+      let matchingEntries = response.data.data;
+
+      // If main entry is a tag (not a branch), find best match by release date
+      if (!isMainBranch && catalogEntry.released) {
+        const bestEntry = findBestCatalogEntryByDate(matchingEntries, catalogEntry.released);
+        if (bestEntry) {
+          matchingEntries = [bestEntry];
+        }
+      } else {
+        // For branches, just use the first (most recent) entry
+        matchingEntries = [matchingEntries[0]];
+      }
+
+      // If books are specified, check that the entry has those books
+      if (books && books.length > 0) {
+        for (const entry of matchingEntries) {
+          if (entry.ingredients && entry.ingredients.length > 0) {
+            const entryBooks = entry.ingredients.map((i) => i.identifier);
+            const hasAllBooks = books.every((book) => entryBooks.includes(book));
+            if (hasAllBooks) {
+              return entry;
+            }
+          }
+        }
+        // If no entry has all books, return null
+        return null;
+      }
+
+      // No book validation needed, return first matching entry
+      return matchingEntries[0];
+    }
+
+    return null;
+  } catch (error) {
+    console.warn('Failed to search for Aligned Bible by subject:', error.message);
     return null;
   }
 }
@@ -229,8 +301,9 @@ export async function getAllCatalogEntriesForRendering(
     books = booksOrUndefined || [];
     const options = optionsOrUndefined || {};
     dcs_api_url = options.dcs_api_url || dcs_api_url;
+    isQuiet = options.quiet || false;
 
-    catalogEntry = await getCatalogEntry(owner, repo, ref, dcs_api_url);
+    catalogEntry = await getCatalogEntry(owner, repo, ref, dcs_api_url, isQuiet);
   } else {
     // Second signature: (catalogEntry, books?, options?)
     catalogEntry = ownerOrCatalogEntry;
@@ -250,6 +323,7 @@ export async function getAllCatalogEntriesForRendering(
     if (options.dcs_api_url) {
       dcs_api_url = options.dcs_api_url;
     }
+    isQuiet = options.quiet || false;
   }
 
   if (!catalogEntry) {
@@ -394,7 +468,7 @@ export async function getAllCatalogEntriesForRendering(
     for (const repoName of repoNames) {
       try {
         const searchUrl = `${dcs_api_url}/catalog/search?owner=${searchOwner}&repo=${repoName}&stage=${searchStage}&lang=${searchLang}${includeHistory}`;
-        console.log(searchUrl);
+        log(searchUrl);
         const searchResponse = await axios.get(searchUrl);
 
         if (
@@ -463,6 +537,12 @@ export async function getAllCatalogEntriesForRendering(
         console.warn(`Failed to search for ${requiredSubject} (${repoName}):`, error.message);
         // Continue to next repo name
       }
+    }
+
+    // Special handling for Aligned Bible if not found through standard repo names
+    if (!foundEntry && requiredSubject === 'Aligned Bible') {
+      log('Standard Aligned Bible repos not found, searching by subject...');
+      foundEntry = await searchAlignedBibleBySubject(catalogEntry, dcs_api_url, books);
     }
 
     if (!foundEntry) {

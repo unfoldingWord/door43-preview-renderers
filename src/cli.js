@@ -22,20 +22,33 @@ function parseArgs(args) {
   const parsed = {
     command: args[0],
     params: {},
+    quiet: false,
   };
 
-  for (let i = 1; i < args.length; i += 2) {
-    const key = args[i].replace(/^--/, '').replace(/-/g, '_');
-    const value = args[i + 1];
+  for (let i = 1; i < args.length; i++) {
+    const arg = args[i];
 
-    if (key === 'book') {
-      parsed.params.bookId = value;
-    } else if (key === 'dcs_api_url') {
-      parsed.params.dcsApiUrl = value;
-    } else if (key === 'output') {
-      parsed.output = value;
-    } else {
-      parsed.params[key] = value;
+    // Handle flags without values
+    if (arg === '--quiet' || arg === '-q') {
+      parsed.quiet = true;
+      continue;
+    }
+
+    // Handle key-value pairs
+    if (arg.startsWith('--')) {
+      const key = arg.replace(/^--/, '').replace(/-/g, '_');
+      const value = args[i + 1];
+
+      if (key === 'book') {
+        parsed.params.bookId = value;
+      } else if (key === 'dcs_api_url') {
+        parsed.params.dcsApiUrl = value;
+      } else if (key === 'output') {
+        parsed.output = value;
+      } else {
+        parsed.params[key] = value;
+      }
+      i++; // Skip the value in next iteration
     }
   }
 
@@ -61,13 +74,20 @@ Options:
   --book <bookId>         Book ID (e.g., gen, exo, mat, 1ti)
   --dcs-api-url <url>     Custom DCS API URL (optional)
   --output <file>         Output file path (optional, defaults to stdout)
+  --quiet, -q             Suppress logging output (no API URLs or progress messages)
 
 Examples:
   # Get catalog entries and output to stdout
   node src/cli.js getAllCatalogEntries --owner unfoldingWord --repo en_tn --ref v80 --book gen
 
+  # Get catalog entries with quiet mode (no logging, just JSON)
+  node src/cli.js getAllCatalogEntries --owner unfoldingWord --repo en_tn --ref v80 --book gen --quiet
+
   # Get catalog entries and save to file
   node src/cli.js getAllCatalogEntries --owner unfoldingWord --repo en_tn --ref v80 --book gen --output result.json
+
+  # Quiet mode for piping to jq
+  node src/cli.js getAllCatalogEntries --owner BSOJ --repo ar_twl --ref v5 --book 1jn --quiet | jq '.catalogEntries[] | {owner, repo: .name, subject}'
 
   # Get resource data
   node src/cli.js getResourceData --owner unfoldingWord --repo en_tn --ref v80 --book gen
@@ -99,7 +119,7 @@ async function main() {
     process.exit(0);
   }
 
-  const { command, params, output } = parseArgs(args);
+  const { command, params, output, quiet } = parseArgs(args);
 
   // Validate required parameters
   if (!params.owner || !params.repo) {
@@ -114,11 +134,14 @@ async function main() {
     switch (command) {
       case 'getAllCatalogEntries':
       case 'getAllCatalogEntriesForRendering':
-        console.error(`Fetching catalog entries for ${params.owner}/${params.repo}...`);
+        if (!quiet) {
+          console.error(`Fetching catalog entries for ${params.owner}/${params.repo}...`);
+        }
         // getAllCatalogEntriesForRendering expects: (owner, repo, ref, books?, options?)
         const books = params.bookId ? [params.bookId] : [];
         const options = {
           dcs_api_url: params.dcsApiUrl || 'https://git.door43.org/api/v1',
+          quiet: quiet,
         };
         result = await getAllCatalogEntriesForRendering(
           params.owner,
@@ -148,11 +171,13 @@ async function main() {
       const outputPath = path.resolve(output);
       fs.writeFileSync(outputPath, jsonOutput);
       console.error(`✓ Output written to ${outputPath}`);
+      process.exit(0);
     } else {
-      console.log(jsonOutput);
+      // Write to stdout and wait for it to flush before exiting
+      process.stdout.write(jsonOutput + '\n', () => {
+        process.exit(0);
+      });
     }
-
-    process.exit(0);
   } catch (error) {
     console.error('Error:', error.message);
     if (error.response) {

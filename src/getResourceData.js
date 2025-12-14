@@ -5,23 +5,39 @@ import { extractRcTaData } from './taHelpers.js';
 import { getBookChapterVersesData } from './bibleHelpers.js';
 import axios from 'axios';
 
+// Global quiet flag for logging
+let isQuiet = false;
+
+/**
+ * Logging function that respects quiet flag
+ * @param {...any} args - Arguments to log
+ */
+function log(...args) {
+  if (!isQuiet) {
+    console.log(...args);
+  }
+}
+
 /**
  * Fetches the catalog entry from DCS API
  * @param {string} owner - Repository owner
  * @param {string} repo - Repository name
  * @param {string} ref - Git reference
  * @param {string} dcs_api_url - Base URL for DCS API
+ * @param {boolean} quiet - Suppress logging output
  * @returns {Promise<Object>} The catalog entry data
  */
 export async function getCatalogEntry(
   owner,
   repo,
   ref,
-  dcs_api_url = 'https://git.door43.org/api/v1'
+  dcs_api_url = 'https://git.door43.org/api/v1',
+  quiet = false
 ) {
+  isQuiet = quiet;
   try {
     const url = `${dcs_api_url}/catalog/entry/${owner}/${repo}/${ref}`;
-    console.log(url);
+    log(url);
     const response = await axios.get(url);
     return response.data;
   } catch (error) {
