@@ -5,13 +5,20 @@
   "main": "dist/index.js",
   "module": "dist/index.esm.js",
   "types": "dist/index.d.ts",
+  "bin": {
+    "door43-renderers": "./src/cli.js"
+  },
   "files": [
-    "dist"
+    "dist",
+    "src/cli.js"
   ],
   "scripts": {
     "build": "rollup -c",
     "dev": "rollup -c -w",
     "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "cli": "node src/cli.js",
     "lint": "eslint src --ext .js,.jsx",
     "format": "prettier --write \"src/**/*.{js,jsx,json,md}\"",
     "styleguide": "styleguidist server",
