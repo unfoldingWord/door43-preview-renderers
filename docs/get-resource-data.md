@@ -1,11 +1,11 @@
-# Get Rendered Pages
+# Get Resource Data
 
-The `get_rendered_pages()` function fetches catalog entry information from the Door43 Content Service (DCS) API.
+The `getResourceData()` function fetches catalog entry information from the Door43 Content Service (DCS) API.
 
 ## Function Signature
 
 ```js static
-async function get_rendered_pages(owner, repo, ref, options = {})
+async function getResourceData(owner, repo, ref, options = {})
 ```
 
 ## Parameters
@@ -23,9 +23,9 @@ Returns a Promise that resolves to a JSON object containing the catalog entry da
 ## Usage Example
 
 ```js static
-import { get_rendered_pages } from 'door43-preview-renderers';
+import { getResourceData } from 'door43-preview-renderers';
 
-const catalogEntry = await get_rendered_pages(
+const catalogEntry = await getResourceData(
   'unfoldingWord',
   'en_tn',
   'master',
@@ -37,4 +37,10 @@ console.log(catalogEntry);
 
 ## Interactive Demo
 
-Try the function below with the default parameters:
+Try the function below with the default parameters. Click the button to fetch real data from the DCS API:
+
+```jsx
+import GetResourceDataDemo from '../src/GetResourceDataDemo';
+
+<GetResourceDataDemo />
+```

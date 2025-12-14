@@ -29,9 +29,14 @@ module.exports = {
       content: 'docs/introduction.md',
     },
     {
-      name: 'Get Rendered Pages',
-      content: 'docs/get-rendered-pages.md',
-      components: 'src/GetRenderedPagesDemo.jsx',
+      name: 'Get Resource Data',
+      content: 'docs/get-resource-data.md',
+      components: 'src/GetResourceDataDemo.jsx',
+    },
+    {
+      name: 'Get All Catalog Entries For Rendering',
+      content: 'docs/get-all-catalog-entries-for-rendering.md',
+      components: 'src/GetAllCatalogEntriesForRenderingDemo.jsx',
     },
     {
       name: 'Renderers',

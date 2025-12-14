@@ -1,6 +1,6 @@
 {
   "name": "door43-preview-renderers",
-  "version": "0.1.0",
+  "version": "1.4.0",
   "description": "JavaScript library for gathering content from various repositories and rendering HTML snippets for web previews and PDFs",
   "main": "dist/index.js",
   "module": "dist/index.esm.js",
@@ -15,6 +15,7 @@
     "lint": "eslint src --ext .js,.jsx",
     "format": "prettier --write \"src/**/*.{js,jsx,json,md}\"",
     "styleguide": "styleguidist server",
+    "styleguide:dev": "styleguidist server",
     "styleguide:build": "pnpm run build && styleguidist build",
     "prepare": "pnpm run build"
   },
@@ -58,7 +59,10 @@
     "webpack": "^5.89.0"
   },
   "dependencies": {
-    "axios": "^1.6.0"
+    "axios": "^1.6.0",
+    "js-yaml": "^4.1.1",
+    "jszip": "^3.10.1",
+    "usfm-js": "^3.4.3"
   },
   "peerDependencies": {
     "react": "^16.8.0 || ^17.0.0 || ^18.0.0",
