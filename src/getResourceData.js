@@ -2,7 +2,9 @@ import { extractRcSbObsData, extractTsObsData, formatObsData } from './obsHelper
 import { extractRcTsvData } from './tsvHelpers.js';
 import { extractRcTwData } from './twHelpers.js';
 import { extractRcTaData } from './taHelpers.js';
-import { getBookChapterVersesData } from './bibleHelpers.js';
+import { extractRcAlignedBibleData } from './rcAlignedBibleHelpers.js';
+import { requiredSubjectsMap, subjectIdentifierMap } from './constants.js';
+import { getAllCatalogEntriesForRendering } from './getAllCatalogEntriesForRendering.js';
 import axios from 'axios';
 
 // Global quiet flag for logging
@@ -74,13 +76,13 @@ export async function getResourceData(
   options = {},
   is_extra = false
 ) {
-  const { dcs_api_url = 'https://git.door43.org/api/v1' } = options;
+  const { dcs_api_url = 'https://git.door43.org/api/v1', quiet = false } = options;
 
   options.is_extra = is_extra;
 
   let catalogEntry;
   try {
-    catalogEntry = await getCatalogEntry(owner, repo, ref, dcs_api_url);
+    catalogEntry = await getCatalogEntry(owner, repo, ref, dcs_api_url, quiet);
   } catch (e) {
     console.error(e);
     return { error: e.message };
@@ -214,15 +216,7 @@ export async function getResourceData(
  * Get resource data for RC Aligned Bible
  */
 async function getRcAlignedBibleData(catalogEntry, books, options) {
-  return {
-    flavorType: catalogEntry.flavor_type,
-    flavor: catalogEntry.flavor,
-    subject: catalogEntry.subject,
-    ingredients: catalogEntry.ingredients.map((i) => i.identifier),
-    title: catalogEntry.title,
-    books: await getBookChapterVersesData(catalogEntry, books, options),
-    options,
-  };
+  return await extractRcAlignedBibleData(catalogEntry, books, options);
 }
 
 /**
@@ -249,39 +243,44 @@ async function getRcTranslationAcademyData(catalogEntry, options) {
  * Get resource data for RC TSV Study Notes
  */
 async function getRcTsvStudyNotesData(catalogEntry, books, options) {
-  const requiredSubjects = ['Aligned Bible', 'Hebrew Old Testament', 'Greek New Testament'];
-  return await extractRcTsvData(catalogEntry, books, options, requiredSubjects);
+  // Use getAllCatalogEntriesForRendering to get all required dependencies
+  const { catalogEntries } = await getAllCatalogEntriesForRendering(catalogEntry, books, options);
+
+  // Pass the catalog entries to extractRcTsvData
+  return await extractRcTsvData(catalogEntry, books, options, catalogEntries);
 }
 
 /**
  * Get resource data for RC TSV Study Questions
  */
 async function getRcTsvStudyQuestionsData(catalogEntry, books, options) {
-  const requiredSubjects = ['Aligned Bible', 'Hebrew Old Testament', 'Greek New Testament'];
-  return await extractRcTsvData(catalogEntry, books, options, requiredSubjects);
+  // Use getAllCatalogEntriesForRendering to get all required dependencies
+  const { catalogEntries } = await getAllCatalogEntriesForRendering(catalogEntry, books, options);
+
+  // Pass the catalog entries to extractRcTsvData
+  return await extractRcTsvData(catalogEntry, books, options, catalogEntries);
 }
 
 /**
  * Get resource data for RC TSV Translation Notes
  */
 async function getRcTsvTranslationNotesData(catalogEntry, books, options) {
-  const requiredSubjects = [
-    'Aligned Bible',
-    'Translation Academy',
-    'Translation Words',
-    'TSV Translation Words Links',
-    'Hebrew Old Testament',
-    'Greek New Testament',
-  ];
-  return await extractRcTsvData(catalogEntry, books, options, requiredSubjects);
+  // Use getAllCatalogEntriesForRendering to get all required dependencies
+  const { catalogEntries } = await getAllCatalogEntriesForRendering(catalogEntry, books, options);
+
+  // Pass the catalog entries to extractRcTsvData
+  return await extractRcTsvData(catalogEntry, books, options, catalogEntries);
 }
 
 /**
  * Get resource data for RC TSV Translation Questions
  */
 async function getRcTsvTranslationQuestionsData(catalogEntry, books, options) {
-  const requiredSubjects = ['Aligned Bible', 'Hebrew Old Testament', 'Greek New Testament'];
-  return await extractRcTsvData(catalogEntry, books, options, requiredSubjects);
+  // Use getAllCatalogEntriesForRendering to get all required dependencies
+  const { catalogEntries } = await getAllCatalogEntriesForRendering(catalogEntry, books, options);
+
+  // Pass the catalog entries to extractRcTsvData
+  return await extractRcTsvData(catalogEntry, books, options, catalogEntries);
 }
 
 /**
@@ -295,6 +294,17 @@ async function getRcTranslationWordsData(catalogEntry, options) {
  * Get resource data for RC TSV Translation Words Links
  */
 async function getRcTsvTranslationWordsLinksData(catalogEntry, books, options) {
+  // Use getAllCatalogEntriesForRendering to get all required dependencies
+  const { catalogEntries } = await getAllCatalogEntriesForRendering(catalogEntry, books, options);
+
+  // Pass the catalog entries to extractRcTsvData
+  return await extractRcTsvData(catalogEntry, books, options, catalogEntries);
+}
+
+/**
+ * Get resource data for RC TSV Translation Words Links (OLD - TO BE REMOVED)
+ */
+async function getRcTsvTranslationWordsLinksDataOLD(catalogEntry, books, options) {
   const requiredSubjects = [
     'Aligned Bible',
     'Hebrew Old Testament',
@@ -439,9 +449,16 @@ async function getTcBibleData(catalogEntry, books, options) {
  * @param {Object} catalogEntry - The main catalog entry
  * @param {string} dcs_api_url - Base URL for DCS API
  * @param {Array<string>} requiredSubjects - List of required subjects
+ * @param {boolean} quiet - Suppress logging output
  * @returns {Promise<Object>} The extra resources
  */
-export async function getExtraResources(catalogEntry, books, dcs_api_url, requiredSubjects) {
+export async function getExtraResources(
+  catalogEntry,
+  books,
+  dcs_api_url,
+  requiredSubjects,
+  quiet = false
+) {
   const owner = catalogEntry.owner;
   const lang = catalogEntry.language;
   const ref = 'master' || catalogEntry.branch_or_tag_name;
@@ -454,19 +471,21 @@ export async function getExtraResources(catalogEntry, books, dcs_api_url, requir
       for (const id of identifier) {
         if (!extras[id]) {
           try {
-            const entry = await getCatalogEntry(owner, `${lang}_${id}`, ref, dcs_api_url);
+            const entry = await getCatalogEntry(owner, `${lang}_${id}`, ref, dcs_api_url, quiet);
             if (entry.subject === subject) {
               extras[id] = await getResourceData(
                 owner,
                 `${lang}_${id}`,
                 ref,
                 books,
-                { dcs_api_url },
+                { dcs_api_url, quiet },
                 true
               );
             }
           } catch (e) {
-            console.warn(`Failed to fetch extra subject ${subject} (${id}):`, e);
+            if (!quiet) {
+              console.warn(`Failed to fetch extra subject ${subject} (${id}):`, e);
+            }
           }
         }
       }
@@ -474,30 +493,40 @@ export async function getExtraResources(catalogEntry, books, dcs_api_url, requir
       if (!extras[identifier]) {
         try {
           const [o, r] = identifier.split('/');
-          const entry = await getCatalogEntry(o, r, ref, dcs_api_url);
+          const entry = await getCatalogEntry(o, r, ref, dcs_api_url, quiet);
           if (entry.subject === subject) {
-            extras[r] = await getResourceData(o, r, ref, books, { dcs_api_url }, true);
+            extras[r] = await getResourceData(o, r, ref, books, { dcs_api_url, quiet }, true);
           }
         } catch (e) {
-          console.warn(`Failed to fetch extra subject ${subject} (${identifier}):`, e);
+          if (!quiet) {
+            console.warn(`Failed to fetch extra subject ${subject} (${identifier}):`, e);
+          }
         }
       }
     } else {
       if (!extras[identifier]) {
         try {
-          const entry = await getCatalogEntry(owner, `${lang}_${identifier}`, ref, dcs_api_url);
+          const entry = await getCatalogEntry(
+            owner,
+            `${lang}_${identifier}`,
+            ref,
+            dcs_api_url,
+            quiet
+          );
           if (entry.subject === subject) {
             extras[identifier] = await getResourceData(
               owner,
               `${lang}_${identifier}`,
               ref,
               books,
-              { dcs_api_url },
+              { dcs_api_url, quiet },
               true
             );
           }
         } catch (e) {
-          console.warn(`Failed to fetch extra subject ${subject} (${identifier}):`, e);
+          if (!quiet) {
+            console.warn(`Failed to fetch extra subject ${subject} (${identifier}):`, e);
+          }
         }
       }
     }

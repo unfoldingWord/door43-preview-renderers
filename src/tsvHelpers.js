@@ -1,4 +1,3 @@
-import { getExtraResources } from './getResourceData.js';
 import { fetchContent } from './dcsApi.js';
 
 /**
@@ -99,7 +98,7 @@ function groupByChapterVerse(rows) {
 /**
  * Common function to extract and format TSV data
  */
-export async function extractRcTsvData(catalogEntry, books, options = {}, requiredSubjects = []) {
+export async function extractRcTsvData(catalogEntry, books, options = {}, catalogEntries = []) {
   const { dcs_api_url = 'https://git.door43.org/api/v1' } = options;
   const owner = catalogEntry.repo.owner.username || catalogEntry.repo.owner.login;
   const repo = catalogEntry.repo.name;
@@ -147,8 +146,32 @@ export async function extractRcTsvData(catalogEntry, books, options = {}, requir
     throw new Error('No valid books were processed from the TSV data');
   }
 
-  if (requiredSubjects.length > 0 && !options.is_extra) {
-    result.extras = await getExtraResources(catalogEntry, books, dcs_api_url, requiredSubjects);
+  // Use catalogEntries from getAllCatalogEntriesForRendering instead of fetching separately
+  if (catalogEntries.length > 1 && !options.is_extra) {
+    // Skip the first entry (which is the main catalogEntry) and process the rest
+    const extraEntries = catalogEntries.slice(1);
+
+    // Import getResourceData dynamically to avoid circular dependency
+    const { getResourceData } = await import('./getResourceData.js');
+
+    for (const entry of extraEntries) {
+      const entryOwner = entry.repo?.owner?.username || entry.repo?.owner?.login || entry.owner;
+      const entryRepo = entry.repo?.name || entry.name;
+      const entryRef = entry.branch_or_tag_name || entry.ref;
+      const identifier = entryRepo.replace(`${entry.language}_`, '');
+
+      // Fetch the resource data for this extra entry
+      const resourceData = await getResourceData(
+        entryOwner,
+        entryRepo,
+        entryRef,
+        books,
+        { dcs_api_url, quiet: options.quiet || false },
+        true // is_extra = true to prevent recursive fetching
+      );
+
+      result.extras[identifier] = resourceData;
+    }
   }
 
   return result;

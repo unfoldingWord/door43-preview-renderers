@@ -153,8 +153,21 @@ async function main() {
         break;
 
       case 'getResourceData':
-        console.error(`Fetching resource data for ${params.owner}/${params.repo}...`);
-        result = await getResourceData(params);
+        if (!quiet) {
+          console.error(`Fetching resource data for ${params.owner}/${params.repo}...`);
+        }
+        const resourceBooks = params.bookId ? [params.bookId] : [];
+        const resourceOptions = {
+          dcs_api_url: params.dcsApiUrl || 'https://git.door43.org/api/v1',
+          quiet: quiet,
+        };
+        result = await getResourceData(
+          params.owner,
+          params.repo,
+          params.ref,
+          resourceBooks,
+          resourceOptions
+        );
         break;
 
       default:

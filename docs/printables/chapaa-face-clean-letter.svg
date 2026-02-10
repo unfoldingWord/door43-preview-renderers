@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="8.5in" height="11in" viewBox="0 0 2550 3300" role="img" aria-labelledby="title desc">
+  <title id="title">Clean Chapaa Style Face Printable</title>
+  <desc id="desc">Watermark-free Chapaa-inspired face art centered on US Letter for printing.</desc>
+
+  <rect x="0" y="0" width="2550" height="3300" fill="#ffffff"/>
+
+  <g transform="translate(1275 1650) scale(2.45)">
+    <!-- Ears back -->
+    <path d="M-340 -360 C-420 -470 -390 -600 -295 -615 C-230 -625 -170 -560 -185 -475 C-193 -428 -217 -383 -250 -340 Z" fill="#cf7c2e" stroke="#111" stroke-width="10"/>
+    <path d="M340 -360 C420 -470 390 -600 295 -615 C230 -625 170 -560 185 -475 C193 -428 217 -383 250 -340 Z" fill="#cf7c2e" stroke="#111" stroke-width="10"/>
+
+    <!-- Ear inner -->
+    <path d="M-286 -410 C-335 -480 -325 -560 -272 -574 C-232 -584 -198 -538 -205 -482 C-208 -450 -224 -420 -248 -392 Z" fill="#f2a7a0" stroke="#111" stroke-width="8"/>
+    <path d="M286 -410 C335 -480 325 -560 272 -574 C232 -584 198 -538 205 -482 C208 -450 224 -420 248 -392 Z" fill="#f2a7a0" stroke="#111" stroke-width="8"/>
+
+    <!-- Head base -->
+    <path d="M-365 -250
+             C-368 -370 -290 -455 -190 -468
+             C-150 -510 -95 -535 -35 -540
+             C35 -545 95 -545 160 -535
+             C235 -524 300 -495 348 -438
+             C380 -398 396 -352 396 -298
+             C396 -230 374 -176 338 -136
+             C364 -112 382 -72 387 -28
+             C394 37 375 95 337 140
+             C302 182 244 222 180 244
+             C130 262 80 275 10 282
+             C-82 291 -175 280 -248 243
+             C-312 210 -358 158 -378 96
+             C-394 49 -394 -7 -381 -58
+             C-369 -107 -341 -146 -300 -175
+             C-345 -190 -364 -215 -365 -250 Z"
+          fill="#f2e4d2" stroke="#111" stroke-width="12"/>
+
+    <!-- Top orange fur -->
+    <path d="M-262 -250
+             C-258 -368 -184 -425 -89 -432
+             C-16 -436 76 -438 160 -427
+             C236 -417 293 -373 298 -290
+             C301 -255 292 -222 278 -195
+             C229 -173 190 -158 145 -156
+             C70 -152 -2 -152 -72 -159
+             C-128 -164 -185 -181 -241 -210
+             C-252 -224 -260 -237 -262 -250 Z"
+          fill="#d98638" stroke="#111" stroke-width="10"/>
+
+    <!-- Forehead stripes -->
+    <path d="M-85 -370 C-106 -346 -106 -311 -86 -287" fill="none" stroke="#b56b2f" stroke-width="16" stroke-linecap="round"/>
+    <path d="M0 -378 C-20 -351 -20 -310 0 -282" fill="none" stroke="#b56b2f" stroke-width="16" stroke-linecap="round"/>
+    <path d="M87 -366 C68 -341 68 -308 88 -285" fill="none" stroke="#b56b2f" stroke-width="16" stroke-linecap="round"/>
+
+    <!-- Cheek orange tips -->
+    <path d="M-315 -75 C-282 -92 -262 -117 -247 -152 C-230 -126 -212 -107 -180 -93 C-210 -67 -243 -52 -280 -48 Z" fill="#d98638" stroke="#111" stroke-width="8"/>
+    <path d="M315 -75 C282 -92 262 -117 247 -152 C230 -126 212 -107 180 -93 C210 -67 243 -52 280 -48 Z" fill="#d98638" stroke="#111" stroke-width="8"/>
+
+    <!-- Eye patches -->
+    <path d="M-236 -185 C-194 -213 -145 -213 -109 -176 C-82 -148 -76 -111 -87 -74 C-119 -40 -178 -28 -224 -46 C-252 -79 -261 -135 -236 -185 Z" fill="#f8f2e8" stroke="#111" stroke-width="8"/>
+    <path d="M236 -185 C194 -213 145 -213 109 -176 C82 -148 76 -111 87 -74 C119 -40 178 -28 224 -46 C252 -79 261 -135 236 -185 Z" fill="#f8f2e8" stroke="#111" stroke-width="8"/>
+
+    <!-- Eyes -->
+    <path d="M-204 -107 C-176 -140 -139 -140 -111 -107" fill="none" stroke="#111" stroke-width="18" stroke-linecap="round"/>
+    <path d="M204 -107 C176 -140 139 -140 111 -107" fill="none" stroke="#111" stroke-width="18" stroke-linecap="round"/>
+
+    <!-- Nose -->
+    <path d="M0 -72 C-48 -98 -97 -49 -86 6 C-78 49 -43 80 0 88 C43 80 78 49 86 6 C97 -49 48 -98 0 -72 Z" fill="#5a3425" stroke="#111" stroke-width="10"/>
+    <ellipse cx="18" cy="-22" rx="26" ry="14" fill="#b38f7d" opacity="0.55"/>
+
+    <!-- Teeth -->
+    <path d="M-115 4 C-148 22 -169 57 -172 92 C-174 126 -162 155 -132 174 C-93 199 -38 195 -8 161 C-26 117 -34 70 -35 22 C-58 9 -85 2 -115 4 Z" fill="#ffffff" stroke="#111" stroke-width="8"/>
+    <path d="M115 4 C148 22 169 57 172 92 C174 126 162 155 132 174 C93 199 38 195 8 161 C26 117 34 70 35 22 C58 9 85 2 115 4 Z" fill="#ffffff" stroke="#111" stroke-width="8"/>
+
+    <!-- Mouth lines -->
+    <path d="M0 86 L0 176" fill="none" stroke="#111" stroke-width="10" stroke-linecap="round"/>
+    <path d="M0 176 C-26 213 -79 220 -130 189" fill="none" stroke="#111" stroke-width="10" stroke-linecap="round"/>
+    <path d="M0 176 C26 213 79 220 130 189" fill="none" stroke="#111" stroke-width="10" stroke-linecap="round"/>
+
+    <!-- Cheek whisker marks -->
+    <path d="M-175 127 C-201 148 -220 172 -233 204" fill="none" stroke="#111" stroke-width="8" stroke-linecap="round"/>
+    <path d="M175 127 C201 148 220 172 233 204" fill="none" stroke="#111" stroke-width="8" stroke-linecap="round"/>
+  </g>
+</svg>

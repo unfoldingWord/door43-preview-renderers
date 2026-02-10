@@ -178,6 +178,31 @@ export default function GetResourceDataDemo() {
             </div>
           </div>
           <div>
+            <strong>Aligned Bible:</strong>
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '5px' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  loadExample('unfoldingWord', 'en_ult', 'v88');
+                  setBooks(['tit']);
+                }}
+                style={{ padding: '5px 10px', fontSize: '14px', cursor: 'pointer' }}
+              >
+                unfoldingWord/en_ult/v88 (tit)
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  loadExample('unfoldingWord', 'en_ust', 'master');
+                  setBooks(['mat', 'mrk', 'luk', 'jhn']);
+                }}
+                style={{ padding: '5px 10px', fontSize: '14px', cursor: 'pointer' }}
+              >
+                unfoldingWord/en_ust/master (mat,mrk,luk,jhn)
+              </button>
+            </div>
+          </div>
+          <div>
             <strong>Translation Academy:</strong>
             <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '5px' }}>
               <button

@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="8.5in" height="11in" viewBox="0 0 850 1100" role="img" aria-labelledby="title desc">
+  <title id="title">Chapaa Kids Mask Printable</title>
+  <desc id="desc">Black and white Chapaa-inspired mask template for coloring, cutting, and wearing with string.</desc>
+
+  <rect x="0" y="0" width="850" height="1100" fill="#ffffff"/>
+
+  <g fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round">
+    <text x="425" y="70" text-anchor="middle" font-family="Arial, sans-serif" font-size="30" fill="#000000" stroke="none">Chapaa Mask (Color + Cut)</text>
+    <text x="425" y="102" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#000000" stroke="none">Print at 100% on US Letter paper (8.5 x 11 in)</text>
+
+    <!-- Outer mask shape -->
+    <path d="M250 440
+             C200 355 210 280 275 235
+             C300 185 355 180 372 228
+             C405 208 445 208 478 228
+             C495 180 550 185 575 235
+             C640 280 650 355 600 440
+             C680 485 695 575 635 640
+             C600 677 550 703 500 717
+             C470 775 380 775 350 717
+             C300 703 250 677 215 640
+             C155 575 170 485 250 440 Z"
+          stroke-width="5" fill="#ffffff"/>
+
+    <!-- Ear inner lines -->
+    <path d="M282 247 C314 215 353 215 365 258 C338 243 315 243 290 265 Z" stroke-width="4"/>
+    <path d="M568 247 C536 215 497 215 485 258 C512 243 535 243 560 265 Z" stroke-width="4"/>
+
+    <!-- Inner face patch -->
+    <path d="M275 490 C270 430 300 372 360 355 C400 342 450 342 490 355 C550 372 580 430 575 490
+             C570 560 550 620 500 665 C465 695 385 695 350 665 C300 620 280 560 275 490 Z"
+          stroke-width="4"/>
+
+    <!-- Eye holes -->
+    <ellipse cx="335" cy="470" rx="48" ry="34" stroke-width="4" fill="#ffffff"/>
+    <ellipse cx="515" cy="470" rx="48" ry="34" stroke-width="4" fill="#ffffff"/>
+
+    <!-- Closed-eye style guide (optional) -->
+    <path d="M300 470 C322 448 348 448 370 470" stroke-width="8"/>
+    <path d="M480 470 C502 448 528 448 550 470" stroke-width="8"/>
+
+    <!-- Nose -->
+    <path d="M425 495 C405 482 385 500 389 524 C393 550 413 563 425 567 C437 563 457 550 461 524 C465 500 445 482 425 495 Z"
+          stroke-width="4" fill="#ffffff"/>
+
+    <!-- Smile and muzzle lines -->
+    <path d="M425 566 L425 620" stroke-width="4"/>
+    <path d="M425 620 C398 648 355 650 320 622" stroke-width="4"/>
+    <path d="M425 620 C452 648 495 650 530 622" stroke-width="4"/>
+    <path d="M330 560 C308 578 293 598 282 625" stroke-width="4"/>
+    <path d="M520 560 C542 578 557 598 568 625" stroke-width="4"/>
+
+    <!-- Forehead stripe guide -->
+    <path d="M373 320 C386 342 387 372 372 395" stroke-width="3"/>
+    <path d="M425 312 C440 340 440 372 425 402" stroke-width="3"/>
+    <path d="M477 320 C464 342 463 372 478 395" stroke-width="3"/>
+
+    <!-- Side string holes -->
+    <circle cx="178" cy="540" r="10" stroke-width="4" fill="#ffffff"/>
+    <circle cx="672" cy="540" r="10" stroke-width="4" fill="#ffffff"/>
+
+    <!-- Cut and punch guides -->
+    <text x="130" y="545" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" fill="#000000" stroke="none">String hole</text>
+    <text x="720" y="545" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" fill="#000000" stroke="none">String hole</text>
+
+    <!-- Footer instructions -->
+    <text x="425" y="1000" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#000000" stroke="none">1) Color the mask  2) Cut outer edge + eyes  3) Punch side holes  4) Tie string</text>
+    <text x="425" y="1030" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" fill="#000000" stroke="none">For thicker masks, glue to cardstock before cutting.</text>
+  </g>
+</svg>

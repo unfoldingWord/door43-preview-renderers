@@ -7,6 +7,7 @@ A JavaScript library for gathering content from various repositories and renderi
 - 🔌 API client for fetching content from Door43 repositories
 - 🎨 Multiple converters for different content formats
 - 📝 HTML snippet generation for web previews
+- 🧱 Subject-aware HTML packaging via `renderHtmlData()`
 - 📄 PDF-ready rendering
 - ⚡ Modular and extensible architecture
 - 🖥️ Command-line interface (CLI) for easy data retrieval
@@ -44,28 +45,33 @@ npx door43-preview-renderers getAllCatalogEntries --owner unfoldingWord --repo e
 ### Library Usage
 
 ```javascript
-import { getAllCatalogEntriesForRendering, getResourceData } from 'door43-preview-renderers';
+import {
+  getAllCatalogEntriesForRendering,
+  getResourceData,
+  renderHtmlData,
+} from 'door43-preview-renderers';
 
 // Get catalog entries with all dependencies
-const result = await getAllCatalogEntriesForRendering(
-  'unfoldingWord',
-  'en_tn',
-  'v80',
-  ['tit'],
-  { dcs_api_url: 'https://git.door43.org/api/v1' }
-);
+const result = await getAllCatalogEntriesForRendering('unfoldingWord', 'en_tn', 'v80', ['tit'], {
+  dcs_api_url: 'https://git.door43.org/api/v1',
+});
 
-console.log(result.version);         // Package version
-console.log(result.catalogEntries);  // Array of catalog entries
+console.log(result.version); // Package version
+console.log(result.catalogEntries); // Array of catalog entries
 
 // Get resource data for a specific repository
-const data = await getResourceData(
-  'unfoldingWord',
-  'en_ult',
-  'master',
-  ['gen'],
-  { dcs_api_url: 'https://git.door43.org/api/v1' }
-);
+const data = await getResourceData('unfoldingWord', 'en_ult', 'master', ['gen'], {
+  dcs_api_url: 'https://git.door43.org/api/v1',
+});
+
+// Render HTML sections + full HTML for supported subjects (currently Bible subjects)
+const rendered = await renderHtmlData('unfoldingWord', 'en_ult', 'v88', ['tit'], {
+  dcs_api_url: 'https://git.door43.org/api/v1',
+  renderOptions: { includeRawUsfmView: false, editorMode: false },
+});
+
+console.log(rendered.sections.body); // HTML body string
+console.log(rendered.fullHtml); // Full HTML document
 ```
 
 ### CLI Usage
@@ -78,7 +84,7 @@ Retrieve a catalog entry along with all its required dependencies:
 
 ```bash
 # Basic usage
-node src/cli.js getAllCatalogEntries --owner unfoldingWord --repo en_tn --ref v80 --book gen
+node src/cli.js getResourceData --owner unfoldingWord --repo en_tn --ref v80 --book gen
 
 # Quiet mode (no logging, just JSON output) - perfect for piping to jq
 node src/cli.js getAllCatalogEntries --owner BSOJ --repo ar_twl --ref v5 --book 1jn --quiet
@@ -120,6 +126,7 @@ Fetches a catalog entry and automatically resolves all required dependencies bas
 #### Parameters
 
 **Signature 1: Fetch by owner/repo/ref**
+
 ```javascript
 getAllCatalogEntriesForRendering(owner, repo, ref, books?, options?)
 ```
@@ -133,6 +140,7 @@ getAllCatalogEntriesForRendering(owner, repo, ref, books?, options?)
   - `quiet` (boolean): Suppress logging output (default: `false`)
 
 **Signature 2: Use existing catalog entry**
+
 ```javascript
 getAllCatalogEntriesForRendering(catalogEntry, books?, options?)
 ```
@@ -144,6 +152,7 @@ getAllCatalogEntriesForRendering(catalogEntry, books?, options?)
 #### Returns
 
 Returns a Promise that resolves to an object with:
+
 ```javascript
 {
   version: "1.4.0",           // Package version
@@ -190,13 +199,9 @@ The function intelligently resolves dependencies based on the resource subject:
 #### Example
 
 ```javascript
-const result = await getAllCatalogEntriesForRendering(
-  'unfoldingWord',
-  'en_tn',
-  'v80',
-  ['tit'],
-  { quiet: true }
-);
+const result = await getAllCatalogEntriesForRendering('unfoldingWord', 'en_tn', 'v80', ['tit'], {
+  quiet: true,
+});
 
 // Result contains:
 // - en_tn (Translation Notes)
@@ -232,19 +237,60 @@ Returns a Promise that resolves to a catalog entry object with detailed informat
 #### Example
 
 ```javascript
-const catalogEntry = await getResourceData(
-  'unfoldingWord',
-  'en_ult',
-  'master',
-  ['gen', 'exo'],
-  { quiet: true,
-    dcs_api_url: 'https://git.door43.org/api/v1'
-  }
-);
+const catalogEntry = await getResourceData('unfoldingWord', 'en_ult', 'master', ['gen', 'exo'], {
+  quiet: true,
+  dcs_api_url: 'https://git.door43.org/api/v1',
+});
 
-console.log(catalogEntry.subject);     // "Aligned Bible"
-console.log(catalogEntry.language);    // "en"
+console.log(catalogEntry.subject); // "Aligned Bible"
+console.log(catalogEntry.language); // "en"
 console.log(catalogEntry.ingredients); // Array of books/chapters
+```
+
+### `renderHtmlData()`
+
+Fetches resource data and renders subject-specific HTML sections.
+
+#### Parameters
+
+```javascript
+renderHtmlData(owner, repo, ref, books?, options?)
+```
+
+- `owner` (string): Repository owner
+- `repo` (string): Repository name
+- `ref` (string): Git reference (branch, tag, or commit)
+- `books` (array, optional): Array of book identifiers to filter (default: `[]`)
+- `options` (object, optional):
+  - `dcs_api_url` (string): DCS API base URL (default: `https://git.door43.org/api/v1`)
+  - `quiet` (boolean): Suppress logging output (default: `false`)
+  - `renderOptions` (object): Renderer-specific options (e.g. `includeRawUsfmView`, `editorMode`)
+
+#### Current subject support
+
+- `Aligned Bible`
+- `Bible`
+- `Greek New Testament`
+- `Hebrew Old Testament`
+
+#### Returns
+
+Returns a Promise that resolves to a rendering package:
+
+```javascript
+{
+  subject: "Aligned Bible",
+  title: "unfoldingWord® Literal Text",
+  sections: {
+    cover: "<h3 ...",
+    body: "<div class=\"section bible-book\" ...",
+    toc: [{ id: "nav-tit", title: "Titus", book: "tit" }],
+    css: { web: "..." },
+    webView: null
+  },
+  fullHtml: "<!DOCTYPE html>...",
+  resourceData: { ... } // original getResourceData output
+}
 ```
 
 ## Development

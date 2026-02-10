@@ -1,0 +1,3 @@
+display_name: Door43 Renderer Maintainer
+short_description: Extend subject renderers and renderHtmlData dispatch in door43-preview-renderers.
+default_prompt: Add or update a subject renderer in door43-preview-renderers, wire renderHtmlData dispatch, update styleguide demo/docs, and include tests.

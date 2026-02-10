@@ -1,6 +1,7 @@
 import babel from '@rollup/plugin-babel';
 import resolve from '@rollup/plugin-node-resolve';
 import commonjs from '@rollup/plugin-commonjs';
+import json from '@rollup/plugin-json';
 
 export default {
   input: 'src/index.js',
@@ -16,8 +17,9 @@ export default {
       sourcemap: true,
     },
   ],
-  external: ['react', 'react-dom', 'axios'],
+  external: ['react', 'react-dom', 'axios', 'proskomma-core', 'proskomma-json-tools'],
   plugins: [
+    json(),
     resolve(),
     commonjs(),
     babel({
