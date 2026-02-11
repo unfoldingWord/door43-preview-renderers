@@ -64,7 +64,7 @@ const data = await getResourceData('unfoldingWord', 'en_ult', 'master', ['gen'],
   dcs_api_url: 'https://git.door43.org/api/v1',
 });
 
-// Render HTML sections + full HTML for supported subjects (currently Bible subjects)
+// Render HTML sections + full HTML for supported subjects
 const rendered = await renderHtmlData('unfoldingWord', 'en_ult', 'v88', ['tit'], {
   dcs_api_url: 'https://git.door43.org/api/v1',
   renderOptions: { includeRawUsfmView: false, editorMode: false },
@@ -272,6 +272,8 @@ renderHtmlData(owner, repo, ref, books?, options?)
 - `Bible`
 - `Greek New Testament`
 - `Hebrew Old Testament`
+- `Translation Academy`
+- `Translation Words`
 
 #### Returns
 

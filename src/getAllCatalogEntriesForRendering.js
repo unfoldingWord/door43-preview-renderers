@@ -1,7 +1,8 @@
 import axios from 'axios';
-import pkg from '../package.json' with { type: 'json' };
-
-const { version } = pkg;
+const version =
+  typeof process !== 'undefined' && process?.env?.npm_package_version
+    ? process.env.npm_package_version
+    : '0.0.0';
 
 // Global quiet flag for logging
 let isQuiet = false;
@@ -12,7 +13,7 @@ let isQuiet = false;
  */
 function log(...args) {
   if (!isQuiet) {
-    console.log(...args);
+    console.warn(...args);
   }
 }
 

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { renderHtmlData } from './renderHtmlData';
 
 /**
@@ -126,22 +126,67 @@ export default function RenderHtmlDataDemo() {
           borderRadius: '4px',
         }}
       >
-        <strong>Quick Examples (Aligned Bible):</strong>
-        <div style={{ marginTop: '10px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          <button
-            type="button"
-            onClick={() => loadExample('unfoldingWord', 'en_ult', 'v88', 'tit')}
-            style={{ padding: '6px 10px', cursor: 'pointer' }}
-          >
-            unfoldingWord/en_ult/v88 (tit)
-          </button>
-          <button
-            type="button"
-            onClick={() => loadExample('unfoldingWord', 'en_ust', 'master', 'mat,mrk')}
-            style={{ padding: '6px 10px', cursor: 'pointer' }}
-          >
-            unfoldingWord/en_ust/master (mat,mrk)
-          </button>
+        <strong>Quick Examples:</strong>
+        <div style={{ marginTop: '10px' }}>
+          <div style={{ marginBottom: '8px' }}>
+            <strong style={{ fontSize: '13px' }}>Aligned Bible</strong>
+            <div style={{ marginTop: '6px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={() => loadExample('unfoldingWord', 'en_ult', 'v88', 'tit')}
+                style={{ padding: '6px 10px', cursor: 'pointer' }}
+              >
+                unfoldingWord/en_ult/v88 (tit)
+              </button>
+              <button
+                type="button"
+                onClick={() => loadExample('unfoldingWord', 'en_ust', 'master', 'mat,mrk')}
+                style={{ padding: '6px 10px', cursor: 'pointer' }}
+              >
+                unfoldingWord/en_ust/master (mat,mrk)
+              </button>
+            </div>
+          </div>
+
+          <div style={{ marginBottom: '8px' }}>
+            <strong style={{ fontSize: '13px' }}>Translation Academy</strong>
+            <div style={{ marginTop: '6px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={() => loadExample('unfoldingWord', 'en_ta', 'v87', '')}
+                style={{ padding: '6px 10px', cursor: 'pointer' }}
+              >
+                unfoldingWord/en_ta/v87
+              </button>
+              <button
+                type="button"
+                onClick={() => loadExample('BSOJ', 'ar_ta', 'master', '')}
+                style={{ padding: '6px 10px', cursor: 'pointer' }}
+              >
+                BSOJ/ar_ta/master
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <strong style={{ fontSize: '13px' }}>Translation Words</strong>
+            <div style={{ marginTop: '6px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={() => loadExample('unfoldingWord', 'en_tw', 'v87', '')}
+                style={{ padding: '6px 10px', cursor: 'pointer' }}
+              >
+                unfoldingWord/en_tw/v87
+              </button>
+              <button
+                type="button"
+                onClick={() => loadExample('BSOJ', 'ar_tw', 'master', '')}
+                style={{ padding: '6px 10px', cursor: 'pointer' }}
+              >
+                BSOJ/ar_tw/master
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 

@@ -3,7 +3,7 @@ import { extractRcTsvData } from './tsvHelpers.js';
 import { extractRcTwData } from './twHelpers.js';
 import { extractRcTaData } from './taHelpers.js';
 import { extractRcAlignedBibleData } from './rcAlignedBibleHelpers.js';
-import { requiredSubjectsMap, subjectIdentifierMap } from './constants.js';
+import { subjectIdentifierMap } from './constants.js';
 import { getAllCatalogEntriesForRendering } from './getAllCatalogEntriesForRendering.js';
 import axios from 'axios';
 
@@ -16,7 +16,7 @@ let isQuiet = false;
  */
 function log(...args) {
   if (!isQuiet) {
-    console.log(...args);
+    console.warn(...args);
   }
 }
 
@@ -84,7 +84,7 @@ export async function getResourceData(
   try {
     catalogEntry = await getCatalogEntry(owner, repo, ref, dcs_api_url, quiet);
   } catch (e) {
-    console.error(e);
+    console.warn(e);
     return { error: e.message };
   }
 
@@ -154,13 +154,13 @@ export async function getResourceData(
           case 'TSV OBS Study Questions':
             return getRcTsvObsStudyQuestionsData(catalogEntry, options);
           case 'TSV OBS Translation Notes':
-            getRcTsvObsTranslationNotesData(catalogEntry, options);
+            return getRcTsvObsTranslationNotesData(catalogEntry, options);
           case 'TSV OBS Translation Questions':
             return getRcTsvObsTranslationQuestionsData(catalogEntry, options);
           case 'TSV OBS Translation Words Links':
             return getRcTsvObsTranslationWordsLinksData(catalogEntry, options);
           default:
-            setErrorMessage(`Conversion of \`${subject}\` resources is currently not supported.`);
+            throw new Error(`Conversion of \`${subject}\` resources is currently not supported.`);
         }
       case 'sb':
         switch (flavorType) {
@@ -177,6 +177,10 @@ export async function getResourceData(
             switch (catalogEntry.flavor) {
               case 'textStories':
                 return getSbObsData(catalogEntry, options);
+              default:
+                throw new Error(
+                  `Conversion of SB gloss flavor \`${catalogEntry.flavor}\` is not currently supported.`
+                );
             }
           default:
             throw new Error(
@@ -190,7 +194,9 @@ export async function getResourceData(
           case 'Bible':
             return getTsBibleData(catalogEntry, books, options);
           default:
-            throw error('Conversion of translationStudio repositories is currently not supported.');
+            throw new Error(
+              'Conversion of translationStudio repositories is currently not supported.'
+            );
         }
       case 'tc':
         switch (subject) {
@@ -222,7 +228,7 @@ async function getRcAlignedBibleData(catalogEntry, books, options) {
 /**
  * Get resource data for RC OBS
  */
-async function getRcObsData(catalogEntry, options) {
+async function getRcObsData(catalogEntry, _options) {
   const ingredient = catalogEntry.ingredients && catalogEntry.ingredients[0];
   if (!ingredient) {
     throw new Error('No ingredients found in catalog entry');
@@ -302,19 +308,6 @@ async function getRcTsvTranslationWordsLinksData(catalogEntry, books, options) {
 }
 
 /**
- * Get resource data for RC TSV Translation Words Links (OLD - TO BE REMOVED)
- */
-async function getRcTsvTranslationWordsLinksDataOLD(catalogEntry, books, options) {
-  const requiredSubjects = [
-    'Aligned Bible',
-    'Hebrew Old Testament',
-    'Greek New Testament',
-    'Translation Words',
-  ];
-  return await extractRcTsvData(catalogEntry, books, options, requiredSubjects);
-}
-
-/**
  * Get resource data for RC TSV OBS Study Notes
  */
 async function getRcTsvObsStudyNotesData(catalogEntry, options) {
@@ -389,10 +382,9 @@ async function getSbBibleData(catalogEntry, books, options) {
 }
 
 /**
-/**
  * Get resource data for SB OBS
  */
-async function getSbObsData(catalogEntry, options) {
+async function getSbObsData(catalogEntry, _options) {
   const ingredient = catalogEntry.ingredients && catalogEntry.ingredients[0];
   if (!ingredient) {
     throw new Error('No ingredients found in catalog entry');
@@ -402,10 +394,9 @@ async function getSbObsData(catalogEntry, options) {
   return formatObsData(data, catalogEntry);
 }
 /**
-/**
  * Get resource data for TS OBS
  */
-async function getTsObsData(catalogEntry, options) {
+async function getTsObsData(catalogEntry, _options) {
   const ingredient = catalogEntry.ingredients && catalogEntry.ingredients[0];
   if (!ingredient) {
     throw new Error('No ingredients found in catalog entry');

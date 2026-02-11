@@ -1,5 +1,7 @@
 import { getResourceData } from './getResourceData.js';
 import { renderAlignedBibleHtml } from './renderers/alignedBibleRenderer.js';
+import { renderTranslationAcademyHtml } from './renderers/translationAcademyRenderer.js';
+import { renderTranslationWordsHtml } from './renderers/translationWordsRenderer.js';
 
 const alignedBibleSubjects = new Set([
   'Aligned Bible',
@@ -7,6 +9,8 @@ const alignedBibleSubjects = new Set([
   'Greek New Testament',
   'Hebrew Old Testament',
 ]);
+const translationAcademySubjects = new Set(['Translation Academy']);
+const translationWordsSubjects = new Set(['Translation Words']);
 
 /**
  * Fetch resource data and render it into HTML data sections.
@@ -37,6 +41,22 @@ export async function renderHtmlData(owner, repo, ref, books = [], options = {})
       ...renderOptions,
     });
 
+    return {
+      ...rendered,
+      resourceData,
+    };
+  }
+
+  if (translationAcademySubjects.has(resourceData.subject)) {
+    const rendered = renderTranslationAcademyHtml(resourceData, renderOptions);
+    return {
+      ...rendered,
+      resourceData,
+    };
+  }
+
+  if (translationWordsSubjects.has(resourceData.subject)) {
+    const rendered = renderTranslationWordsHtml(resourceData, renderOptions);
     return {
       ...rendered,
       resourceData,

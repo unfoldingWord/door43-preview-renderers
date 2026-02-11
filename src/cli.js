@@ -10,12 +10,8 @@
 
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import { getAllCatalogEntriesForRendering } from './getAllCatalogEntriesForRendering.js';
 import { getResourceData } from './getResourceData.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 // Parse command line arguments
 function parseArgs(args) {
@@ -57,7 +53,7 @@ function parseArgs(args) {
 
 // Display help message
 function showHelp() {
-  console.log(`
+  process.stdout.write(`
 door43-preview-renderers CLI
 
 Usage:
@@ -133,7 +129,7 @@ async function main() {
 
     switch (command) {
       case 'getAllCatalogEntries':
-      case 'getAllCatalogEntriesForRendering':
+      case 'getAllCatalogEntriesForRendering': {
         if (!quiet) {
           console.error(`Fetching catalog entries for ${params.owner}/${params.repo}...`);
         }
@@ -151,8 +147,9 @@ async function main() {
           options
         );
         break;
+      }
 
-      case 'getResourceData':
+      case 'getResourceData': {
         if (!quiet) {
           console.error(`Fetching resource data for ${params.owner}/${params.repo}...`);
         }
@@ -169,6 +166,7 @@ async function main() {
           resourceOptions
         );
         break;
+      }
 
       default:
         console.error(`Error: Unknown command "${command}"`);

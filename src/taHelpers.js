@@ -5,7 +5,7 @@ import yaml from 'js-yaml';
 /**
  * Extract Translation Academy data from RC format (markdown files in article directories)
  */
-export async function extractRcTaData(catalogEntry, options) {
+export async function extractRcTaData(catalogEntry, _options) {
   const zipUrl = catalogEntry.zipball_url;
   const ingredients = catalogEntry.ingredients;
 

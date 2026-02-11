@@ -24,6 +24,8 @@ const rendered = await renderHtmlData('unfoldingWord', 'en_ult', 'v88', ['tit'],
 - `Bible`
 - `Greek New Testament`
 - `Hebrew Old Testament`
+- `Translation Academy`
+- `Translation Words`
 
 It returns:
 

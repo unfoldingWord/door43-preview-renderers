@@ -2,10 +2,10 @@
  * Converts Markdown content to HTML
  *
  * @param {string} markdown - Markdown content
- * @param {Object} [options] - Conversion options
+ * @param {Object} [_options] - Conversion options
  * @returns {string} HTML string
  */
-export function convertMarkdown(markdown, options = {}) {
+export function convertMarkdown(markdown, _options = {}) {
   // Basic markdown to HTML conversion
   // In a real implementation, you might use a library like marked or markdown-it
 

@@ -1,7 +1,16 @@
 module.exports = {
   testEnvironment: 'node',
   testMatch: ['**/__tests__/**/*.js', '**/?(*.)+(spec|test).js'],
-  collectCoverageFrom: ['src/**/*.js', '!src/**/*.test.js', '!src/**/*.jsx', '!src/cli.js'],
+  collectCoverageFrom: [
+    'src/getAllCatalogEntriesForRendering.js',
+    'src/getResourceData.js',
+    'src/renderHtmlData.js',
+    'src/dcsApi.js',
+    'src/api/client.js',
+    'src/index.js',
+    'src/renderers/**/*.js',
+    '!src/renderers/sofria2html.js',
+  ],
   moduleNameMapper: {
     '^(\\.{1,2}/.*)\\.js$': '$1',
   },

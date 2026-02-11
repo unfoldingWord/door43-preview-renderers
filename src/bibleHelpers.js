@@ -40,7 +40,7 @@ export async function getBookChapterVersesData(catalogEntry, books, options) {
         filePath,
         dcs_api_url
       );
-      const bookJson = usfm.toJSON(usfmContent);
+      bookData[book] = usfm.toJSON(usfmContent);
     } catch (error) {
       throw new Error(`Failed to fetch or parse USFM content for book ${book}: ${error.message}`);
     }
@@ -48,24 +48,3 @@ export async function getBookChapterVersesData(catalogEntry, books, options) {
 
   return bookData;
 }
-
-const sortKeys = (keys) => {
-  return keys.sort((a, b) => {
-    const numA = parseInt(a.split('-')[0], 10);
-    const numB = parseInt(b.split('-')[0], 10);
-
-    if (isNaN(numA) && isNaN(numB)) {
-      // Both are NaN, sort lexicographically
-      return a.localeCompare(b);
-    } else if (isNaN(numA)) {
-      // Only numA is NaN, numA should come after numB
-      return 1;
-    } else if (isNaN(numB)) {
-      // Only numB is NaN, numB should come after numA
-      return -1;
-    } else {
-      // Both are numbers, sort numerically
-      return numA - numB;
-    }
-  });
-};

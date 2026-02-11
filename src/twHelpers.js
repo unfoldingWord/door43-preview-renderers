@@ -4,7 +4,7 @@ import JSZip from 'jszip';
 /**
  * Extract Translation Words data from RC format (markdown files in directories)
  */
-export async function extractRcTwData(catalogEntry, options) {
+export async function extractRcTwData(catalogEntry, _options) {
   const zipUrl = catalogEntry.zipball_url;
   const ingredient = catalogEntry.ingredients && catalogEntry.ingredients[0];
 
