@@ -42,15 +42,15 @@ describe('getAllCatalogEntriesForRendering', () => {
       {
         owner: 'unfoldingWord',
         name: 'en_tw',
-        branch_or_tag_name: 'v87',
-        url: 'https://git.door43.org/api/v1/catalog/entry/unfoldingWord/en_tw/v87',
+        branch_or_tag_name: 'v89',
+        url: 'https://git.door43.org/api/v1/catalog/entry/unfoldingWord/en_tw/v89',
       },
       [],
       { quiet: true }
     );
 
     expect(axiosGetMock).toHaveBeenCalledWith(
-      'https://git.door43.org/api/v1/catalog/bp/unfoldingWord/en_tw/v87'
+      'https://git.door43.org/api/v1/catalog/bp/unfoldingWord/en_tw/v89'
     );
     expect(result.catalogEntries).toEqual(entries);
   });

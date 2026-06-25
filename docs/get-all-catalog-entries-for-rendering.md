@@ -29,7 +29,7 @@ getAllCatalogEntriesForRendering(owner, repo, ref, books?, options?)
 **Parameters:**
 - **owner** (string): Repository owner (e.g., 'unfoldingWord')
 - **repo** (string): Repository name (e.g., 'en_tn')
-- **ref** (string): Git reference - branch, tag, or commit (e.g., 'v87')
+- **ref** (string): Git reference - branch, tag, or commit (e.g., 'v89')
 - **books** (Array, optional): List of book identifiers (e.g., ['1th', 'mat'])
 - **options** (Object, optional): Configuration options
   - **dcs_api_url** (string): DCS API base URL (default: 'https://git.door43.org/api/v1')
@@ -148,7 +148,7 @@ import { getAllCatalogEntriesForRendering } from 'door43-preview-renderers';
 const result = await getAllCatalogEntriesForRendering(
   'unfoldingWord',
   'en_tn',
-  'v87',
+  'v89',
   ['1th']
 );
 
@@ -190,7 +190,7 @@ const result = await getAllCatalogEntriesForRendering(
 const result = await getAllCatalogEntriesForRendering(
   'unfoldingWord',
   'en_tn',
-  'v87',
+  'v89',
   ['gen', 'exo']
 );
 // Only fetches Hebrew OT, skips Greek NT (all books are OT)
@@ -202,7 +202,7 @@ const result = await getAllCatalogEntriesForRendering(
 const result = await getAllCatalogEntriesForRendering(
   'unfoldingWord',
   'en_tn',
-  'v87',
+  'v89',
   ['gen', 'mat']
 );
 // Fetches both Hebrew OT and Greek NT (mixed testaments)

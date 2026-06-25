@@ -21,14 +21,14 @@ describe('api/client', () => {
     const result = await fetchResource({
       owner: 'unfoldingWord',
       repo: 'en_ta',
-      ref: 'v87',
+      ref: 'v89',
       path: 'translate',
     });
 
     expect(axiosGetMock).toHaveBeenCalledWith(
       'https://api.github.com/repos/unfoldingWord/en_ta/contents/translate',
       {
-        params: { ref: 'v87' },
+        params: { ref: 'v89' },
         headers: {
           Accept: 'application/vnd.github.v3+json',
         },
@@ -40,9 +40,9 @@ describe('api/client', () => {
   test('fetchResource wraps errors', async () => {
     axiosGetMock.mockRejectedValueOnce(new Error('network'));
 
-    await expect(
-      fetchResource({ owner: 'u', repo: 'r', ref: 'main', path: '' })
-    ).rejects.toThrow('Failed to fetch resource: network');
+    await expect(fetchResource({ owner: 'u', repo: 'r', ref: 'main', path: '' })).rejects.toThrow(
+      'Failed to fetch resource: network'
+    );
   });
 
   test('fetchRawContent requests raw GitHub URL', async () => {
@@ -55,9 +55,7 @@ describe('api/client', () => {
       path: 'README.md',
     });
 
-    expect(axiosGetMock).toHaveBeenCalledWith(
-      'https://raw.githubusercontent.com/u/r/v1/README.md'
-    );
+    expect(axiosGetMock).toHaveBeenCalledWith('https://raw.githubusercontent.com/u/r/v1/README.md');
     expect(result).toBe('raw text');
   });
 

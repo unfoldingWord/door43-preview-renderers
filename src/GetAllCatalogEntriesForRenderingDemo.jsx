@@ -10,7 +10,7 @@ import { getAllCatalogEntriesForRendering } from './getAllCatalogEntriesForRende
 export default function GetAllCatalogEntriesForRenderingDemo() {
   const [owner, setOwner] = useState('unfoldingWord');
   const [repo, setRepo] = useState('en_tn');
-  const [ref, setRef] = useState('v87');
+  const [ref, setRef] = useState('v89');
   const [books, setBooks] = useState('1th');
   const [options, setOptions] = useState('');
   const [result, setResult] = useState(null);
@@ -80,7 +80,7 @@ export default function GetAllCatalogEntriesForRenderingDemo() {
         <h3>Quick Examples</h3>
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
           <button
-            onClick={() => loadExample('unfoldingWord', 'en_tn', 'v87', '1th')}
+            onClick={() => loadExample('unfoldingWord', 'en_tn', 'v89', '1th')}
             style={{
               padding: '8px 16px',
               backgroundColor: '#0366d6',
@@ -90,7 +90,7 @@ export default function GetAllCatalogEntriesForRenderingDemo() {
               cursor: 'pointer',
             }}
           >
-            unfoldingWord/en_tn/v87 [1th]
+            unfoldingWord/en_tn/v89 [1th]
           </button>
           <button
             onClick={() => loadExample('BSOJ', 'ar_tn', 'master', 'tit')}
@@ -119,7 +119,7 @@ export default function GetAllCatalogEntriesForRenderingDemo() {
             unfoldingWord/en_tn/v66 [mat,mrk]
           </button>
           <button
-            onClick={() => loadExample('unfoldingWord', 'en_tn', 'v87', 'rut,tit')}
+            onClick={() => loadExample('unfoldingWord', 'en_tn', 'v89', 'rut,tit')}
             style={{
               padding: '8px 16px',
               backgroundColor: '#0366d6',
@@ -129,7 +129,7 @@ export default function GetAllCatalogEntriesForRenderingDemo() {
               cursor: 'pointer',
             }}
           >
-            unfoldingWord/en_tn/v87 [rut,tit - Mixed OT/NT]
+            unfoldingWord/en_tn/v89 [rut,tit - Mixed OT/NT]
           </button>
           <button
             onClick={() => loadExample('unfoldingWord', 'en_obs-tn', 'v11', '')}

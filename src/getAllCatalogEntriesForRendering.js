@@ -32,7 +32,7 @@ function log(...args) {
  * const result = await getAllCatalogEntriesForRendering(
  *   'unfoldingWord',
  *   'en_tn',
- *   'v87',
+ *   'v89',
  *   ['1th'],
  *   { dcs_api_url: 'https://qa.door43.org/api/v1' }
  * );

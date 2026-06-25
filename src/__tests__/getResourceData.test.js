@@ -58,7 +58,13 @@ describe('getCatalogEntry', () => {
     const catalog = { subject: 'Aligned Bible' };
     axiosGetMock.mockResolvedValueOnce({ data: catalog });
 
-    const result = await getCatalogEntry('unfoldingWord', 'en_ult', 'v88', 'https://git.door43.org/api/v1', true);
+    const result = await getCatalogEntry(
+      'unfoldingWord',
+      'en_ult',
+      'v88',
+      'https://git.door43.org/api/v1',
+      true
+    );
 
     expect(axiosGetMock).toHaveBeenCalledWith(
       'https://git.door43.org/api/v1/catalog/entry/unfoldingWord/en_ult/v88'
@@ -155,9 +161,12 @@ describe('getResourceData', () => {
     axiosGetMock.mockResolvedValueOnce({ data: catalogEntry });
     extractRcTaDataMock.mockResolvedValueOnce(data);
 
-    const result = await getResourceData('unfoldingWord', 'en_ta', 'v87', [], { quiet: true });
+    const result = await getResourceData('unfoldingWord', 'en_ta', 'v89', [], { quiet: true });
 
-    expect(extractRcTaDataMock).toHaveBeenCalledWith(catalogEntry, expect.objectContaining({ quiet: true }));
+    expect(extractRcTaDataMock).toHaveBeenCalledWith(
+      catalogEntry,
+      expect.objectContaining({ quiet: true })
+    );
     expect(result).toEqual(data);
   });
 
@@ -173,9 +182,12 @@ describe('getResourceData', () => {
     axiosGetMock.mockResolvedValueOnce({ data: catalogEntry });
     extractRcTwDataMock.mockResolvedValueOnce(data);
 
-    const result = await getResourceData('unfoldingWord', 'en_tw', 'v87', [], { quiet: true });
+    const result = await getResourceData('unfoldingWord', 'en_tw', 'v89', [], { quiet: true });
 
-    expect(extractRcTwDataMock).toHaveBeenCalledWith(catalogEntry, expect.objectContaining({ quiet: true }));
+    expect(extractRcTwDataMock).toHaveBeenCalledWith(
+      catalogEntry,
+      expect.objectContaining({ quiet: true })
+    );
     expect(result).toEqual(data);
   });
 
@@ -364,9 +376,7 @@ describe('getResourceData', () => {
       ['tit'],
       expect.any(Object)
     );
-    expect(result).toEqual(
-      expect.objectContaining({ type: 'usfm', books: { tit: '\\id TIT' } })
-    );
+    expect(result).toEqual(expect.objectContaining({ type: 'usfm', books: { tit: '\\id TIT' } }));
   });
 
   test('throws for unsupported TS subject', async () => {
@@ -405,9 +415,7 @@ describe('getResourceData', () => {
       ['tit'],
       expect.any(Object)
     );
-    expect(result).toEqual(
-      expect.objectContaining({ type: 'usfm', books: { tit: '\\id TIT' } })
-    );
+    expect(result).toEqual(expect.objectContaining({ type: 'usfm', books: { tit: '\\id TIT' } }));
   });
 
   test('throws for unsupported TC subject', async () => {
@@ -463,4 +471,3 @@ describe('getResourceData', () => {
     );
   });
 });
-

@@ -103,12 +103,12 @@ export default function GetResourceDataDemo() {
               <button
                 type="button"
                 onClick={() => {
-                  loadExample('unfoldingWord', 'en_tn', 'v87');
+                  loadExample('unfoldingWord', 'en_tn', 'v89');
                   setBooks(['gen']);
                 }}
                 style={{ padding: '5px 10px', fontSize: '14px', cursor: 'pointer' }}
               >
-                TN v87: unfoldingWord/en_tn/v87 (gen)
+                TN v89: unfoldingWord/en_tn/v89 (gen)
               </button>
               <button
                 type="button"
@@ -123,22 +123,22 @@ export default function GetResourceDataDemo() {
               <button
                 type="button"
                 onClick={() => {
-                  loadExample('unfoldingWord', 'en_twl', 'v87');
+                  loadExample('unfoldingWord', 'en_twl', 'v89');
                   setBooks(['gen']);
                 }}
                 style={{ padding: '5px 10px', fontSize: '14px', cursor: 'pointer' }}
               >
-                TWL: unfoldingWord/en_twl/v87 (gen)
+                TWL: unfoldingWord/en_twl/v89 (gen)
               </button>
               <button
                 type="button"
                 onClick={() => {
-                  loadExample('unfoldingWord', 'en_tq', 'v87');
+                  loadExample('unfoldingWord', 'en_tq', 'v89');
                   setBooks(['gen']);
                 }}
                 style={{ padding: '5px 10px', fontSize: '14px', cursor: 'pointer' }}
               >
-                TQ: unfoldingWord/en_tq/v87 (gen)
+                TQ: unfoldingWord/en_tq/v89 (gen)
               </button>
             </div>
           </div>
@@ -148,12 +148,12 @@ export default function GetResourceDataDemo() {
               <button
                 type="button"
                 onClick={() => {
-                  loadExample('unfoldingWord', 'en_tw', 'v87');
+                  loadExample('unfoldingWord', 'en_tw', 'v89');
                   setBooks([]);
                 }}
                 style={{ padding: '5px 10px', fontSize: '14px', cursor: 'pointer' }}
               >
-                unfoldingWord/en_tw/v87
+                unfoldingWord/en_tw/v89
               </button>
               <button
                 type="button"
@@ -228,12 +228,12 @@ export default function GetResourceDataDemo() {
               <button
                 type="button"
                 onClick={() => {
-                  loadExample('unfoldingWord', 'en_ta', 'v87');
+                  loadExample('unfoldingWord', 'en_ta', 'v89');
                   setBooks([]);
                 }}
                 style={{ padding: '5px 10px', fontSize: '14px', cursor: 'pointer' }}
               >
-                unfoldingWord/en_ta/v87
+                unfoldingWord/en_ta/v89
               </button>
               <button
                 type="button"

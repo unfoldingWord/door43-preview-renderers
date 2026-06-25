@@ -51,7 +51,11 @@ describe('renderHtmlData', () => {
 
   test('routes aligned Bible subjects and passes requested books/render options', async () => {
     const resourceData = { subject: 'Aligned Bible', type: 'usfm', books: { tit: '...' } };
-    const rendered = { subject: 'Aligned Bible', sections: { body: '<div />' }, fullHtml: '<html />' };
+    const rendered = {
+      subject: 'Aligned Bible',
+      sections: { body: '<div />' },
+      fullHtml: '<html />',
+    };
 
     getResourceDataMock.mockResolvedValueOnce(resourceData);
     renderAlignedBibleHtmlMock.mockReturnValueOnce(rendered);
@@ -73,12 +77,16 @@ describe('renderHtmlData', () => {
 
   test('routes Translation Academy subjects', async () => {
     const resourceData = { subject: 'Translation Academy', type: 'ta', manuals: {} };
-    const rendered = { subject: 'Translation Academy', sections: { body: '<div />' }, fullHtml: '<html />' };
+    const rendered = {
+      subject: 'Translation Academy',
+      sections: { body: '<div />' },
+      fullHtml: '<html />',
+    };
 
     getResourceDataMock.mockResolvedValueOnce(resourceData);
     renderTranslationAcademyHtmlMock.mockReturnValueOnce(rendered);
 
-    const result = await renderHtmlData('unfoldingWord', 'en_ta', 'v87', [], {
+    const result = await renderHtmlData('unfoldingWord', 'en_ta', 'v89', [], {
       quiet: true,
       renderOptions: { includeAppendix: true },
     });
@@ -91,12 +99,16 @@ describe('renderHtmlData', () => {
 
   test('routes Translation Words subjects', async () => {
     const resourceData = { subject: 'Translation Words', type: 'tw', articles: {} };
-    const rendered = { subject: 'Translation Words', sections: { body: '<div />' }, fullHtml: '<html />' };
+    const rendered = {
+      subject: 'Translation Words',
+      sections: { body: '<div />' },
+      fullHtml: '<html />',
+    };
 
     getResourceDataMock.mockResolvedValueOnce(resourceData);
     renderTranslationWordsHtmlMock.mockReturnValueOnce(rendered);
 
-    const result = await renderHtmlData('unfoldingWord', 'en_tw', 'v87', [], {
+    const result = await renderHtmlData('unfoldingWord', 'en_tw', 'v89', [], {
       quiet: true,
       renderOptions: { includeAppendix: true },
     });

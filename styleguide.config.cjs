@@ -1,5 +1,7 @@
 module.exports = {
   title: 'Door43 Preview Renderers',
+  // Shown under the title in the sidebar; read from package.json so it stays in sync.
+  version: require('./package.json').version,
   webpackConfig: {
     module: {
       rules: [
