@@ -1,69 +1,116 @@
 # Introduction
 
-Welcome to **Door43 Preview Renderers** documentation!
+Welcome to the **Door43 Preview Renderers** documentation.
 
-This library provides a comprehensive solution for fetching, converting, and rendering content from Door43 repositories into HTML snippets suitable for web previews and PDF generation.
+This is a headless JavaScript library (no React dependency) for fetching unfoldingWord Bible translation resources from the Door43 Content Service (DCS) and turning them into HTML and print-ready PDF. It powers the preview and print features used by tools like the Door43 Preview App, but it can be used on its own in the browser or in Node.
 
 ## What is Door43?
 
-Door43 is a platform for Bible translation and related resources. This library helps developers integrate Door43 content into their applications.
+Door43 is unfoldingWord's platform for Bible translation and related resources. The DCS catalog hosts interrelated resources — Aligned Bibles, Translation Notes, Translation Questions, Translation Academy, Translation Words, Open Bible Stories, and their variants — that this library knows how to fetch, assemble, and render.
 
-## Key Concepts
+## The tiered pipeline
 
-### API Client
-The API client module handles all communication with repository sources, fetching content from various locations.
+The library is organized as a tiered API, so you take it only as far as you need:
 
-### Renderers
-Renderers transform processed content into HTML snippets that can be displayed in web applications or converted to PDFs.
+1. **Catalog** — `getAllCatalogEntriesForRendering()` calls the DCS Book Package endpoint once and returns every related resource (with version matching).
+2. **Data** — `getResourceData()` fetches and parses one resource into a normalized JSON object (USFM, TSV, markdown, or OBS), pulling in any extras it needs to render.
+3. **HTML** — `renderHtmlData()` routes that data to the right subject renderer and returns packaged HTML sections plus a complete `fullHtml` document.
+4. **Print/PDF** — `assemblePrintDocument()` combines sections into a PagedJS-compatible print document, and `generatePdf()` produces a PDF.
 
-### Converters
-Converters handle format-specific transformations, such as Markdown to HTML or USFM parsing.
+## Getting started
 
-## Getting Started
+The typical flow goes data → HTML → (optional) print:
 
 ```js static
-import { fetchResource, renderHTML } from 'door43-preview-renderers';
+import {
+  renderHtmlData,
+  assemblePrintDocument,
+  generatePdfFromAssembled,
+} from 'door43-preview-renderers';
 
-// Fetch content from a Door43 repository
-const content = await fetchResource({
-  owner: 'unfoldingWord',
-  repo: 'en_ult',
-  ref: 'master',
+// Fetch + parse + render a resource to HTML in one step.
+const rendered = await renderHtmlData('unfoldingWord', 'en_ult', 'master', ['tit'], {
+  dcs_api_url: 'https://git.door43.org/api/v1',
+  renderOptions: { editorMode: false },
 });
 
-// Render the content as HTML
-const html = renderHTML(content);
+rendered.sections; // { cover, copyright, body, toc, css, webView? }
+rendered.fullHtml; // complete standalone HTML document
+
+// Optionally assemble a print document ({ html, css }) and render a PDF.
+const assembled = assemblePrintDocument(rendered.sections, { title: rendered.title });
+const pdf = await generatePdfFromAssembled(assembled);
 ```
 
-## Architecture
+If you only want the raw parsed data (no HTML), call `getResourceData()` directly:
 
-The library is designed with modularity in mind:
+```js static
+import { getResourceData } from 'door43-preview-renderers';
 
-- **src/constants.js** - Bible book data and resource constants
-- **src/getResourceData.js** - Core resource data fetching
-- **src/getAllCatalogEntriesForRendering.js** - Catalog entries with dependencies
-- **src/api/** - API communication layer
-- **src/renderers/** - HTML rendering logic
-- **src/converters/** - Format conversion utilities
+const data = await getResourceData('adipatealberto', 'pid_rut_text_reg', 'master', ['rut']);
+// → { type: 'usfm', subject: 'Bible', books: { rut: '\\id RUT ...' }, license, ... }
+```
 
-This separation allows you to use only the parts you need and extend functionality easily.
+## What it can render
 
-## Core Functions
+`getResourceData()` understands four DCS metadata types:
 
-### getAllCatalogEntriesForRendering()
+| Metadata type | Description |
+|---|---|
+| `rc` | Resource Container (the unfoldingWord standard) |
+| `sb` | Scripture Burrito |
+| `ts` | translationStudio projects (single-book Bibles, OBS) |
+| `tc` | translationCore projects (aligned Bibles with an exported USFM) |
 
-Fetches all catalog entries needed for rendering a resource, including dependencies. Features intelligent version matching using the `relations` field and date-based fallback.
+`renderHtmlData()` produces HTML for these subjects:
 
-[Learn more →](get-all-catalog-entries-for-rendering.md)
+| Subject(s) | Renderer |
+|---|---|
+| Aligned Bible, Bible, Greek New Testament, Hebrew Old Testament | `renderAlignedBibleHtml` (USFM via Proskomma) |
+| Open Bible Stories | `renderObsHtml` |
+| TSV Translation Notes, TSV OBS Translation Notes | `renderTranslationNotesHtml` |
+| TSV Translation Questions, TSV Study Notes, TSV Study Questions, TSV OBS Translation Questions, TSV OBS Study Notes, TSV OBS Study Questions | `renderTsvQuestionsHtml` |
+| Translation Academy | `renderTranslationAcademyHtml` |
+| Translation Words | `renderTranslationWordsHtml` |
 
-### getResourceData()
+`getResourceData()` can also fetch and parse additional subjects (for example, Translation Words Links) as supporting data for the renderers above, even where there is not yet a dedicated top-level HTML renderer for them.
 
-Main function for fetching resource data from DCS (Door43 Content Service).
+## Core functions
 
-[Learn more →](get-resource-data.md)
+### Catalog and data
+
+- **`getAllCatalogEntriesForRendering()`** — all catalog entries for a Book Package, with intelligent version matching. [Learn more →](get-all-catalog-entries-for-rendering.md)
+- **`getResourceData()`** — fetch and parse one resource into normalized data. [Learn more →](get-resource-data.md)
+- **`getCatalogEntry()`** — fetch a single catalog entry's metadata.
+
+### Rendering
+
+- **`renderHtmlData()`** — the subject-aware HTML pipeline. [Learn more →](renderers.md)
+- Subject renderers: `renderAlignedBibleHtml`, `renderObsHtml`, `renderTranslationNotesHtml`, `renderTsvQuestionsHtml`, `renderTranslationAcademyHtml`, `renderTranslationWordsHtml`, and the generic `renderHTML`.
+- **`generateCopyrightAndLicenseHtml()`** / **`copyrightCss`** — copyright and license page (LICENSE.md is converted from Markdown to HTML).
+
+### Print and PDF
+
+- **`assemblePrintDocument()`**, **`generateTocHtml()`**, **`generateTocFromHtml()`**, **`buildCoverPage()`**, **`getPrintCss()`**, **`PAGE_SIZES`** — assemble PagedJS-compatible print documents.
+- **`generatePdf()`** / **`generatePdfFromAssembled()`** — produce a PDF.
+
+### Converters
+
+- **`convertMarkdown()`**, **`convertNoteFromMD2HTML()`** — Markdown helpers used across the renderers. [Learn more →](converters.md)
 
 ### Constants
 
-Export of Bible book data and resource mappings for use in your application.
+- **`BibleBookData`**, **`requiredSubjectsMap`**, **`subjectIdentifierMap`** — Bible book metadata and resource mappings. [Learn more →](constants.md)
 
-[Learn more →](constants.md)
+## Architecture
+
+- **src/constants.js** — Bible book data and resource mappings
+- **src/getResourceData.js** — fetch and parse resource data (rc / sb / ts / tc)
+- **src/getAllCatalogEntriesForRendering.js** — Book Package catalog entries with dependencies
+- **src/renderHtmlData.js** — subject-aware HTML rendering router
+- **src/renderers/** — per-subject HTML renderers + print assembly
+- **src/converters/** — Markdown and USFM conversion utilities
+- **src/pdf/** — PDF generation
+- **src/api/** — low-level DCS communication
+
+This separation lets you use only the parts you need and extend the library with new subjects.
