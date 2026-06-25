@@ -12,6 +12,9 @@ import fs from 'fs';
 import path from 'path';
 import { getAllCatalogEntriesForRendering } from './getAllCatalogEntriesForRendering.js';
 import { getResourceData } from './getResourceData.js';
+import { renderHtmlData } from './renderHtmlData.js';
+import { assemblePrintDocument, PAGE_SIZES } from './renderers/printDocumentAssembler.js';
+import { generatePdf } from './pdf/generatePdf.js';
 
 // Parse command line arguments
 function parseArgs(args) {
@@ -41,6 +44,10 @@ function parseArgs(args) {
         parsed.params.dcsApiUrl = value;
       } else if (key === 'output') {
         parsed.output = value;
+      } else if (key === 'page_size') {
+        parsed.params.pageSize = value;
+      } else if (key === 'columns') {
+        parsed.params.columns = parseInt(value, 10) || 1;
       } else {
         parsed.params[key] = value;
       }
@@ -61,7 +68,10 @@ Usage:
 
 Commands:
   getAllCatalogEntries    Get all catalog entries for rendering
-  getResourceData         Get resource data for a specific book
+  getResourceData        Get resource data for a specific book
+  renderHtml             Fetch resource data and render to HTML sections (JSON)
+  assemblePrint          Fetch, render, and assemble a print-ready HTML document
+  generatePdf            Fetch, render, assemble, and render a PDF via WeasyPrint (requires the weasyprint binary)
 
 Options:
   --owner <owner>         Repository owner (required)
@@ -71,6 +81,8 @@ Options:
   --dcs-api-url <url>     Custom DCS API URL (optional)
   --output <file>         Output file path (optional, defaults to stdout)
   --quiet, -q             Suppress logging output (no API URLs or progress messages)
+  --page-size <size>      Page size for assemblePrint (A4, A5, USL, TRADE, CQ; default A4)
+  --columns <n>           Number of columns for assemblePrint (default 1)
 
 Examples:
   # Get catalog entries and output to stdout
@@ -87,6 +99,18 @@ Examples:
 
   # Get resource data
   node src/cli.js getResourceData --owner unfoldingWord --repo en_tn --ref v80 --book gen
+
+  # Render HTML sections (JSON output with body, toc, css, etc.)
+  node src/cli.js renderHtml --owner unfoldingWord --repo en_tn --ref v88 --book tit --quiet
+
+  # Assemble print-ready HTML document (outputs complete HTML)
+  node src/cli.js assemblePrint --owner unfoldingWord --repo en_tn --ref v88 --book tit --output tit_tn.html
+
+  # Assemble with page size options
+  node src/cli.js assemblePrint --owner unfoldingWord --repo en_obs --ref v9 --page-size TRADE --output obs.html
+
+  # Generate a PDF directly (no browser; requires weasyprint installed)
+  node src/cli.js generatePdf --owner unfoldingWord --repo en_tn --ref v88 --book tit --output tit_tn.pdf
 
   # Use custom DCS API URL
   node src/cli.js getAllCatalogEntries --owner BSOJ --repo ar_twl --ref v5 --book 1jn --dcs-api-url https://git.door43.org/api/v1
@@ -168,9 +192,127 @@ async function main() {
         break;
       }
 
+      case 'renderHtml': {
+        if (!quiet) {
+          console.error(`Rendering HTML for ${params.owner}/${params.repo}...`);
+        }
+        const renderBooks = params.bookId ? [params.bookId] : [];
+        const renderOpts = {
+          dcs_api_url: params.dcsApiUrl || 'https://git.door43.org/api/v1',
+          quiet: quiet,
+        };
+        const rendered = await renderHtmlData(
+          params.owner,
+          params.repo,
+          params.ref,
+          renderBooks,
+          renderOpts
+        );
+        // Remove resourceData from JSON output (too large), keep sections
+        const { resourceData: _rd, ...outputData } = rendered;
+        result = outputData;
+        break;
+      }
+
+      case 'assemblePrint': {
+        if (!quiet) {
+          console.error(`Assembling print document for ${params.owner}/${params.repo}...`);
+        }
+        const printBooks = params.bookId ? [params.bookId] : [];
+        const printOpts = {
+          dcs_api_url: params.dcsApiUrl || 'https://git.door43.org/api/v1',
+          quiet: quiet,
+        };
+        const printRendered = await renderHtmlData(
+          params.owner,
+          params.repo,
+          params.ref,
+          printBooks,
+          printOpts
+        );
+
+        // Resolve page size
+        const pageSizeKey = (params.pageSize || 'A4').toUpperCase();
+        const pageSizeMap = {
+          A4: PAGE_SIZES.A4_PORTRAIT,
+          A5: PAGE_SIZES.A5_PORTRAIT,
+          USL: PAGE_SIZES.US_LETTER_PORTRAIT,
+          TRADE: PAGE_SIZES.TRADE,
+          CQ: PAGE_SIZES.CROWN_QUARTO,
+        };
+        const pageSize = pageSizeMap[pageSizeKey] || PAGE_SIZES.A4_PORTRAIT;
+
+        const printDoc = assemblePrintDocument(printRendered.sections || printRendered, {
+          title: printRendered.title || 'Document',
+          version: params.ref || '',
+          abbreviation: printRendered.resourceData?.catalogEntry?.abbreviation || '',
+          pageWidth: pageSize.width,
+          pageHeight: pageSize.height,
+          columns: params.columns || 1,
+          direction: printRendered.resourceData?.catalogEntry?.language_direction || 'ltr',
+        });
+
+        // For assemblePrint, output the raw HTML, not JSON
+        if (output) {
+          const outputPath = path.resolve(output);
+          fs.writeFileSync(outputPath, printDoc.html);
+          console.error(`✓ Print-ready HTML written to ${outputPath}`);
+          process.exit(0);
+        } else {
+          process.stdout.write(printDoc.html + '\n', () => {
+            process.exit(0);
+          });
+        }
+        return; // Skip JSON formatting below
+      }
+
+      case 'generatePdf': {
+        if (!output) {
+          console.error('Error: generatePdf requires --output <file.pdf>');
+          process.exit(1);
+        }
+        if (!quiet) {
+          console.error(`Generating PDF for ${params.owner}/${params.repo}...`);
+        }
+        const pdfBooks = params.bookId ? [params.bookId] : [];
+        const pdfRendered = await renderHtmlData(params.owner, params.repo, params.ref, pdfBooks, {
+          dcs_api_url: params.dcsApiUrl || 'https://git.door43.org/api/v1',
+          quiet: quiet,
+        });
+
+        const pdfPageSizeKey = (params.pageSize || 'A4').toUpperCase();
+        const pdfPageSizeMap = {
+          A4: PAGE_SIZES.A4_PORTRAIT,
+          A5: PAGE_SIZES.A5_PORTRAIT,
+          USL: PAGE_SIZES.US_LETTER_PORTRAIT,
+          TRADE: PAGE_SIZES.TRADE,
+          CQ: PAGE_SIZES.CROWN_QUARTO,
+        };
+        const pdfPageSize = pdfPageSizeMap[pdfPageSizeKey] || PAGE_SIZES.A4_PORTRAIT;
+
+        const pdfDoc = assemblePrintDocument(pdfRendered.sections || pdfRendered, {
+          title: pdfRendered.title || 'Document',
+          version: params.ref || '',
+          abbreviation: pdfRendered.resourceData?.catalogEntry?.abbreviation || '',
+          pageWidth: pdfPageSize.width,
+          pageHeight: pdfPageSize.height,
+          columns: params.columns || 1,
+          direction: pdfRendered.resourceData?.catalogEntry?.language_direction || 'ltr',
+          engine: 'weasyprint',
+        });
+
+        const pdfOutputPath = path.resolve(output);
+        await generatePdf(pdfDoc.html, { outputPath: pdfOutputPath, quiet });
+        console.error(`✓ PDF written to ${pdfOutputPath}`);
+        process.exit(0);
+        return;
+      }
+
       default:
         console.error(`Error: Unknown command "${command}"`);
-        console.error('Valid commands: getAllCatalogEntries, getResourceData');
+        console.error(
+          'Valid commands: getAllCatalogEntries, getResourceData, renderHtml, assemblePrint, generatePdf'
+        );
         process.exit(1);
     }
 

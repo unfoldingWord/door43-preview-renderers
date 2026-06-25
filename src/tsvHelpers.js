@@ -1,4 +1,5 @@
 import { fetchContent } from './dcsApi.js';
+import { addGLQuoteCols } from 'tsv-quote-converters';
 
 /**
  * Parse TSV content into array of objects
@@ -23,9 +24,13 @@ function parseTsv(tsvContent) {
 }
 
 /**
- * Normalize TSV columns
+ * Normalize TSV columns, converting GLQuote/GLOccurrence columns into a GLQuotes object.
+ * @param {Array} rows - Parsed TSV rows
+ * @param {string|null} singleBibleRepo - When addGLQuoteCols was called with a single bible,
+ *   the repo identifier columns will be "GLQuote"/"GLOccurrence" (no suffix). This param
+ *   provides the repo name to key them under in GLQuotes.
  */
-function normalizeTsvColumns(rows) {
+function normalizeTsvColumns(rows, singleBibleRepo = null) {
   if (rows.length === 0) return rows;
 
   return rows.map((row) => {
@@ -57,13 +62,81 @@ function normalizeTsvColumns(rows) {
       delete normalized.OccurrenceNote;
     }
 
-    // Remove GLQuote column
-    if (normalized.GLQuote) {
-      delete normalized.GLQuote;
+    // Collect GLQuote/GLOccurrence columns into a GLQuotes object
+    const glQuotes = {};
+    const glKeys = Object.keys(normalized).filter(
+      (k) => k.startsWith('GLQuote') || k.startsWith('GLOccurrence')
+    );
+
+    for (const key of glKeys) {
+      if (key.startsWith('GLQuote')) {
+        // "GLQuote:en_ult" -> repo = "en_ult", or "GLQuote" -> use singleBibleRepo
+        const repo = key.includes(':') ? key.split(':')[1] : singleBibleRepo;
+        if (!repo) continue;
+        if (!glQuotes[repo]) glQuotes[repo] = {};
+        glQuotes[repo].Quote = normalized[key];
+      } else if (key.startsWith('GLOccurrence')) {
+        const repo = key.includes(':') ? key.split(':')[1] : singleBibleRepo;
+        if (!repo) continue;
+        if (!glQuotes[repo]) glQuotes[repo] = {};
+        const occ = normalized[key];
+        glQuotes[repo].Occurrence = isNaN(parseInt(occ)) ? occ : parseInt(occ);
+      }
+      delete normalized[key];
+    }
+
+    if (Object.keys(glQuotes).length > 0) {
+      normalized.GLQuotes = glQuotes;
     }
 
     return normalized;
   });
+}
+
+/**
+ * Build bibleLinks array from catalog entries that are Aligned Bibles.
+ * Returns links in the format "owner/repo/ref" for addGLQuoteCols.
+ */
+function buildBibleLinks(catalogEntries) {
+  const links = [];
+  for (const entry of catalogEntries) {
+    if (entry.subject === 'Aligned Bible') {
+      const owner = entry.repo?.owner?.username || entry.repo?.owner?.login || entry.owner;
+      const repo = entry.repo?.name || entry.name;
+      const ref = entry.branch_or_tag_name || entry.ref;
+      links.push(`${owner}/${repo}/${ref}`);
+    }
+  }
+  return links;
+}
+
+/**
+ * Add GL quote columns to TSV content using tsv-quote-converters.
+ * Calls addGLQuoteCols for each aligned bible and returns the enriched TSV.
+ */
+async function addGLQuotes(tsvContent, bookCode, catalogEntries, options = {}) {
+  const bibleLinks = buildBibleLinks(catalogEntries);
+  if (bibleLinks.length === 0) return tsvContent;
+
+  const dcsApiUrl = options.dcs_api_url || 'https://git.door43.org/api/v1';
+  // Strip /api/v1 to get the base DCS URL that addGLQuoteCols expects
+  const dcsUrl = dcsApiUrl.replace(/\/api\/v[0-9]+\/?$/, '');
+
+  const result = await addGLQuoteCols({
+    bibleLinks,
+    bookCode,
+    tsvContent,
+    trySeparatorsAndOccurrences: true,
+    usePreviousGLQuotes: true,
+    dcsUrl,
+    quiet: options.quiet !== false,
+  });
+
+  if (result.errors && result.errors.length > 0 && !options.quiet) {
+    console.warn(`GL quote conversion had ${result.errors.length} error(s) for ${bookCode}`);
+  }
+
+  return result.output;
 }
 
 /**
@@ -127,10 +200,38 @@ export async function extractRcTsvData(catalogEntry, books, options = {}, catalo
     // Extract the file path (remove leading ./)
     const filePath = ingredient.path.replace(/^\.\//, '');
 
-    // Fetch and parse the TSV file
-    const tsvContent = await fetchContent(owner, repo, ref, filePath, dcs_api_url);
+    // Fetch the TSV file
+    let tsvContent = await fetchContent(owner, repo, ref, filePath, dcs_api_url);
+
+    // Aligned bibles to convert quotes against. For a primary resource these come
+    // from the filtered blueprint entries; for an extra TSV that still needs GL
+    // quotes (e.g. TSV Translation Words Links fetched as an extra of TN), the parent
+    // passes its already-resolved bible entries via options.glBibleEntries.
+    const bibleEntriesForGl =
+      !options.is_extra && catalogEntries.length > 1
+        ? catalogEntries
+        : options.glBibleEntries || [];
+
+    // Add GL quote columns if aligned bibles are available
+    if (bibleEntriesForGl.length > 0) {
+      try {
+        tsvContent = await addGLQuotes(tsvContent, bookId, bibleEntriesForGl, options);
+      } catch (e) {
+        if (!options.quiet) {
+          console.warn(`GL quote conversion failed for ${bookId}: ${e.message}`);
+        }
+      }
+    }
+
+    // Parse and normalize the TSV
+    // When there's exactly one aligned bible, addGLQuoteCols outputs "GLQuote"/"GLOccurrence"
+    // without a repo suffix — pass the single repo name so normalization can key it properly.
+    const bibleLinks = buildBibleLinks(bibleEntriesForGl);
+    const singleBibleRepo = bibleLinks.length === 1
+      ? bibleLinks[0].split('/')[1]
+      : null;
     const rows = parseTsv(tsvContent);
-    const normalizedRows = normalizeTsvColumns(rows);
+    const normalizedRows = normalizeTsvColumns(rows, singleBibleRepo);
     const chapters = groupByChapterVerse(normalizedRows);
 
     // Add book data
@@ -151,6 +252,10 @@ export async function extractRcTsvData(catalogEntry, books, options = {}, catalo
     // Skip the first entry (which is the main catalogEntry) and process the rest
     const extraEntries = catalogEntries.slice(1);
 
+    // Aligned bibles among the resolved entries — passed down to TSV extras (e.g. TWL)
+    // so they can convert their own original-language quotes to GL quotes.
+    const glBibleEntries = catalogEntries.filter((e) => e.subject === 'Aligned Bible');
+
     // Import getResourceData dynamically to avoid circular dependency
     const { getResourceData } = await import('./getResourceData.js');
 
@@ -160,17 +265,29 @@ export async function extractRcTsvData(catalogEntry, books, options = {}, catalo
       const entryRef = entry.branch_or_tag_name || entry.ref;
       const identifier = entryRepo.replace(`${entry.language}_`, '');
 
-      // Fetch the resource data for this extra entry
-      const resourceData = await getResourceData(
-        entryOwner,
-        entryRepo,
-        entryRef,
-        books,
-        { dcs_api_url, quiet: options.quiet || false },
-        true // is_extra = true to prevent recursive fetching
-      );
+      // Fetch the resource data for this extra entry.
+      // Use try/catch because some dependencies may not contain the requested books
+      // (e.g., Hebrew OT won't have New Testament books like 'tit').
+      try {
+        const resourceData = await getResourceData(
+          entryOwner,
+          entryRepo,
+          entryRef,
+          books,
+          { dcs_api_url, quiet: options.quiet || false, glBibleEntries, catalogEntry: entry },
+          true // is_extra = true to prevent recursive fetching
+        );
 
-      result.extras[identifier] = resourceData;
+        if (resourceData && !resourceData.error) {
+          result.extras[identifier] = resourceData;
+        }
+      } catch (e) {
+        // Dependency resource doesn't have the requested books — skip gracefully.
+        // This is expected, e.g., when requesting NT book 'tit' from Hebrew OT.
+        if (!options.quiet) {
+          console.warn(`Skipping extra resource ${identifier}: ${e.message}`);
+        }
+      }
     }
   }
 

@@ -36,8 +36,12 @@ export async function extractRcSbObsData(catalogEntry, ingredient) {
   const rootFolders = Object.keys(zip.files)
     .filter((name) => !name.includes('/') || name.endsWith('/'))
     .map((name) => name.split('/')[0]);
+  // Gitea lowercases the repo name in the archive's root folder, so match
+  // case-insensitively and use the actual folder name from the zip.
   const actualRepoName =
-    rootFolders.find((name) => name.startsWith(repoName.split('/').pop())) || repoName;
+    rootFolders.find((name) =>
+      name.toLowerCase().startsWith(repoName.split('/').pop().toLowerCase())
+    ) || repoName;
   const actualBasePath = actualRepoName + '/' + path.replace(/^\.\//, '');
 
   // Extract title
@@ -178,8 +182,12 @@ export async function extractTsObsData(catalogEntry, ingredient) {
   const rootFolders = Object.keys(zip.files)
     .filter((name) => !name.includes('/') || name.endsWith('/'))
     .map((name) => name.split('/')[0]);
+  // Gitea lowercases the repo name in the archive's root folder, so match
+  // case-insensitively and use the actual folder name from the zip.
   const actualRepoName =
-    rootFolders.find((name) => name.startsWith(repoName.split('/').pop())) || repoName;
+    rootFolders.find((name) =>
+      name.toLowerCase().startsWith(repoName.split('/').pop().toLowerCase())
+    ) || repoName;
 
   // Handle path - if it's "." use just the repo name, otherwise append the path
   const cleanPath = path.replace(/^\.\//, '').replace(/^\.$/, '');

@@ -188,7 +188,7 @@ export default function GetResourceDataDemo() {
                 }}
                 style={{ padding: '5px 10px', fontSize: '14px', cursor: 'pointer' }}
               >
-                unfoldingWord/en_ult/v88 (tit)
+                RC: unfoldingWord/en_ult/v88 (tit)
               </button>
               <button
                 type="button"
@@ -198,7 +198,27 @@ export default function GetResourceDataDemo() {
                 }}
                 style={{ padding: '5px 10px', fontSize: '14px', cursor: 'pointer' }}
               >
-                unfoldingWord/en_ust/master (mat,mrk,luk,jhn)
+                RC: unfoldingWord/en_ust/master (mat,mrk,luk,jhn)
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  loadExample('adipatealberto', 'pid_rut_text_reg', 'master');
+                  setBooks(['rut']);
+                }}
+                style={{ padding: '5px 10px', fontSize: '14px', cursor: 'pointer' }}
+              >
+                TS: adipatealberto/pid_rut_text_reg/master (rut)
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  loadExample('christopherrsmith', 'en_ust_dan_book', 'master');
+                  setBooks(['dan']);
+                }}
+                style={{ padding: '5px 10px', fontSize: '14px', cursor: 'pointer' }}
+              >
+                TC: christopherrsmith/en_ust_dan_book/master (dan)
               </button>
             </div>
           </div>
@@ -341,7 +361,7 @@ export default function GetResourceDataDemo() {
             opacity: loading ? 0.6 : 1,
           }}
         >
-          {loading ? 'Fetching...' : 'Fetch Catalog Entry'}
+          {loading ? 'Fetching...' : 'Fetch Resource Data'}
         </button>
       </form>
 

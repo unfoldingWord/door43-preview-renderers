@@ -2,6 +2,9 @@ import { getResourceData } from './getResourceData.js';
 import { renderAlignedBibleHtml } from './renderers/alignedBibleRenderer.js';
 import { renderTranslationAcademyHtml } from './renderers/translationAcademyRenderer.js';
 import { renderTranslationWordsHtml } from './renderers/translationWordsRenderer.js';
+import { renderObsHtml } from './renderers/obsRenderer.js';
+import { renderTranslationNotesHtml } from './renderers/translationNotesRenderer.js';
+import { renderTsvQuestionsHtml } from './renderers/tsvQuestionsRenderer.js';
 
 const alignedBibleSubjects = new Set([
   'Aligned Bible',
@@ -11,6 +14,19 @@ const alignedBibleSubjects = new Set([
 ]);
 const translationAcademySubjects = new Set(['Translation Academy']);
 const translationWordsSubjects = new Set(['Translation Words']);
+const obsSubjects = new Set(['Open Bible Stories']);
+const translationNotesSubjects = new Set([
+  'TSV Translation Notes',
+  'TSV OBS Translation Notes',
+]);
+const tsvQuestionsSubjects = new Set([
+  'TSV Translation Questions',
+  'TSV Study Questions',
+  'TSV Study Notes',
+  'TSV OBS Translation Questions',
+  'TSV OBS Study Notes',
+  'TSV OBS Study Questions',
+]);
 
 /**
  * Fetch resource data and render it into HTML data sections.
@@ -57,6 +73,30 @@ export async function renderHtmlData(owner, repo, ref, books = [], options = {})
 
   if (translationWordsSubjects.has(resourceData.subject)) {
     const rendered = renderTranslationWordsHtml(resourceData, renderOptions);
+    return {
+      ...rendered,
+      resourceData,
+    };
+  }
+
+  if (obsSubjects.has(resourceData.subject)) {
+    const rendered = renderObsHtml(resourceData, renderOptions);
+    return {
+      ...rendered,
+      resourceData,
+    };
+  }
+
+  if (translationNotesSubjects.has(resourceData.subject)) {
+    const rendered = renderTranslationNotesHtml(resourceData, renderOptions);
+    return {
+      ...rendered,
+      resourceData,
+    };
+  }
+
+  if (tsvQuestionsSubjects.has(resourceData.subject)) {
+    const rendered = renderTsvQuestionsHtml(resourceData, renderOptions);
     return {
       ...rendered,
       resourceData,

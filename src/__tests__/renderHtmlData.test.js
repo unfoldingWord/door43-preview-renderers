@@ -4,6 +4,7 @@ const getResourceDataMock = jest.fn();
 const renderAlignedBibleHtmlMock = jest.fn();
 const renderTranslationAcademyHtmlMock = jest.fn();
 const renderTranslationWordsHtmlMock = jest.fn();
+const renderObsHtmlMock = jest.fn();
 
 jest.unstable_mockModule('../getResourceData.js', () => ({
   getResourceData: getResourceDataMock,
@@ -19,6 +20,10 @@ jest.unstable_mockModule('../renderers/translationAcademyRenderer.js', () => ({
 
 jest.unstable_mockModule('../renderers/translationWordsRenderer.js', () => ({
   renderTranslationWordsHtml: renderTranslationWordsHtmlMock,
+}));
+
+jest.unstable_mockModule('../renderers/obsRenderer.js', () => ({
+  renderObsHtml: renderObsHtmlMock,
 }));
 
 const { renderHtmlData } = await import('../renderHtmlData.js');
@@ -102,11 +107,31 @@ describe('renderHtmlData', () => {
     expect(result).toEqual({ ...rendered, resourceData });
   });
 
-  test('throws for unsupported subjects', async () => {
-    getResourceDataMock.mockResolvedValueOnce({ subject: 'Open Bible Stories' });
+  test('routes Open Bible Stories subjects', async () => {
+    const resourceData = { subject: 'Open Bible Stories', type: 'obs', stories: {} };
+    const rendered = {
+      subject: 'Open Bible Stories',
+      sections: { body: '<div />', copyright: '' },
+      fullHtml: '<html />',
+    };
 
-    await expect(renderHtmlData('unfoldingWord', 'en_obs', 'v1', [], {})).rejects.toThrow(
-      'HTML rendering is not implemented yet for subject `Open Bible Stories`.'
+    getResourceDataMock.mockResolvedValueOnce(resourceData);
+    renderObsHtmlMock.mockReturnValueOnce(rendered);
+
+    const result = await renderHtmlData('unfoldingWord', 'en_obs', 'v1', [], {
+      quiet: true,
+      renderOptions: { resolution: '360px' },
+    });
+
+    expect(renderObsHtmlMock).toHaveBeenCalledWith(resourceData, { resolution: '360px' });
+    expect(result).toEqual({ ...rendered, resourceData });
+  });
+
+  test('throws for unsupported subjects', async () => {
+    getResourceDataMock.mockResolvedValueOnce({ subject: 'Training Library' });
+
+    await expect(renderHtmlData('unfoldingWord', 'en_tl', 'v1', [], {})).rejects.toThrow(
+      'HTML rendering is not implemented yet for subject `Training Library`.'
     );
   });
 });

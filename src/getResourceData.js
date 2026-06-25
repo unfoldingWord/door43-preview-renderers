@@ -3,7 +3,8 @@ import { extractRcTsvData } from './tsvHelpers.js';
 import { extractRcTwData } from './twHelpers.js';
 import { extractRcTaData } from './taHelpers.js';
 import { extractRcAlignedBibleData } from './rcAlignedBibleHelpers.js';
-import { subjectIdentifierMap } from './constants.js';
+import { extractTsBibleData } from './tsBibleHelpers.js';
+import { requiredSubjectsMap } from './constants.js';
 import { getAllCatalogEntriesForRendering } from './getAllCatalogEntriesForRendering.js';
 import axios from 'axios';
 
@@ -81,11 +82,17 @@ export async function getResourceData(
   options.is_extra = is_extra;
 
   let catalogEntry;
-  try {
-    catalogEntry = await getCatalogEntry(owner, repo, ref, dcs_api_url, quiet);
-  } catch (e) {
-    console.warn(e);
-    return { error: e.message };
+  // Reuse a catalog entry already resolved by the blueprint (passed by the parent
+  // when fetching extras) to avoid a redundant /catalog/entry/ round-trip.
+  if (options.catalogEntry) {
+    catalogEntry = options.catalogEntry;
+  } else {
+    try {
+      catalogEntry = await getCatalogEntry(owner, repo, ref, dcs_api_url, quiet);
+    } catch (e) {
+      console.warn(e);
+      return { error: e.message };
+    }
   }
 
   if (!catalogEntry) {
@@ -246,13 +253,85 @@ async function getRcTranslationAcademyData(catalogEntry, options) {
 }
 
 /**
+ * Select at most 2 Aligned Bible entries from the blueprint results.
+ *
+ * Preference:
+ *  - One "literal" Bible: abbreviation ult or glt
+ *  - One "simplified" Bible: abbreviation ust or gst
+ *  - If neither preferred abbreviation is found, use the first (and optionally second) Aligned Bible
+ *
+ * @param {Array} entries - Aligned Bible catalog entries from the blueprint
+ * @returns {Array} At most 2 selected entries
+ */
+function selectAlignedBibles(entries) {
+  if (entries.length <= 2) return entries;
+
+  const literal = entries.find((e) => ['ult', 'glt'].includes(e.abbreviation));
+  const simplified = entries.find((e) => ['ust', 'gst'].includes(e.abbreviation));
+
+  if (literal && simplified) return [literal, simplified];
+  if (literal) return [literal, entries.find((e) => e !== literal) || literal];
+  if (simplified) return [entries.find((e) => e !== simplified) || simplified, simplified];
+
+  // No preferred abbreviations found — use first two
+  return entries.slice(0, 2);
+}
+
+/**
+ * Fetch and filter blueprint catalog entries to only include resources
+ * that the given subject actually needs (per requiredSubjectsMap).
+ *
+ * The /catalog/bp/ endpoint is the source of truth for which resources
+ * (and specific versions) are available for a book package. This function
+ * filters those entries to the subjects the main resource actually needs
+ * for rendering, and applies Aligned Bible selection logic (at most 2,
+ * preferring ult/glt + ust/gst).
+ *
+ * When is_extra=true, skips the blueprint call entirely — extras should
+ * not recursively fetch their own dependencies.
+ */
+async function getFilteredCatalogEntries(catalogEntry, books, options) {
+  if (options.is_extra) {
+    // Extras should not recursively fetch dependencies — return only the main entry
+    return [catalogEntry];
+  }
+
+  const { catalogEntries } = await getAllCatalogEntriesForRendering(catalogEntry, books, options);
+
+  const requiredSubjects = requiredSubjectsMap[catalogEntry.subject];
+  if (!requiredSubjects || requiredSubjects.length === 0) {
+    return catalogEntries;
+  }
+
+  // Separate Aligned Bible entries for special selection logic
+  const alignedBibleEntries = [];
+  const otherEntries = [];
+
+  for (let i = 1; i < catalogEntries.length; i++) {
+    const entry = catalogEntries[i];
+    if (!requiredSubjects.includes(entry.subject)) {
+      continue; // Subject not needed by this resource — skip
+    }
+    if (entry.subject === 'Aligned Bible') {
+      alignedBibleEntries.push(entry);
+    } else {
+      otherEntries.push(entry);
+    }
+  }
+
+  // Select at most 2 Aligned Bibles, preferring ult/glt + ust/gst
+  const selectedBibles = requiredSubjects.includes('Aligned Bible')
+    ? selectAlignedBibles(alignedBibleEntries)
+    : [];
+
+  return [catalogEntries[0], ...selectedBibles, ...otherEntries];
+}
+
+/**
  * Get resource data for RC TSV Study Notes
  */
 async function getRcTsvStudyNotesData(catalogEntry, books, options) {
-  // Use getAllCatalogEntriesForRendering to get all required dependencies
-  const { catalogEntries } = await getAllCatalogEntriesForRendering(catalogEntry, books, options);
-
-  // Pass the catalog entries to extractRcTsvData
+  const catalogEntries = await getFilteredCatalogEntries(catalogEntry, books, options);
   return await extractRcTsvData(catalogEntry, books, options, catalogEntries);
 }
 
@@ -260,10 +339,7 @@ async function getRcTsvStudyNotesData(catalogEntry, books, options) {
  * Get resource data for RC TSV Study Questions
  */
 async function getRcTsvStudyQuestionsData(catalogEntry, books, options) {
-  // Use getAllCatalogEntriesForRendering to get all required dependencies
-  const { catalogEntries } = await getAllCatalogEntriesForRendering(catalogEntry, books, options);
-
-  // Pass the catalog entries to extractRcTsvData
+  const catalogEntries = await getFilteredCatalogEntries(catalogEntry, books, options);
   return await extractRcTsvData(catalogEntry, books, options, catalogEntries);
 }
 
@@ -271,10 +347,7 @@ async function getRcTsvStudyQuestionsData(catalogEntry, books, options) {
  * Get resource data for RC TSV Translation Notes
  */
 async function getRcTsvTranslationNotesData(catalogEntry, books, options) {
-  // Use getAllCatalogEntriesForRendering to get all required dependencies
-  const { catalogEntries } = await getAllCatalogEntriesForRendering(catalogEntry, books, options);
-
-  // Pass the catalog entries to extractRcTsvData
+  const catalogEntries = await getFilteredCatalogEntries(catalogEntry, books, options);
   return await extractRcTsvData(catalogEntry, books, options, catalogEntries);
 }
 
@@ -282,10 +355,7 @@ async function getRcTsvTranslationNotesData(catalogEntry, books, options) {
  * Get resource data for RC TSV Translation Questions
  */
 async function getRcTsvTranslationQuestionsData(catalogEntry, books, options) {
-  // Use getAllCatalogEntriesForRendering to get all required dependencies
-  const { catalogEntries } = await getAllCatalogEntriesForRendering(catalogEntry, books, options);
-
-  // Pass the catalog entries to extractRcTsvData
+  const catalogEntries = await getFilteredCatalogEntries(catalogEntry, books, options);
   return await extractRcTsvData(catalogEntry, books, options, catalogEntries);
 }
 
@@ -300,10 +370,7 @@ async function getRcTranslationWordsData(catalogEntry, options) {
  * Get resource data for RC TSV Translation Words Links
  */
 async function getRcTsvTranslationWordsLinksData(catalogEntry, books, options) {
-  // Use getAllCatalogEntriesForRendering to get all required dependencies
-  const { catalogEntries } = await getAllCatalogEntriesForRendering(catalogEntry, books, options);
-
-  // Pass the catalog entries to extractRcTsvData
+  const catalogEntries = await getFilteredCatalogEntries(catalogEntry, books, options);
   return await extractRcTsvData(catalogEntry, books, options, catalogEntries);
 }
 
@@ -313,8 +380,8 @@ async function getRcTsvTranslationWordsLinksData(catalogEntry, books, options) {
 async function getRcTsvObsStudyNotesData(catalogEntry, options) {
   // OBS doesn't use books parameter, extract all ingredients
   const books = catalogEntry.ingredients.map((i) => i.identifier);
-  const requiredSubjects = ['Open Bible Stories'];
-  return await extractRcTsvData(catalogEntry, books, options, requiredSubjects);
+  const catalogEntries = await getFilteredCatalogEntries(catalogEntry, books, options);
+  return await extractRcTsvData(catalogEntry, books, options, catalogEntries);
 }
 
 /**
@@ -323,8 +390,8 @@ async function getRcTsvObsStudyNotesData(catalogEntry, options) {
 async function getRcTsvObsStudyQuestionsData(catalogEntry, options) {
   // OBS doesn't use books parameter, extract all ingredients
   const books = catalogEntry.ingredients.map((i) => i.identifier);
-  const requiredSubjects = ['Open Bible Stories'];
-  return await extractRcTsvData(catalogEntry, books, options, requiredSubjects);
+  const catalogEntries = await getFilteredCatalogEntries(catalogEntry, books, options);
+  return await extractRcTsvData(catalogEntry, books, options, catalogEntries);
 }
 
 /**
@@ -333,13 +400,8 @@ async function getRcTsvObsStudyQuestionsData(catalogEntry, options) {
 async function getRcTsvObsTranslationNotesData(catalogEntry, options) {
   // OBS doesn't use books parameter, extract all ingredients
   const books = catalogEntry.ingredients.map((i) => i.identifier);
-  const requiredSubjects = [
-    'Open Bible Stories',
-    'TSV OBS Translation Words Links',
-    'Translation Academy',
-    'Translation Words',
-  ];
-  return await extractRcTsvData(catalogEntry, books, options, requiredSubjects);
+  const catalogEntries = await getFilteredCatalogEntries(catalogEntry, books, options);
+  return await extractRcTsvData(catalogEntry, books, options, catalogEntries);
 }
 
 /**
@@ -348,8 +410,8 @@ async function getRcTsvObsTranslationNotesData(catalogEntry, options) {
 async function getRcTsvObsTranslationQuestionsData(catalogEntry, options) {
   // OBS doesn't use books parameter, extract all ingredients
   const books = catalogEntry.ingredients.map((i) => i.identifier);
-  const requiredSubjects = ['Open Bible Stories'];
-  return await extractRcTsvData(catalogEntry, books, options, requiredSubjects);
+  const catalogEntries = await getFilteredCatalogEntries(catalogEntry, books, options);
+  return await extractRcTsvData(catalogEntry, books, options, catalogEntries);
 }
 
 /**
@@ -407,121 +469,21 @@ async function getTsObsData(catalogEntry, _options) {
 }
 /**
  * Get resource data for TS Bible
+ *
+ * ts Bible repos hold a single book split into chunk files; extractTsBibleData
+ * pieces those chunks back together into USFM.
  */
 async function getTsBibleData(catalogEntry, books, options) {
-  return {
-    flavorType: catalogEntry.flavor_type,
-    flavor: catalogEntry.flavor,
-    subject: catalogEntry.subject,
-    ingredients: catalogEntry.ingredients.map((i) => i.identifier),
-    title: catalogEntry.title,
-    books,
-    options,
-  };
+  return await extractTsBibleData(catalogEntry, books, options);
 }
 
 /**
  * Get resource data for TC Bible
+ *
+ * tc Aligned Bible/Bible repos store each book as a USFM file referenced by its
+ * ingredient path — structurally identical to RC aligned Bibles — so the same
+ * extractor fetches the content and strips alignments for display.
  */
 async function getTcBibleData(catalogEntry, books, options) {
-  return {
-    flavorType: catalogEntry.flavor_type,
-    flavor: catalogEntry.flavor,
-    subject: catalogEntry.subject,
-    ingredients: catalogEntry.ingredients.map((i) => i.identifier),
-    title: catalogEntry.title,
-    books,
-    options,
-  };
-}
-
-/**
- * Fetches extra resources based on required subjects
- * @param {Object} catalogEntry - The main catalog entry
- * @param {string} dcs_api_url - Base URL for DCS API
- * @param {Array<string>} requiredSubjects - List of required subjects
- * @param {boolean} quiet - Suppress logging output
- * @returns {Promise<Object>} The extra resources
- */
-export async function getExtraResources(
-  catalogEntry,
-  books,
-  dcs_api_url,
-  requiredSubjects,
-  quiet = false
-) {
-  const owner = catalogEntry.owner;
-  const lang = catalogEntry.language;
-  const ref = 'master' || catalogEntry.branch_or_tag_name;
-
-  const extras = {};
-
-  for (const subject of requiredSubjects) {
-    const identifier = subjectIdentifierMap[subject];
-    if (Array.isArray(identifier)) {
-      for (const id of identifier) {
-        if (!extras[id]) {
-          try {
-            const entry = await getCatalogEntry(owner, `${lang}_${id}`, ref, dcs_api_url, quiet);
-            if (entry.subject === subject) {
-              extras[id] = await getResourceData(
-                owner,
-                `${lang}_${id}`,
-                ref,
-                books,
-                { dcs_api_url, quiet },
-                true
-              );
-            }
-          } catch (e) {
-            if (!quiet) {
-              console.warn(`Failed to fetch extra subject ${subject} (${id}):`, e);
-            }
-          }
-        }
-      }
-    } else if (identifier.includes('/')) {
-      if (!extras[identifier]) {
-        try {
-          const [o, r] = identifier.split('/');
-          const entry = await getCatalogEntry(o, r, ref, dcs_api_url, quiet);
-          if (entry.subject === subject) {
-            extras[r] = await getResourceData(o, r, ref, books, { dcs_api_url, quiet }, true);
-          }
-        } catch (e) {
-          if (!quiet) {
-            console.warn(`Failed to fetch extra subject ${subject} (${identifier}):`, e);
-          }
-        }
-      }
-    } else {
-      if (!extras[identifier]) {
-        try {
-          const entry = await getCatalogEntry(
-            owner,
-            `${lang}_${identifier}`,
-            ref,
-            dcs_api_url,
-            quiet
-          );
-          if (entry.subject === subject) {
-            extras[identifier] = await getResourceData(
-              owner,
-              `${lang}_${identifier}`,
-              ref,
-              books,
-              { dcs_api_url, quiet },
-              true
-            );
-          }
-        } catch (e) {
-          if (!quiet) {
-            console.warn(`Failed to fetch extra subject ${subject} (${identifier}):`, e);
-          }
-        }
-      }
-    }
-  }
-
-  return extras;
+  return await extractRcAlignedBibleData(catalogEntry, books, options);
 }

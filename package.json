@@ -14,6 +14,8 @@
     "src/cli.js"
   ],
   "scripts": {
+    "fetch-logos": "node scripts/fetch-logos.mjs",
+    "prebuild": "node -e \"const f='src/assets/logos.generated.js';require('fs').existsSync(f)||require('child_process').execSync('node scripts/fetch-logos.mjs',{stdio:'inherit'})\"",
     "build": "rollup -c",
     "dev": "rollup -c -w",
     "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js",
@@ -71,17 +73,16 @@
     "axios": "^1.6.0",
     "js-yaml": "^4.1.1",
     "jszip": "^3.10.1",
+    "markdown-it": "^14.1.1",
     "proskomma-core": "^0.10.17",
     "proskomma-json-tools": "0.8.12",
+    "tsv-quote-converters": "^1.1.18",
     "usfm-alignment-remover": "^0.1.6",
     "usfm-js": "^3.4.3"
   },
   "peerDependencies": {
     "react": "^16.8.0 || ^17.0.0 || ^18.0.0",
     "react-dom": "^16.8.0 || ^17.0.0 || ^18.0.0"
-  },
-  "pnpm": {
-    "overrides": {}
   },
   "engines": {
     "node": ">=16.0.0",

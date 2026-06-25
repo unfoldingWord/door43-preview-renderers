@@ -1,6 +1,7 @@
 import { Proskomma } from 'proskomma-core';
 import { SofriaRenderFromProskomma, render } from 'proskomma-json-tools';
 import { renderers as sofriaRenderers } from './sofria2html.js';
+import { convertMarkdown } from '../converters/markdownConverter.js';
 
 const defaultFlags = {
   showWordAtts: false,
@@ -62,7 +63,7 @@ const extraWebCss = `
 }
 
 .license-text {
-  white-space: pre-wrap;
+  font-size: 0.9em;
 }
 `;
 
@@ -256,7 +257,7 @@ export function renderAlignedBibleHtml(resourceData, options = {}) {
 
   const cover = `<h3 class="cover-book-title">${escapeHtml(coverTitle)}</h3>`;
   const copyright = resourceData.license
-    ? `<pre class="license-text">${escapeHtml(resourceData.license)}</pre>`
+    ? `<div class="license-text">${convertMarkdown(resourceData.license)}</div>`
     : '';
   const body = bodyParts.join('\n');
   const pageBody = [cover, copyright, body].filter(Boolean).join('\n');

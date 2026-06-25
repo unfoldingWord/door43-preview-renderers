@@ -2,6 +2,51 @@ import { useMemo, useState } from 'react';
 import { renderHtmlData } from './renderHtmlData';
 
 /**
+ * Example resources covering every supported subject + metadata type, so the
+ * styleguide exercises each route in renderHtmlData(). Each entry is
+ * [label, owner, repo, ref, books].
+ */
+const EXAMPLE_GROUPS = [
+  {
+    group: 'Scripture (USFM)',
+    examples: [
+      ['RC: Aligned Bible — ULT', 'unfoldingWord', 'en_ult', 'master', 'tit'],
+      ['RC: Aligned Bible — UST', 'unfoldingWord', 'en_ust', 'master', 'tit'],
+      ['RC: Hebrew Old Testament — UHB', 'unfoldingWord', 'hbo_uhb', 'master', 'rut'],
+      ['RC: Greek New Testament — UGNT', 'unfoldingWord', 'el-x-koine_ugnt', 'master', 'tit'],
+      ['TS: Bible — Ruth', 'adipatealberto', 'pid_rut_text_reg', 'master', 'rut'],
+      ['TC: Aligned Bible — Daniel', 'christopherrsmith', 'en_ust_dan_book', 'master', 'dan'],
+    ],
+  },
+  {
+    group: 'TSV Bible helps',
+    examples: [
+      ['Translation Notes', 'unfoldingWord', 'en_tn', 'master', 'tit'],
+      ['Translation Questions', 'unfoldingWord', 'en_tq', 'master', 'tit'],
+      ['Study Notes', 'unfoldingWord', 'en_sn', 'master', 'tit'],
+      ['Study Questions', 'unfoldingWord', 'en_sq', 'master', 'tit'],
+    ],
+  },
+  {
+    group: 'Manuals (markdown)',
+    examples: [
+      ['Translation Academy', 'unfoldingWord', 'en_ta', 'master', ''],
+      ['Translation Words', 'unfoldingWord', 'en_tw', 'master', ''],
+    ],
+  },
+  {
+    group: 'Open Bible Stories',
+    examples: [
+      ['OBS', 'unfoldingWord', 'en_obs', 'master', ''],
+      ['OBS Translation Notes', 'unfoldingWord', 'en_obs-tn', 'master', ''],
+      ['OBS Translation Questions', 'unfoldingWord', 'en_obs-tq', 'master', ''],
+      ['OBS Study Notes', 'unfoldingWord', 'en_obs-sn', 'master', ''],
+      ['OBS Study Questions', 'unfoldingWord', 'en_obs-sq', 'master', ''],
+    ],
+  },
+];
+
+/**
  * Demo component for renderHtmlData function.
  */
 export default function RenderHtmlDataDemo() {
@@ -126,67 +171,26 @@ export default function RenderHtmlDataDemo() {
           borderRadius: '4px',
         }}
       >
-        <strong>Quick Examples:</strong>
+        <strong>Quick Examples (every supported subject &amp; metadata type):</strong>
         <div style={{ marginTop: '10px' }}>
-          <div style={{ marginBottom: '8px' }}>
-            <strong style={{ fontSize: '13px' }}>Aligned Bible</strong>
-            <div style={{ marginTop: '6px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-              <button
-                type="button"
-                onClick={() => loadExample('unfoldingWord', 'en_ult', 'v88', 'tit')}
-                style={{ padding: '6px 10px', cursor: 'pointer' }}
-              >
-                unfoldingWord/en_ult/v88 (tit)
-              </button>
-              <button
-                type="button"
-                onClick={() => loadExample('unfoldingWord', 'en_ust', 'master', 'mat,mrk')}
-                style={{ padding: '6px 10px', cursor: 'pointer' }}
-              >
-                unfoldingWord/en_ust/master (mat,mrk)
-              </button>
+          {EXAMPLE_GROUPS.map(({ group, examples }) => (
+            <div key={group} style={{ marginBottom: '8px' }}>
+              <strong style={{ fontSize: '13px' }}>{group}</strong>
+              <div style={{ marginTop: '6px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                {examples.map(([label, exOwner, exRepo, exRef, exBooks]) => (
+                  <button
+                    key={label}
+                    type="button"
+                    onClick={() => loadExample(exOwner, exRepo, exRef, exBooks)}
+                    title={`${exOwner}/${exRepo}/${exRef}${exBooks ? ` (${exBooks})` : ''}`}
+                    style={{ padding: '6px 10px', cursor: 'pointer' }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-
-          <div style={{ marginBottom: '8px' }}>
-            <strong style={{ fontSize: '13px' }}>Translation Academy</strong>
-            <div style={{ marginTop: '6px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-              <button
-                type="button"
-                onClick={() => loadExample('unfoldingWord', 'en_ta', 'v87', '')}
-                style={{ padding: '6px 10px', cursor: 'pointer' }}
-              >
-                unfoldingWord/en_ta/v87
-              </button>
-              <button
-                type="button"
-                onClick={() => loadExample('BSOJ', 'ar_ta', 'master', '')}
-                style={{ padding: '6px 10px', cursor: 'pointer' }}
-              >
-                BSOJ/ar_ta/master
-              </button>
-            </div>
-          </div>
-
-          <div>
-            <strong style={{ fontSize: '13px' }}>Translation Words</strong>
-            <div style={{ marginTop: '6px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-              <button
-                type="button"
-                onClick={() => loadExample('unfoldingWord', 'en_tw', 'v87', '')}
-                style={{ padding: '6px 10px', cursor: 'pointer' }}
-              >
-                unfoldingWord/en_tw/v87
-              </button>
-              <button
-                type="button"
-                onClick={() => loadExample('BSOJ', 'ar_tw', 'master', '')}
-                style={{ padding: '6px 10px', cursor: 'pointer' }}
-              >
-                BSOJ/ar_tw/master
-              </button>
-            </div>
-          </div>
+          ))}
         </div>
       </div>
 

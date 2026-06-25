@@ -9,6 +9,7 @@ const getAllCatalogEntriesForRenderingMock = jest.fn();
 const extractRcSbObsDataMock = jest.fn();
 const extractTsObsDataMock = jest.fn();
 const formatObsDataMock = jest.fn();
+const extractTsBibleDataMock = jest.fn();
 
 jest.unstable_mockModule('axios', () => ({
   default: {
@@ -42,7 +43,11 @@ jest.unstable_mockModule('../obsHelpers.js', () => ({
   formatObsData: formatObsDataMock,
 }));
 
-const { getCatalogEntry, getResourceData, getExtraResources } = await import('../getResourceData.js');
+jest.unstable_mockModule('../tsBibleHelpers.js', () => ({
+  extractTsBibleData: extractTsBibleDataMock,
+}));
+
+const { getCatalogEntry, getResourceData } = await import('../getResourceData.js');
 
 describe('getCatalogEntry', () => {
   beforeEach(() => {
@@ -338,23 +343,29 @@ describe('getResourceData', () => {
     expect(result).toEqual(formatted);
   });
 
-  test('returns TS Bible payload', async () => {
-    axiosGetMock.mockResolvedValueOnce({
-      data: {
-        title: 'TS Bible',
-        subject: 'Bible',
-        ingredients: [{ identifier: 'tit' }],
-        metadata_type: 'ts',
-      },
+  test('delegates TS Bible to extractTsBibleData', async () => {
+    const catalogEntry = {
+      title: 'TS Bible',
+      subject: 'Bible',
+      ingredients: [{ identifier: 'tit' }],
+      metadata_type: 'ts',
+    };
+    axiosGetMock.mockResolvedValueOnce({ data: catalogEntry });
+    extractTsBibleDataMock.mockResolvedValueOnce({
+      type: 'usfm',
+      subject: 'Bible',
+      books: { tit: '\\id TIT' },
     });
 
     const result = await getResourceData('u', 'r', 'ref', ['tit'], { quiet: true });
 
+    expect(extractTsBibleDataMock).toHaveBeenCalledWith(
+      expect.objectContaining({ metadata_type: 'ts', subject: 'Bible' }),
+      ['tit'],
+      expect.any(Object)
+    );
     expect(result).toEqual(
-      expect.objectContaining({
-        subject: 'Bible',
-        books: ['tit'],
-      })
+      expect.objectContaining({ type: 'usfm', books: { tit: '\\id TIT' } })
     );
   });
 
@@ -373,23 +384,29 @@ describe('getResourceData', () => {
     );
   });
 
-  test('returns TC Bible payload', async () => {
-    axiosGetMock.mockResolvedValueOnce({
-      data: {
-        title: 'TC Bible',
-        subject: 'Bible',
-        ingredients: [{ identifier: 'tit' }],
-        metadata_type: 'tc',
-      },
+  test('delegates TC Bible to extractRcAlignedBibleData', async () => {
+    const catalogEntry = {
+      title: 'TC Bible',
+      subject: 'Bible',
+      ingredients: [{ identifier: 'tit' }],
+      metadata_type: 'tc',
+    };
+    axiosGetMock.mockResolvedValueOnce({ data: catalogEntry });
+    extractRcAlignedBibleDataMock.mockResolvedValueOnce({
+      type: 'usfm',
+      subject: 'Bible',
+      books: { tit: '\\id TIT' },
     });
 
     const result = await getResourceData('u', 'r', 'ref', ['tit'], { quiet: true });
 
+    expect(extractRcAlignedBibleDataMock).toHaveBeenCalledWith(
+      expect.objectContaining({ metadata_type: 'tc', subject: 'Bible' }),
+      ['tit'],
+      expect.any(Object)
+    );
     expect(result).toEqual(
-      expect.objectContaining({
-        subject: 'Bible',
-        books: ['tit'],
-      })
+      expect.objectContaining({ type: 'usfm', books: { tit: '\\id TIT' } })
     );
   });
 
@@ -447,68 +464,3 @@ describe('getResourceData', () => {
   });
 });
 
-describe('getExtraResources', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
-  test('fetches extras across identifier styles (array, owner/repo, and lang suffix)', async () => {
-    const baseCatalogEntry = {
-      owner: 'unfoldingWord',
-      language: 'en',
-      branch_or_tag_name: 'v1',
-    };
-
-    const catalogByRepo = {
-      en_ult: {
-        title: 'ULT',
-        subject: 'Aligned Bible',
-        ingredients: [{ identifier: 'tit', path: './content/tit.usfm' }],
-        metadata_type: 'rc',
-      },
-      en_ust: {
-        title: 'UST',
-        subject: 'Aligned Bible',
-        ingredients: [{ identifier: 'tit', path: './content/tit.usfm' }],
-        metadata_type: 'rc',
-      },
-      hbo_uhb: {
-        title: 'UHB',
-        subject: 'Hebrew Old Testament',
-        ingredients: [{ identifier: 'gen', path: './content/gen.usfm' }],
-        metadata_type: 'rc',
-      },
-      en_ta: {
-        title: 'TA',
-        subject: 'Translation Academy',
-        ingredients: [{ identifier: 'translate', path: './translate' }],
-        metadata_type: 'rc',
-      },
-    };
-
-    axiosGetMock.mockImplementation(async (url) => {
-      const parts = url.split('/');
-      const repo = parts[parts.length - 2];
-      const data = catalogByRepo[repo];
-      if (!data) {
-        throw new Error(`unexpected repo lookup for ${repo}`);
-      }
-      return { data };
-    });
-
-    extractRcAlignedBibleDataMock.mockResolvedValue({ type: 'usfm', books: { tit: 'USFM' } });
-    extractRcTaDataMock.mockResolvedValue({ type: 'ta', manuals: {} });
-
-    const extras = await getExtraResources(
-      baseCatalogEntry,
-      ['tit'],
-      'https://git.door43.org/api/v1',
-      ['Aligned Bible', 'Hebrew Old Testament', 'Translation Academy'],
-      true
-    );
-
-    expect(Object.keys(extras)).toEqual(expect.arrayContaining(['ult', 'ust', 'hbo_uhb', 'ta']));
-    expect(extras.ult).toEqual(expect.objectContaining({ type: 'usfm' }));
-    expect(extras.ta).toEqual(expect.objectContaining({ type: 'ta' }));
-  });
-});

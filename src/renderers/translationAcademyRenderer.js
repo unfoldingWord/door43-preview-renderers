@@ -105,9 +105,9 @@ export function renderTranslationAcademyHtml(resourceData, options = {}) {
   const body = renderManualsToHtml(manuals);
   const toc = buildManualToc(manuals);
   const copyright = resourceData.license
-    ? `<pre class="license-text">${escapeHtmlText(resourceData.license)}</pre>`
+    ? `<div class="license-text">${convertMarkdown(resourceData.license)}</div>`
     : '';
-  const cssWeb = `${manualWebCss}\n.license-text { white-space: pre-wrap; }\n`;
+  const cssWeb = `${manualWebCss}\n.license-text { font-size: 0.9em; }\n`;
   const pageBody = [cover, copyright, body].filter(Boolean).join('\n');
 
   return {
