@@ -10,7 +10,7 @@
 
 import fs from 'fs';
 import path from 'path';
-import { getAllCatalogEntriesForRendering } from './getAllCatalogEntriesForRendering.js';
+import { getAllCatalogEntries } from './getAllCatalogEntries.js';
 import { getResourceData } from './getResourceData.js';
 import { renderHtmlData } from './renderHtmlData.js';
 import { assemblePrintDocument, PAGE_SIZES } from './renderers/printDocumentAssembler.js';
@@ -152,23 +152,14 @@ async function main() {
     let result;
 
     switch (command) {
-      case 'getAllCatalogEntries':
-      case 'getAllCatalogEntriesForRendering': {
+      case 'getAllCatalogEntries': {
         if (!quiet) {
           console.error(`Fetching catalog entries for ${params.owner}/${params.repo}...`);
         }
-        // getAllCatalogEntriesForRendering expects: (owner, repo, ref, books?, options?)
         const books = params.bookId ? [params.bookId] : [];
-        const options = {
-          dcs_api_url: params.dcsApiUrl || 'https://git.door43.org/api/v1',
-          quiet: quiet,
-        };
-        result = await getAllCatalogEntriesForRendering(
-          params.owner,
-          params.repo,
-          params.ref,
-          books,
-          options
+        result = await getAllCatalogEntries(
+          { owner: params.owner, repo: params.repo, ref: params.ref, books },
+          { dcs_api_url: params.dcsApiUrl || 'https://git.door43.org/api/v1', quiet }
         );
         break;
       }

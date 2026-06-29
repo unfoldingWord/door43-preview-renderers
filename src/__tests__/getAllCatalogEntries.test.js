@@ -8,22 +8,19 @@ jest.unstable_mockModule('axios', () => ({
   },
 }));
 
-const { getAllCatalogEntriesForRendering } = await import('../getAllCatalogEntriesForRendering.js');
+const { getAllCatalogEntries } = await import('../getAllCatalogEntries.js');
 
-describe('getAllCatalogEntriesForRendering', () => {
+describe('getAllCatalogEntries', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  test('fetches catalog entries using owner/repo/ref signature', async () => {
-    const entries = [{ owner: 'unfoldingWord', name: 'en_tn' }];
+  test('fetches a CatalogSet from an { owner, repo, ref } descriptor', async () => {
+    const entries = [{ owner: 'unfoldingWord', name: 'en_tn', branch_or_tag_name: 'v80' }];
     axiosGetMock.mockResolvedValueOnce({ data: { data: entries } });
 
-    const result = await getAllCatalogEntriesForRendering(
-      'unfoldingWord',
-      'en_tn',
-      'v80',
-      ['tit'],
+    const result = await getAllCatalogEntries(
+      { owner: 'unfoldingWord', repo: 'en_tn', ref: 'v80', books: ['tit'] },
       { dcs_api_url: 'https://git.door43.org/api/v1', quiet: true }
     );
 
@@ -31,21 +28,22 @@ describe('getAllCatalogEntriesForRendering', () => {
       'https://git.door43.org/api/v1/catalog/bp/unfoldingWord/en_tn/v80'
     );
     expect(result.catalogEntries).toEqual(entries);
-    expect(result.version).toMatch(/^\d+\.\d+\.\d+/);
+    expect(result.resourceVersion).toBe('v80');
+    expect(result.libraryVersion).toMatch(/^\d+\.\d+\.\d+/);
+    expect(result.source).toMatchObject({ owner: 'unfoldingWord', repo: 'en_tn', ref: 'v80' });
   });
 
-  test('fetches catalog entries using catalogEntry signature and infers dcs_api_url', async () => {
+  test('fetches from a catalog-entry source and infers dcs_api_url from its url', async () => {
     const entries = [{ owner: 'unfoldingWord', name: 'en_tw' }];
     axiosGetMock.mockResolvedValueOnce({ data: { data: entries } });
 
-    const result = await getAllCatalogEntriesForRendering(
+    const result = await getAllCatalogEntries(
       {
         owner: 'unfoldingWord',
         name: 'en_tw',
         branch_or_tag_name: 'v89',
         url: 'https://git.door43.org/api/v1/catalog/entry/unfoldingWord/en_tw/v89',
       },
-      [],
       { quiet: true }
     );
 
@@ -55,41 +53,41 @@ describe('getAllCatalogEntriesForRendering', () => {
     expect(result.catalogEntries).toEqual(entries);
   });
 
+  test('returns a CatalogSet source unchanged (passthrough)', async () => {
+    const catalogSet = {
+      resourceVersion: 'v1',
+      libraryVersion: '1.0.0',
+      catalogEntries: [{ name: 'x' }],
+    };
+    const result = await getAllCatalogEntries(catalogSet, { quiet: true });
+    expect(result).toBe(catalogSet);
+    expect(axiosGetMock).not.toHaveBeenCalled();
+  });
+
   test('throws when required owner/repo/ref values are missing', async () => {
     await expect(
-      getAllCatalogEntriesForRendering({
-        owner: 'unfoldingWord',
-        name: 'en_tw',
-      })
+      getAllCatalogEntries({ owner: 'unfoldingWord', name: 'en_tw' })
     ).rejects.toThrow('Owner, repo, and ref are required.');
   });
 
   test('throws when /catalog/bp returns invalid payload', async () => {
     axiosGetMock.mockResolvedValueOnce({ data: {} });
-
     await expect(
-      getAllCatalogEntriesForRendering('unfoldingWord', 'en_tn', 'v80', [], { quiet: true })
+      getAllCatalogEntries({ owner: 'unfoldingWord', repo: 'en_tn', ref: 'v80' }, { quiet: true })
     ).rejects.toThrow('Invalid response from /catalog/bp endpoint');
   });
 
   test('throws when /catalog/bp returns an empty entry list', async () => {
     axiosGetMock.mockResolvedValueOnce({ data: { data: [] } });
-
     await expect(
-      getAllCatalogEntriesForRendering('unfoldingWord', 'en_tn', 'v80', [], { quiet: true })
+      getAllCatalogEntries({ owner: 'unfoldingWord', repo: 'en_tn', ref: 'v80' }, { quiet: true })
     ).rejects.toThrow('No catalog entries returned from /catalog/bp endpoint');
   });
 
   test('formats axios status errors', async () => {
-    axiosGetMock.mockRejectedValueOnce({
-      response: {
-        status: 404,
-        statusText: 'Not Found',
-      },
-    });
-
+    axiosGetMock.mockRejectedValueOnce({ response: { status: 404, statusText: 'Not Found' } });
     await expect(
-      getAllCatalogEntriesForRendering('unfoldingWord', 'en_tn', 'v80', [], { quiet: true })
+      getAllCatalogEntries({ owner: 'unfoldingWord', repo: 'en_tn', ref: 'v80' }, { quiet: true })
     ).rejects.toThrow('Failed to fetch catalog entries: 404 Not Found');
   });
 });

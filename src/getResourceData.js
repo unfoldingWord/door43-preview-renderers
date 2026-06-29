@@ -5,7 +5,7 @@ import { extractRcTaData } from './taHelpers.js';
 import { extractRcAlignedBibleData } from './rcAlignedBibleHelpers.js';
 import { extractTsBibleData } from './tsBibleHelpers.js';
 import { requiredSubjectsMap } from './constants.js';
-import { getAllCatalogEntriesForRendering } from './getAllCatalogEntriesForRendering.js';
+import { getAllCatalogEntries } from './getAllCatalogEntries.js';
 import axios from 'axios';
 
 // Global quiet flag for logging
@@ -296,7 +296,7 @@ async function getFilteredCatalogEntries(catalogEntry, books, options) {
     return [catalogEntry];
   }
 
-  const { catalogEntries } = await getAllCatalogEntriesForRendering(catalogEntry, books, options);
+  const { catalogEntries } = await getAllCatalogEntries(catalogEntry, { ...options, books });
 
   const requiredSubjects = requiredSubjectsMap[catalogEntry.subject];
   if (!requiredSubjects || requiredSubjects.length === 0) {

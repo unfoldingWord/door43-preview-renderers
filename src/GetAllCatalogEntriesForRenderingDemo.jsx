@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { getAllCatalogEntriesForRendering } from './getAllCatalogEntriesForRendering';
+import { getAllCatalogEntries } from './getAllCatalogEntries';
 
 /**
  * Demo component for getAllCatalogEntriesForRendering function
@@ -50,11 +50,8 @@ export default function GetAllCatalogEntriesForRenderingDemo() {
       : [];
 
     try {
-      const data = await getAllCatalogEntriesForRendering(
-        owner,
-        repo,
-        ref,
-        booksArray,
+      const data = await getAllCatalogEntries(
+        { owner, repo, ref, books: booksArray },
         optionsJSON
       );
       setResult(data);
@@ -253,7 +250,8 @@ export default function GetAllCatalogEntriesForRenderingDemo() {
           <h3>Result:</h3>
           <div style={{ marginBottom: '15px' }}>
             <p>
-              <strong>Version:</strong> {result.version}
+              <strong>Resource version:</strong> {result.resourceVersion}{' '}
+              <span style={{ color: '#888' }}>(lib {result.libraryVersion})</span>
             </p>
             <p>
               <strong>Found {result.catalogEntries.length} catalog entries:</strong>

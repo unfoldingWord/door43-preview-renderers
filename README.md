@@ -124,49 +124,40 @@ node src/cli.js getResourceData --owner unfoldingWord --repo en_tn --ref v80 --b
 
 ## API Reference
 
-### `getAllCatalogEntriesForRendering()`
+### `getAllCatalogEntries()`
 
-Fetches a catalog entry and automatically resolves all required dependencies based on the resource type.
+Fetches the full book-package catalog (the blueprint) for a resource — the main
+entry plus all its dependencies. Stage 1 of the pipeline.
 
 #### Parameters
 
-**Signature 1: Fetch by owner/repo/ref**
-
 ```javascript
-getAllCatalogEntriesForRendering(owner, repo, ref, books?, options?)
+getAllCatalogEntries(source, options?)
 ```
 
-- `owner` (string): Repository owner
-- `repo` (string): Repository name
-- `ref` (string): Git reference (branch, tag, or commit)
-- `books` (array, optional): Array of book identifiers (e.g., `['gen', 'exo']`)
+- `source` (object): one of
+  - a **descriptor** `{ owner, repo, ref, books? }`
+  - an existing **catalog entry** object (its `url` is used to infer the DCS API base)
+  - an existing **CatalogSet** (returned unchanged — passthrough)
 - `options` (object, optional):
   - `dcs_api_url` (string): DCS API base URL (default: `https://git.door43.org/api/v1`)
   - `quiet` (boolean): Suppress logging output (default: `false`)
-
-**Signature 2: Use existing catalog entry**
-
-```javascript
-getAllCatalogEntriesForRendering(catalogEntry, books?, options?)
-```
-
-- `catalogEntry` (object): An existing catalog entry object
-- `books` (array, optional): Array of book identifiers
-- `options` (object, optional): Same as signature 1
+  - `books` (array): Books, when using the catalog-entry source form
 
 #### Returns
 
-Returns a Promise that resolves to an object with:
+Returns a Promise that resolves to a **CatalogSet**:
 
 ```javascript
 {
-  version: "1.4.0",           // Package version
-  catalogEntries: [           // Array of catalog entries
+  resourceVersion: "v89",      // the resource's version (tag/branch)
+  libraryVersion: "1.4.1",     // this renderer library's npm version
+  catalogEntries: [            // main entry first, then dependencies
     { /* main catalog entry */ },
     { /* dependency 1 */ },
-    { /* dependency 2 */ },
     ...
-  ]
+  ],
+  source: { owner, repo, ref, books, dcsApiUrl }
 }
 ```
 
@@ -204,11 +195,12 @@ The function intelligently resolves dependencies based on the resource subject:
 #### Example
 
 ```javascript
-const result = await getAllCatalogEntriesForRendering('unfoldingWord', 'en_tn', 'v80', ['tit'], {
-  quiet: true,
-});
+const result = await getAllCatalogEntries(
+  { owner: 'unfoldingWord', repo: 'en_tn', ref: 'v80', books: ['tit'] },
+  { quiet: true }
+);
 
-// Result contains:
+// result.catalogEntries contains:
 // - en_tn (Translation Notes)
 // - en_ult (Aligned Bible)
 // - en_ta (Translation Academy)
@@ -421,7 +413,7 @@ pnpm run format
 After installing the package, import the functions you need:
 
 ```javascript
-import { getAllCatalogEntriesForRendering, getResourceData } from 'door43-preview-renderers';
+import { getAllCatalogEntries, getResourceData, renderHtmlData, renderHTML } from 'door43-preview-renderers';
 
 // Your code here
 ```
@@ -471,7 +463,7 @@ door43-preview-renderers/
 │   ├── cli.js                                # Command-line interface
 │   ├── constants.js                          # Bible books and resource constants
 │   ├── getResourceData.js                    # Core resource data fetching
-│   ├── getAllCatalogEntriesForRendering.js   # Catalog entries with dependencies
+│   ├── getAllCatalogEntries.js               # Book-package catalog (blueprint)
 │   ├── api/                                  # API client modules
 │   ├── renderers/                            # HTML rendering components
 │   └── converters/                           # Content format converters

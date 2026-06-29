@@ -5,7 +5,7 @@ const extractRcAlignedBibleDataMock = jest.fn();
 const extractRcTaDataMock = jest.fn();
 const extractRcTwDataMock = jest.fn();
 const extractRcTsvDataMock = jest.fn();
-const getAllCatalogEntriesForRenderingMock = jest.fn();
+const getAllCatalogEntriesMock = jest.fn();
 const extractRcSbObsDataMock = jest.fn();
 const extractTsObsDataMock = jest.fn();
 const formatObsDataMock = jest.fn();
@@ -33,8 +33,8 @@ jest.unstable_mockModule('../tsvHelpers.js', () => ({
   extractRcTsvData: extractRcTsvDataMock,
 }));
 
-jest.unstable_mockModule('../getAllCatalogEntriesForRendering.js', () => ({
-  getAllCatalogEntriesForRendering: getAllCatalogEntriesForRenderingMock,
+jest.unstable_mockModule('../getAllCatalogEntries.js', () => ({
+  getAllCatalogEntries: getAllCatalogEntriesMock,
 }));
 
 jest.unstable_mockModule('../obsHelpers.js', () => ({
@@ -200,17 +200,16 @@ describe('getResourceData', () => {
     };
 
     axiosGetMock.mockResolvedValueOnce({ data: catalogEntry });
-    getAllCatalogEntriesForRenderingMock.mockResolvedValueOnce({
+    getAllCatalogEntriesMock.mockResolvedValueOnce({
       catalogEntries: [{ owner: 'unfoldingWord', name: 'en_tn' }],
     });
     extractRcTsvDataMock.mockResolvedValueOnce({ type: 'tsv' });
 
     const result = await getResourceData('unfoldingWord', 'en_tn', 'v80', ['tit'], { quiet: true });
 
-    expect(getAllCatalogEntriesForRenderingMock).toHaveBeenCalledWith(
+    expect(getAllCatalogEntriesMock).toHaveBeenCalledWith(
       catalogEntry,
-      ['tit'],
-      expect.objectContaining({ quiet: true })
+      expect.objectContaining({ quiet: true, books: ['tit'] })
     );
     expect(extractRcTsvDataMock).toHaveBeenCalledWith(
       catalogEntry,
