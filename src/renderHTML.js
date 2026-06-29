@@ -2,6 +2,7 @@ import {
   assemblePrintDocument,
   resolvePageSize,
   generateTocHtml,
+  renderAppendicesHtml,
 } from './renderers/printDocumentAssembler.js';
 import { resolveComposeOptions } from './renderOptions.js';
 
@@ -78,16 +79,10 @@ function buildScreenDocument(htmlData, opts) {
   if (opts.show.body && sections.body) {
     parts.push(sections.body);
   }
-  // Appendices keyed by kind (Phase 1b). Until renderers populate
-  // sections.appendices, the body already carries them inline.
-  if (opts.show.appendices && sections.appendices && typeof sections.appendices === 'object') {
-    for (const kind of Object.keys(sections.appendices)) {
-      const articles = sections.appendices[kind] || {};
-      for (const id of Object.keys(articles)) {
-        const article = articles[id] || {};
-        parts.push(`<section class="appendix ${escapeHtml(kind)}" id="${escapeHtml(id)}">${article.html || ''}</section>`);
-      }
-    }
+  // Appendices keyed by kind (e.g. TN's TA + TW), rendered with section headings.
+  if (opts.show.appendices && sections.appendices) {
+    const appendicesHtml = renderAppendicesHtml(sections.appendices);
+    if (appendicesHtml) parts.push(appendicesHtml);
   }
 
   return `<!DOCTYPE html>

@@ -104,7 +104,7 @@ for the screen or for print. Returns a string.
 | `show.copyright` | boolean | screen `false` / print `true` | screen ✅ / print 🚧 | Include the license/copyright page. |
 | `show.toc` | boolean | screen `false` / print `true` | screen ✅ / print 🚧 | Include a static Table of Contents page. (The TOC *data* is always on `htmlData.sections.toc` for an app's interactive selector.) |
 | `show.body` | boolean | `true` | ✅ | Include the main content. |
-| `show.appendices` | boolean \| `['ta','tw']` | `true` | 🚧 | Include the TA/TW appendices. (Renderers don't emit them as a separate keyed section yet.) |
+| `show.appendices` | boolean \| `['ta','tw']` | `true` | screen ✅ / print 🚧 | Include the TA/TW appendices (now a keyed `{ ta, tw }` section). Screen honors the boolean; print always includes them, and per-kind `['ta','tw']` selection is 🚧 planned. |
 | `columns` | number | `1` | print ✅ / screen 🚧 | Body column count (currently applied to print only). |
 | `direction` | `'ltr'` \| `'rtl'` | from `htmlData.direction` | ✅ | Text direction. |
 | `engine` | `'weasyprint'` \| `'pagedjs'` | `'weasyprint'` | ✅ | Print engine. `pagedjs` injects the PagedJS polyfill `<script>` for in-browser preview. |

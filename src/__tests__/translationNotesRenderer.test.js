@@ -132,16 +132,29 @@ describe('renderTranslationNotesHtml', () => {
     expect(body).not.toContain('δοῦλος');
   });
 
-  test('builds a TA appendix with the referenced article body', () => {
-    expect(body).toContain('id="appendix-ta"');
-    expect(body).toContain('Abstract Nouns');
-    expect(body).toContain('Use a verb.');
+  test('collects a TA appendix (keyed by kind) with the referenced article body', () => {
+    // Appendices are now a keyed object on sections, not embedded in body.
+    expect(body).not.toContain('id="appendix-ta"');
+    const ta = sections.appendices.ta['translate/figs-abstractnouns'];
+    expect(ta.title).toBe('Abstract Nouns');
+    expect(ta.html).toContain('Abstract Nouns');
+    expect(ta.html).toContain('Use a verb.');
   });
 
-  test('builds a TW appendix from TWL references', () => {
-    expect(body).toContain('id="appendix-tw"');
-    expect(body).toContain('Paul, Saul');
-    expect(body).toContain('Paul was an apostle.');
+  test('collects a TW appendix (keyed by kind) from TWL references', () => {
+    const tw = sections.appendices.tw['names/paul'];
+    expect(tw.title).toBe('Paul, Saul');
+    expect(tw.html).toContain('Paul, Saul');
+    expect(tw.html).toContain('Paul was an apostle.');
+  });
+
+  test('renderAppendicesHtml wraps the keyed appendices into appendix sections', async () => {
+    const { renderAppendicesHtml } = await import('../renderers/printDocumentAssembler.js');
+    const html = renderAppendicesHtml(sections.appendices);
+    expect(html).toContain('id="appendix-ta"');
+    expect(html).toContain('id="appendix-tw"');
+    expect(html).toContain('Use a verb.');
+    expect(html).not.toContain('rc://');
   });
 
   test('resolves TA links (note body + SupportReference) to titled internal anchors', () => {

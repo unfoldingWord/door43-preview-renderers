@@ -164,6 +164,38 @@ export function generateTocFromHtml(bodyHtml) {
   return generateTocHtml(entries);
 }
 
+// ─── Appendices ──────────────────────────────────────────────────────────────
+
+const APPENDIX_LABELS = { ta: 'Translation Academy', tw: 'Translation Words' };
+
+/**
+ * Render the keyed appendices object ({ ta: { id: { title, html } }, tw: {…} })
+ * into HTML: one `<section class="appendix <kind>">` per kind, with a heading and
+ * the collected article HTML. Returns '' when there are no appendices.
+ *
+ * @param {Object} appendices - sections.appendices from a renderer
+ * @returns {string}
+ */
+export function renderAppendicesHtml(appendices) {
+  if (!appendices || typeof appendices !== 'object') return '';
+
+  let html = '';
+  for (const kind of Object.keys(appendices)) {
+    const articles = appendices[kind] || {};
+    const ids = Object.keys(articles);
+    if (!ids.length) continue;
+
+    const label = APPENDIX_LABELS[kind] || kind.toUpperCase();
+    html += `<section class="appendix ${kind}" id="appendix-${kind}" data-toc-title="${escapeHtml(label)}">\n`;
+    html += `  <h2 class="appendix-header">${escapeHtml(label)}</h2>\n`;
+    for (const id of ids) {
+      html += articles[id]?.html || '';
+    }
+    html += `</section>\n`;
+  }
+  return html;
+}
+
 // ─── Cover Generation ───────────────────────────────────────────────────────
 
 /**
@@ -526,6 +558,7 @@ export function assemblePrintDocument(sections, options = {}) {
     body = '',
     toc: tocData = [],
     css = {},
+    appendices = null,
   } = sections;
 
   // Prefer the renderer-provided cover (now a complete logo + title + version
@@ -566,6 +599,7 @@ export function assemblePrintDocument(sections, options = {}) {
     ${tocHtml}
   </div>
   ${body}
+  ${renderAppendicesHtml(appendices)}
 </div>`;
 
   // Build complete HTML document

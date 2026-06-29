@@ -1,5 +1,5 @@
 import { convertNoteFromMD2HTML, convertMarkdown } from '../converters/markdownConverter.js';
-import { buildCoverPage, coverCss } from './printDocumentAssembler.js';
+import { buildCoverPage, coverCss, renderAppendicesHtml } from './printDocumentAssembler.js';
 import { BibleBookData } from '../constants.js';
 import {
   escapeHtml,
@@ -60,48 +60,48 @@ function renderAppendixArticle(anchorId, article, backRefList, bookId) {
 }
 
 /**
- * Build appendix HTML for TA and TW articles referenced in notes / TWL lists.
+ * Collect TA and TW appendix articles referenced in notes / TWL lists into a
+ * keyed-by-kind object: `{ ta: { articlePath: { title, html } }, tw: {…} }`.
+ *
+ * The body is scanned for TA/TW article references (see the main loop); this
+ * turns each referenced article into its rendered HTML, keyed by its rc path.
+ * The keyed shape lets the composer (renderHTML / assemblePrintDocument) render,
+ * toggle, or link to appendices independently — see renderAppendicesHtml().
  */
-function buildAppendix(rcLinks, extras, bookId, backRefs) {
-  let html = '';
+function collectAppendices(rcLinks, extras, bookId, backRefs) {
+  const appendices = {};
 
-  // TA Appendix
   const taResource = extras?.ta;
   if (taResource?.manuals && rcLinks.ta.size > 0) {
-    let inner = '';
+    const ta = {};
     for (const articlePath of Array.from(rcLinks.ta).sort()) {
       const article = findTaArticle(taResource, articlePath);
       if (!article) continue;
       const anchorId = `nav-${bookId}--ta-${articlePath.replace(/\//g, '-')}`;
-      inner += renderAppendixArticle(anchorId, article, backRefs.ta[articlePath], bookId);
+      ta[articlePath] = {
+        title: article.title,
+        html: renderAppendixArticle(anchorId, article, backRefs.ta[articlePath], bookId),
+      };
     }
-    if (inner) {
-      html += `<section class="appendix ta" id="appendix-ta" data-toc-title="Translation Academy">\n`;
-      html += `  <h2 class="appendix-header">Translation Academy</h2>\n`;
-      html += inner;
-      html += `</section>\n`;
-    }
+    if (Object.keys(ta).length) appendices.ta = ta;
   }
 
-  // TW Appendix
   const twResource = extras?.tw;
   if (twResource?.articles && rcLinks.tw.size > 0) {
-    let inner = '';
+    const tw = {};
     for (const articlePath of Array.from(rcLinks.tw).sort()) {
       const article = findTwArticle(twResource, articlePath);
       if (!article) continue;
       const anchorId = `nav-${bookId}--tw-${articlePath.replace(/\//g, '-')}`;
-      inner += renderAppendixArticle(anchorId, article, backRefs.tw[articlePath], bookId);
+      tw[articlePath] = {
+        title: article.title,
+        html: renderAppendixArticle(anchorId, article, backRefs.tw[articlePath], bookId),
+      };
     }
-    if (inner) {
-      html += `<section class="appendix tw" id="appendix-tw" data-toc-title="Translation Words">\n`;
-      html += `  <h2 class="appendix-header">Translation Words</h2>\n`;
-      html += inner;
-      html += `</section>\n`;
-    }
+    if (Object.keys(tw).length) appendices.tw = tw;
   }
 
-  return html;
+  return appendices;
 }
 
 /**
@@ -581,12 +581,26 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
     bodyParts.push(`</section>\n`);
   }
 
-  // Build appendices (after the main loop so TWL-referenced TW articles are collected)
-  const appendixHtml = buildAppendix(allRcLinks, extras, bookIds[0] || '', backRefs);
+  // Collect appendices (after the main loop so TWL-referenced TW articles are
+  // included), keyed by kind so the composer can render/toggle them separately.
+  const firstBook = bookIds[0] || '';
+  const bookIdSet = new Set(bookIds);
+  const appendices = collectAppendices(allRcLinks, extras, firstBook, backRefs);
 
-  // Resolve rc links across the whole document, including appendix cross-links
-  let body = bodyParts.join('') + appendixHtml;
-  body = resolveRcLinks(body, bookIds[0] || '', allRcLinks, extras, new Set(bookIds));
+  // Resolve rc:// links to internal anchors — across the body and across each
+  // appendix article (so their cross-links resolve to the same anchors).
+  let body = resolveRcLinks(bodyParts.join(''), firstBook, allRcLinks, extras, bookIdSet);
+  for (const kind of Object.keys(appendices)) {
+    for (const id of Object.keys(appendices[kind])) {
+      appendices[kind][id].html = resolveRcLinks(
+        appendices[kind][id].html,
+        firstBook,
+        allRcLinks,
+        extras,
+        bookIdSet
+      );
+    }
+  }
 
   const cover = buildCoverPage({
     title,
@@ -600,7 +614,7 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
   const fullHtml = buildFullHtmlDocument(
     title,
     tnWebCss + tnPrintCss + coverCss,
-    `<div class="section cover-page">${cover}</div>\n${body}`
+    `<div class="section cover-page">${cover}</div>\n${body}${renderAppendicesHtml(appendices)}`
   );
 
   return {
@@ -613,6 +627,7 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
       toc,
       css,
       webView: null,
+      appendices,
     },
     renderedBooks: {},
     fullHtml,

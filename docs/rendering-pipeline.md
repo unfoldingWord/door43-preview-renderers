@@ -418,9 +418,11 @@ Consequences:
   `renderHTML.test.js` + `renderOptions.test.js`. 19 suites / 143 tests pass; lint + build green.
 
 **Phase 1b — Per-renderer content contract (PENDING).**
-1. Promote `requestedBooks`/`direction` and add `appendices` keyed by kind
-   (`{ ta, tw }`) to what each renderer produces (TN currently embeds appendices
-   in `body` — `translationNotesRenderer.js:588`).
+1. ✅ **DONE (appendices)** — TN now emits `sections.appendices = { ta, tw }`
+   keyed by article (no longer embedded in `body`); a shared
+   `renderAppendicesHtml()` composes them for screen (renderHTML) and print
+   (assemblePrintDocument), preserving the original markup. Verified end-to-end.
+   *(Still pending: promoting `requestedBooks`/`direction` into the data layer.)*
 2. ✅ **DONE** — anchors rewritten to the `<res>-<book>-<chap|front>-<verse|intro>[-<noteId>]`
    scheme via a centralized prefix rewrite in `renderHtmlData` (`src/renderers/anchors.js`):
    renderers keep emitting internally-consistent `nav-…`, and `renderHtmlData` swaps the
