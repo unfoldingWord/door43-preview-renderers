@@ -2,6 +2,7 @@ import { Proskomma } from 'proskomma-core';
 import { SofriaRenderFromProskomma, render } from 'proskomma-json-tools';
 import { renderers as sofriaRenderers } from './sofria2html.js';
 import { convertMarkdown } from '../converters/markdownConverter.js';
+import { buildCoverPage, coverCss } from './printDocumentAssembler.js';
 
 const defaultFlags = {
   showWordAtts: false,
@@ -253,14 +254,20 @@ export function renderAlignedBibleHtml(resourceData, options = {}) {
   const coverTitle = resourceData.title || 'Bible';
   const webCss = `${render.sofria2web.renderStyles.styleAsCSS(
     render.sofria2web.renderStyles.styles
-  )}\n${extraWebCss}\n${editorMode ? '' : '.implied-word-start, .implied-word-end { display: none; }'}`;
+  )}\n${extraWebCss}\n${coverCss}\n${editorMode ? '' : '.implied-word-start, .implied-word-end { display: none; }'}`;
 
-  const cover = `<h3 class="cover-book-title">${escapeHtml(coverTitle)}</h3>`;
+  const cover = buildCoverPage({
+    title: coverTitle,
+    version: resourceData.version,
+    abbreviation: resourceData.abbreviation,
+  });
   const copyright = resourceData.license
     ? `<div class="license-text">${convertMarkdown(resourceData.license)}</div>`
     : '';
   const body = bodyParts.join('\n');
-  const pageBody = [cover, copyright, body].filter(Boolean).join('\n');
+  const pageBody = [`<div class="section cover-page">${cover}</div>`, copyright, body]
+    .filter(Boolean)
+    .join('\n');
 
   return {
     subject: resourceData.subject,

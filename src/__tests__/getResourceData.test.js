@@ -5,7 +5,7 @@ const extractRcAlignedBibleDataMock = jest.fn();
 const extractRcTaDataMock = jest.fn();
 const extractRcTwDataMock = jest.fn();
 const extractRcTsvDataMock = jest.fn();
-const getAllCatalogEntriesForRenderingMock = jest.fn();
+const getAllCatalogEntriesMock = jest.fn();
 const extractRcSbObsDataMock = jest.fn();
 const extractTsObsDataMock = jest.fn();
 const formatObsDataMock = jest.fn();
@@ -33,8 +33,8 @@ jest.unstable_mockModule('../tsvHelpers.js', () => ({
   extractRcTsvData: extractRcTsvDataMock,
 }));
 
-jest.unstable_mockModule('../getAllCatalogEntriesForRendering.js', () => ({
-  getAllCatalogEntriesForRendering: getAllCatalogEntriesForRenderingMock,
+jest.unstable_mockModule('../getAllCatalogEntries.js', () => ({
+  getAllCatalogEntries: getAllCatalogEntriesMock,
 }));
 
 jest.unstable_mockModule('../obsHelpers.js', () => ({
@@ -90,7 +90,7 @@ describe('getResourceData', () => {
     axiosGetMock.mockRejectedValueOnce(new Error('network down'));
     const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 
-    const result = await getResourceData('u', 'r', 'ref', [], { quiet: true });
+    const result = await getResourceData({ owner: 'u', repo: 'r', ref: 'ref', books: [] }, { quiet: true });
 
     expect(result).toEqual({ error: 'Failed to get catalog entry: network down' });
     consoleErrorSpy.mockRestore();
@@ -108,10 +108,10 @@ describe('getResourceData', () => {
     axiosGetMock.mockResolvedValueOnce({ data: catalogEntry });
     extractRcAlignedBibleDataMock.mockResolvedValueOnce(renderedData);
 
-    const result = await getResourceData('unfoldingWord', 'en_ult', 'v88', ['tit'], {
-      quiet: true,
-      dcs_api_url: 'https://git.door43.org/api/v1',
-    });
+    const result = await getResourceData(
+      { owner: 'unfoldingWord', repo: 'en_ult', ref: 'v88', books: ['tit'] },
+      { quiet: true, dcs_api_url: 'https://git.door43.org/api/v1' }
+    );
 
     expect(extractRcAlignedBibleDataMock).toHaveBeenCalledWith(
       catalogEntry,
@@ -136,7 +136,7 @@ describe('getResourceData', () => {
     axiosGetMock.mockResolvedValueOnce({ data: catalogEntry });
     extractRcAlignedBibleDataMock.mockResolvedValueOnce({ ok: true });
 
-    await getResourceData('unfoldingWord', 'en_ult', 'v88', ['tit'], { quiet: true });
+    await getResourceData({ owner: 'unfoldingWord', repo: 'en_ult', ref: 'v88', books: ['tit'] }, { quiet: true });
 
     expect(extractRcAlignedBibleDataMock).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -161,7 +161,7 @@ describe('getResourceData', () => {
     axiosGetMock.mockResolvedValueOnce({ data: catalogEntry });
     extractRcTaDataMock.mockResolvedValueOnce(data);
 
-    const result = await getResourceData('unfoldingWord', 'en_ta', 'v89', [], { quiet: true });
+    const result = await getResourceData({ owner: 'unfoldingWord', repo: 'en_ta', ref: 'v89', books: [] }, { quiet: true });
 
     expect(extractRcTaDataMock).toHaveBeenCalledWith(
       catalogEntry,
@@ -182,7 +182,7 @@ describe('getResourceData', () => {
     axiosGetMock.mockResolvedValueOnce({ data: catalogEntry });
     extractRcTwDataMock.mockResolvedValueOnce(data);
 
-    const result = await getResourceData('unfoldingWord', 'en_tw', 'v89', [], { quiet: true });
+    const result = await getResourceData({ owner: 'unfoldingWord', repo: 'en_tw', ref: 'v89', books: [] }, { quiet: true });
 
     expect(extractRcTwDataMock).toHaveBeenCalledWith(
       catalogEntry,
@@ -200,17 +200,16 @@ describe('getResourceData', () => {
     };
 
     axiosGetMock.mockResolvedValueOnce({ data: catalogEntry });
-    getAllCatalogEntriesForRenderingMock.mockResolvedValueOnce({
+    getAllCatalogEntriesMock.mockResolvedValueOnce({
       catalogEntries: [{ owner: 'unfoldingWord', name: 'en_tn' }],
     });
     extractRcTsvDataMock.mockResolvedValueOnce({ type: 'tsv' });
 
-    const result = await getResourceData('unfoldingWord', 'en_tn', 'v80', ['tit'], { quiet: true });
+    const result = await getResourceData({ owner: 'unfoldingWord', repo: 'en_tn', ref: 'v80', books: ['tit'] }, { quiet: true });
 
-    expect(getAllCatalogEntriesForRenderingMock).toHaveBeenCalledWith(
+    expect(getAllCatalogEntriesMock).toHaveBeenCalledWith(
       catalogEntry,
-      ['tit'],
-      expect.objectContaining({ quiet: true })
+      expect.objectContaining({ quiet: true, books: ['tit'] })
     );
     expect(extractRcTsvDataMock).toHaveBeenCalledWith(
       catalogEntry,
@@ -235,7 +234,7 @@ describe('getResourceData', () => {
     extractRcSbObsDataMock.mockResolvedValueOnce(obsData);
     formatObsDataMock.mockReturnValueOnce(formatted);
 
-    const result = await getResourceData('unfoldingWord', 'en_obs', 'v1', [], { quiet: true });
+    const result = await getResourceData({ owner: 'unfoldingWord', repo: 'en_obs', ref: 'v1', books: [] }, { quiet: true });
 
     expect(extractRcSbObsDataMock).toHaveBeenCalledWith(catalogEntry, catalogEntry.ingredients[0]);
     expect(formatObsDataMock).toHaveBeenCalledWith(obsData, catalogEntry);
@@ -252,7 +251,7 @@ describe('getResourceData', () => {
       },
     });
 
-    await expect(getResourceData('u', 'r', 'ref', [], { quiet: true })).rejects.toThrow(
+    await expect(getResourceData({ owner: 'u', repo: 'r', ref: 'ref', books: [] }, { quiet: true })).rejects.toThrow(
       'No ingredients found in catalog entry'
     );
   });
@@ -269,7 +268,7 @@ describe('getResourceData', () => {
       },
     });
 
-    const result = await getResourceData('u', 'r', 'ref', ['tit'], { quiet: true });
+    const result = await getResourceData({ owner: 'u', repo: 'r', ref: 'ref', books: ['tit'] }, { quiet: true });
 
     expect(result).toEqual(
       expect.objectContaining({
@@ -291,7 +290,7 @@ describe('getResourceData', () => {
       },
     });
 
-    await expect(getResourceData('u', 'r', 'ref', ['tit'], { quiet: true })).rejects.toThrow(
+    await expect(getResourceData({ owner: 'u', repo: 'r', ref: 'ref', books: ['tit'] }, { quiet: true })).rejects.toThrow(
       'Conversion of SB flavor `unknownFlavor` is not currently supported.'
     );
   });
@@ -312,7 +311,7 @@ describe('getResourceData', () => {
     extractRcSbObsDataMock.mockResolvedValueOnce(obsData);
     formatObsDataMock.mockReturnValueOnce(formatted);
 
-    const result = await getResourceData('u', 'r', 'ref', [], { quiet: true });
+    const result = await getResourceData({ owner: 'u', repo: 'r', ref: 'ref', books: [] }, { quiet: true });
 
     expect(extractRcSbObsDataMock).toHaveBeenCalledWith(catalogEntry, catalogEntry.ingredients[0]);
     expect(result).toEqual(formatted);
@@ -330,7 +329,7 @@ describe('getResourceData', () => {
       },
     });
 
-    await expect(getResourceData('u', 'r', 'ref', [], { quiet: true })).rejects.toThrow(
+    await expect(getResourceData({ owner: 'u', repo: 'r', ref: 'ref', books: [] }, { quiet: true })).rejects.toThrow(
       'Conversion of SB gloss flavor `other` is not currently supported.'
     );
   });
@@ -349,7 +348,7 @@ describe('getResourceData', () => {
     extractTsObsDataMock.mockResolvedValueOnce(obsData);
     formatObsDataMock.mockReturnValueOnce(formatted);
 
-    const result = await getResourceData('u', 'r', 'ref', [], { quiet: true });
+    const result = await getResourceData({ owner: 'u', repo: 'r', ref: 'ref', books: [] }, { quiet: true });
 
     expect(extractTsObsDataMock).toHaveBeenCalledWith(catalogEntry, catalogEntry.ingredients[0]);
     expect(result).toEqual(formatted);
@@ -369,7 +368,7 @@ describe('getResourceData', () => {
       books: { tit: '\\id TIT' },
     });
 
-    const result = await getResourceData('u', 'r', 'ref', ['tit'], { quiet: true });
+    const result = await getResourceData({ owner: 'u', repo: 'r', ref: 'ref', books: ['tit'] }, { quiet: true });
 
     expect(extractTsBibleDataMock).toHaveBeenCalledWith(
       expect.objectContaining({ metadata_type: 'ts', subject: 'Bible' }),
@@ -389,7 +388,7 @@ describe('getResourceData', () => {
       },
     });
 
-    await expect(getResourceData('u', 'r', 'ref', [], { quiet: true })).rejects.toThrow(
+    await expect(getResourceData({ owner: 'u', repo: 'r', ref: 'ref', books: [] }, { quiet: true })).rejects.toThrow(
       'Conversion of translationStudio repositories is currently not supported.'
     );
   });
@@ -408,7 +407,7 @@ describe('getResourceData', () => {
       books: { tit: '\\id TIT' },
     });
 
-    const result = await getResourceData('u', 'r', 'ref', ['tit'], { quiet: true });
+    const result = await getResourceData({ owner: 'u', repo: 'r', ref: 'ref', books: ['tit'] }, { quiet: true });
 
     expect(extractRcAlignedBibleDataMock).toHaveBeenCalledWith(
       expect.objectContaining({ metadata_type: 'tc', subject: 'Bible' }),
@@ -428,7 +427,7 @@ describe('getResourceData', () => {
       },
     });
 
-    await expect(getResourceData('u', 'r', 'ref', [], { quiet: true })).rejects.toThrow(
+    await expect(getResourceData({ owner: 'u', repo: 'r', ref: 'ref', books: [] }, { quiet: true })).rejects.toThrow(
       'Conversion of translationCore `Translation Questions` repositories is currently not supported.'
     );
   });
@@ -443,7 +442,7 @@ describe('getResourceData', () => {
       },
     });
 
-    await expect(getResourceData('u', 'r', 'ref', [], { quiet: true })).rejects.toThrow(
+    await expect(getResourceData({ owner: 'u', repo: 'r', ref: 'ref', books: [] }, { quiet: true })).rejects.toThrow(
       'Conversion of `Random Subject` resources is currently not supported.'
     );
   });
@@ -458,7 +457,7 @@ describe('getResourceData', () => {
       },
     });
 
-    await expect(getResourceData('x', 'y', 'z', [], { quiet: true })).rejects.toThrow(
+    await expect(getResourceData({ owner: 'x', repo: 'y', ref: 'z', books: [] }, { quiet: true })).rejects.toThrow(
       'Not a valid repository that can be convert.'
     );
   });
@@ -466,8 +465,37 @@ describe('getResourceData', () => {
   test('throws when metadata cannot be inferred from top-level or repo fields', async () => {
     axiosGetMock.mockResolvedValueOnce({ data: {} });
 
-    await expect(getResourceData('x', 'y', 'z', [], { quiet: true })).rejects.toThrow(
+    await expect(getResourceData({ owner: 'x', repo: 'y', ref: 'z', books: [] }, { quiet: true })).rejects.toThrow(
       'Unable to determine its type and/or ingredients.'
     );
+  });
+
+  test('reuses a passed CatalogSet without re-fetching /catalog/entry or /catalog/bp', async () => {
+    const mainEntry = {
+      title: 'Translation Notes',
+      subject: 'TSV Translation Notes',
+      ingredients: [{ identifier: 'tit' }],
+      metadata_type: 'rc',
+    };
+    const catalogSet = {
+      resourceVersion: 'v80',
+      catalogEntries: [mainEntry, { subject: 'Aligned Bible', name: 'en_ult' }],
+      source: { books: ['tit'] },
+    };
+    extractRcTsvDataMock.mockResolvedValueOnce({ type: 'tsv' });
+
+    const result = await getResourceData(catalogSet, { quiet: true });
+
+    expect(axiosGetMock).not.toHaveBeenCalled(); // no /catalog/entry round-trip
+    expect(getAllCatalogEntriesMock).not.toHaveBeenCalled(); // no /catalog/bp re-fetch
+    expect(extractRcTsvDataMock).toHaveBeenCalled();
+    expect(result).toEqual({ type: 'tsv' });
+  });
+
+  test('returns a ResourceData input unchanged (passthrough)', async () => {
+    const resourceData = { type: 'tsv', subject: 'TSV Translation Notes', books: {} };
+    const result = await getResourceData(resourceData, { quiet: true });
+    expect(result).toBe(resourceData);
+    expect(axiosGetMock).not.toHaveBeenCalled();
   });
 });

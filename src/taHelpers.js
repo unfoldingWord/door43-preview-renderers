@@ -1,6 +1,7 @@
 import axios from 'axios';
 import JSZip from 'jszip';
 import yaml from 'js-yaml';
+import { readLicenseFromZip } from './dcsApi.js';
 
 /**
  * Extract Translation Academy data from RC format (markdown files in article directories)
@@ -166,6 +167,9 @@ export async function extractRcTaData(catalogEntry, _options) {
     flavorType: catalogEntry.flavor_type || '',
     flavor: catalogEntry.flavor || '',
     title: catalogEntry.title,
+    abbreviation: catalogEntry.abbreviation || catalogEntry.repo?.abbreviation || '',
+    version: catalogEntry.branch_or_tag_name || catalogEntry.ref || '',
+    license: await readLicenseFromZip(zip),
     manuals,
   };
 }

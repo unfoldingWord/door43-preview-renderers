@@ -5,7 +5,7 @@ import { extractRcTaData } from './taHelpers.js';
 import { extractRcAlignedBibleData } from './rcAlignedBibleHelpers.js';
 import { extractTsBibleData } from './tsBibleHelpers.js';
 import { requiredSubjectsMap } from './constants.js';
-import { getAllCatalogEntriesForRendering } from './getAllCatalogEntriesForRendering.js';
+import { getAllCatalogEntries } from './getAllCatalogEntries.js';
 import axios from 'axios';
 
 // Global quiet flag for logging
@@ -49,50 +49,66 @@ export async function getCatalogEntry(
 }
 
 /**
- * Get resource data from DCS
+ * Fetch and parse a resource (and its dependencies) into ResourceData. Stage 2
+ * of the pipeline.
  *
- * @param {string} owner - Repository owner
- * @param {string} repo - Repository name
- * @param {string} ref - Git reference (branch, tag, or commit)
- * @param {Array} books - List of book identifiers to include (if applicable)
- * @param {Object} options - Options object
- * @param {string} options.dcs_api_url - DCS API base URL (default: https://git.door43.org/api/v1)
- * @param {boolean} is_extra - Whether to include extra data (default: false)
- * @returns {Promise<Object>} Catalog entry JSON object
+ * @param {Object} input - One of:
+ *   - a descriptor `{ owner, repo, ref, books? }`
+ *   - a **CatalogSet** from getAllCatalogEntries() (reused — no second /catalog/bp/ call)
+ *   - a catalog entry object
+ *   - existing **ResourceData** (returned unchanged — passthrough)
+ * @param {Object} [options]
+ * @param {string} [options.dcs_api_url] - DCS API base URL (default: https://git.door43.org/api/v1)
+ * @param {boolean} [options.quiet] - Suppress logging
+ * @param {Array<string>} [options.books] - Books (when not carried on `input`)
+ * @param {boolean} [options.isExtra] - Internal: this is a dependency; skip resolving its own deps
+ * @returns {Promise<Object>} ResourceData
  *
  * @example
- * const result = await getResourceData(
- *   'unfoldingWord',
- *   'en_tn',
- *   'master',
- *   { dcs_api_url: 'https://git.door43.org/api/v1' }
- * );
- * console.log(result);
+ * const data = await getResourceData({ owner: 'unfoldingWord', repo: 'en_tn', ref: 'v89', books: ['tit'] });
+ * // or reuse a CatalogSet:
+ * const set = await getAllCatalogEntries({ owner: 'unfoldingWord', repo: 'en_tn', ref: 'v89', books: ['tit'] });
+ * const data2 = await getResourceData(set);
  */
-export async function getResourceData(
-  owner,
-  repo,
-  ref,
-  books = [],
-  options = {},
-  is_extra = false
-) {
+const RESOURCE_TYPES = new Set(['usfm', 'tsv', 'obs', 'ta', 'tw']);
+
+export async function getResourceData(input, options = {}) {
+  // ResourceData passthrough — already parsed upstream or restored from cache.
+  if (input && typeof input === 'object' && RESOURCE_TYPES.has(input.type) && input.subject) {
+    return input;
+  }
+
   const { dcs_api_url = 'https://git.door43.org/api/v1', quiet = false } = options;
 
-  options.is_extra = is_extra;
+  // Books selection comes from the descriptor / CatalogSet source, or options.
+  const books =
+    (input && input.books) || (input && input.source && input.source.books) || options.books || [];
 
   let catalogEntry;
-  // Reuse a catalog entry already resolved by the blueprint (passed by the parent
-  // when fetching extras) to avoid a redundant /catalog/entry/ round-trip.
   if (options.catalogEntry) {
+    // Parent passed a pre-resolved entry (e.g. when fetching an extra) — avoids a
+    // redundant /catalog/entry/ round-trip.
     catalogEntry = options.catalogEntry;
-  } else {
+  } else if (input && Array.isArray(input.catalogEntries)) {
+    // CatalogSet — reuse it. The main entry is first, and the filtered-entries
+    // step reuses these (via options.preEntries) instead of re-calling /catalog/bp/.
+    catalogEntry = input.catalogEntries[0];
+    options.preEntries = input.catalogEntries;
+  } else if (input && input.ref && input.repo) {
+    // Descriptor { owner, repo, ref }
     try {
-      catalogEntry = await getCatalogEntry(owner, repo, ref, dcs_api_url, quiet);
+      catalogEntry = await getCatalogEntry(input.owner, input.repo, input.ref, dcs_api_url, quiet);
     } catch (e) {
       console.warn(e);
       return { error: e.message };
     }
+  } else if (input && (input.name || input.branch_or_tag_name || input.ingredients)) {
+    // A catalog entry object
+    catalogEntry = input;
+  } else {
+    throw new Error(
+      'getResourceData: input must be { owner, repo, ref }, a catalog entry, a CatalogSet, or ResourceData.'
+    );
   }
 
   if (!catalogEntry) {
@@ -287,16 +303,20 @@ function selectAlignedBibles(entries) {
  * for rendering, and applies Aligned Bible selection logic (at most 2,
  * preferring ult/glt + ust/gst).
  *
- * When is_extra=true, skips the blueprint call entirely — extras should
- * not recursively fetch their own dependencies.
+ * When options.isExtra is set, skips the blueprint call entirely — extras should
+ * not recursively fetch their own dependencies. When options.preEntries is set
+ * (a CatalogSet was passed to getResourceData), those entries are reused instead
+ * of re-fetching /catalog/bp/.
  */
 async function getFilteredCatalogEntries(catalogEntry, books, options) {
-  if (options.is_extra) {
+  if (options.isExtra) {
     // Extras should not recursively fetch dependencies — return only the main entry
     return [catalogEntry];
   }
 
-  const { catalogEntries } = await getAllCatalogEntriesForRendering(catalogEntry, books, options);
+  // Reuse a CatalogSet passed into getResourceData (no second /catalog/bp/ call).
+  const catalogEntries =
+    options.preEntries || (await getAllCatalogEntries(catalogEntry, { ...options, books })).catalogEntries;
 
   const requiredSubjects = requiredSubjectsMap[catalogEntry.subject];
   if (!requiredSubjects || requiredSubjects.length === 0) {

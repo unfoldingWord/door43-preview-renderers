@@ -42,6 +42,29 @@ export const PAGE_SIZES = {
   CROWN_QUARTO: { label: 'Crown Quarto', orientation: 'portrait', width: '189mm', height: '246mm' },
 };
 
+/**
+ * Resolve a page-size option into { width, height }.
+ *
+ * Accepts:
+ *  - a PAGE_SIZES key, e.g. 'A4_PORTRAIT', 'US_LETTER_LANDSCAPE'
+ *  - a friendly label, e.g. 'A4', 'US Letter', 'Trade' (portrait assumed)
+ *  - an explicit { width, height } object (CSS lengths, e.g. '6in', '210mm')
+ * Falls back to A4 portrait.
+ */
+export function resolvePageSize(pageSize) {
+  if (pageSize && typeof pageSize === 'object' && pageSize.width && pageSize.height) {
+    return { width: pageSize.width, height: pageSize.height };
+  }
+  if (typeof pageSize === 'string') {
+    if (PAGE_SIZES[pageSize]) return PAGE_SIZES[pageSize];
+    const byLabel = Object.values(PAGE_SIZES).find(
+      (s) => s.label.toLowerCase() === pageSize.toLowerCase() && s.orientation === 'portrait'
+    );
+    if (byLabel) return byLabel;
+  }
+  return PAGE_SIZES.A4_PORTRAIT;
+}
+
 // ─── Logo mapping ───────────────────────────────────────────────────────────
 
 const ABBREVIATION_TO_LOGO = {
@@ -141,6 +164,38 @@ export function generateTocFromHtml(bodyHtml) {
   return generateTocHtml(entries);
 }
 
+// ─── Appendices ──────────────────────────────────────────────────────────────
+
+const APPENDIX_LABELS = { ta: 'Translation Academy', tw: 'Translation Words' };
+
+/**
+ * Render the keyed appendices object ({ ta: { id: { title, html } }, tw: {…} })
+ * into HTML: one `<section class="appendix <kind>">` per kind, with a heading and
+ * the collected article HTML. Returns '' when there are no appendices.
+ *
+ * @param {Object} appendices - sections.appendices from a renderer
+ * @returns {string}
+ */
+export function renderAppendicesHtml(appendices) {
+  if (!appendices || typeof appendices !== 'object') return '';
+
+  let html = '';
+  for (const kind of Object.keys(appendices)) {
+    const articles = appendices[kind] || {};
+    const ids = Object.keys(articles);
+    if (!ids.length) continue;
+
+    const label = APPENDIX_LABELS[kind] || kind.toUpperCase();
+    html += `<section class="appendix ${kind}" id="appendix-${kind}" data-toc-title="${escapeHtml(label)}">\n`;
+    html += `  <h2 class="appendix-header">${escapeHtml(label)}</h2>\n`;
+    for (const id of ids) {
+      html += articles[id]?.html || '';
+    }
+    html += `</section>\n`;
+  }
+  return html;
+}
+
 // ─── Cover Generation ───────────────────────────────────────────────────────
 
 /**
@@ -167,6 +222,45 @@ ${version ? `<h3 class="cover-version">${escapeHtml(version)}</h3>` : ''}
 ${extraCoverHtml || ''}`;
 }
 
+/**
+ * Centering CSS for the cover when rendered as a standalone web document
+ * (the renderers' `fullHtml`). Print uses its own cover-page rules in
+ * getPrintCss(); these rules are scoped to `.cover-page` so they only affect
+ * the cover block, not the rest of the page.
+ */
+export const coverCss = `
+.cover-page {
+  text-align: center;
+  padding-top: 2rem;
+}
+
+.cover-page .header-title {
+  display: none;
+}
+
+.cover-page .title-logo {
+  display: block;
+  margin: 0 auto 1rem auto;
+  width: 180px;
+  max-width: 60%;
+  height: auto;
+}
+
+.cover-page .cover-header,
+.cover-page .cover-version,
+.cover-page .cover-book-title,
+.cover-page .cover-resource-title {
+  text-align: center;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.cover-page .cover-version {
+  color: #666;
+  font-weight: normal;
+}
+`;
+
 // ─── Print CSS ──────────────────────────────────────────────────────────────
 
 /**
@@ -187,9 +281,14 @@ export function getPrintCss(options = {}) {
     columns = 1,
     direction = 'ltr',
     extraCss = '',
+    pageNumberPosition = 'bottom',
+    runningHeader = true,
   } = options;
 
   const isRtl = direction === 'rtl';
+  // The page-number counter lives in one margin box; the running header (if on)
+  // occupies @top-left/@top-right, so a 'top' page number uses @top-center.
+  const pnBox = pageNumberPosition === 'top' ? '@top-center' : '@bottom-center';
 
   return `
 /* ─── Page Setup ─────────────────────────────────────────── */
@@ -205,13 +304,13 @@ export function getPrintCss(options = {}) {
     font-size: 8pt;
   }
 
-  @bottom-center {
+  ${pnBox} {
     content: counter(page);
   }
 }
 
 @page :first {
-  @bottom-center { content: none; }
+  ${pnBox} { content: none; }
 }
 
 @page :blank {
@@ -234,34 +333,35 @@ export function getPrintCss(options = {}) {
 @page :left {
   margin-right: 30mm;
   margin-left: 20mm;
-
+${runningHeader ? `
   @top-left {
     font-size: 10px;
     content: string(doctitle);
     text-align: left;
-  }
+  }` : ''}
 }
 
 @page :right {
   margin-left: 30mm;
   margin-right: 20mm;
-
+${runningHeader ? `
   @top-right {
     font-size: 10px;
     content: string(doctitle);
     text-align: right;
-  }
+  }` : ''}
 }
 
 /* ─── Running Header ─────────────────────────────────────── */
 /* The running title is captured from the cover header via string-set and
    echoed into the page margin boxes with string(). This works natively in
    WeasyPrint/Prince and in the PagedJS browser preview — no JS reflow needed
-   for the header, and no positioned running element. */
-
+   for the header, and no positioned running element. Omitted when the running
+   header is disabled. */
+${runningHeader ? `
 .cover-header {
   string-set: doctitle content(text);
-}
+}` : ''}
 
 /* ─── Footnotes (USFM) ──────────────────────────────────── */
 
@@ -456,7 +556,17 @@ export function assemblePrintDocument(sections, options = {}) {
     includePagedJsPolyfill = engine === 'pagedjs',
     pagedJsUrl = 'https://unpkg.com/pagedjs/dist/paged.polyfill.js',
     footerHtml = '',
+    // Which top-level sections to include (defaults preserve the full document).
+    show = {},
+    // Page-number margin box ('bottom' | 'top') and running-header toggle.
+    pageNumberPosition = 'bottom',
+    runningHeader = true,
   } = options;
+
+  const showCover = show.cover !== false;
+  const showCopyright = show.copyright !== false;
+  const showToc = show.toc !== false;
+  const showAppendices = show.appendices !== false;
 
   const {
     cover: coverSnippet = '',
@@ -464,15 +574,13 @@ export function assemblePrintDocument(sections, options = {}) {
     body = '',
     toc: tocData = [],
     css = {},
+    appendices = null,
   } = sections;
 
-  // Build cover page
-  const cover = buildCoverPage({
-    title,
-    version,
-    abbreviation,
-    extraCoverHtml: coverSnippet,
-  });
+  // Prefer the renderer-provided cover (now a complete logo + title + version
+  // cover); fall back to building one from the options for callers that pass
+  // only a short snippet or none at all.
+  const cover = coverSnippet || buildCoverPage({ title, version, abbreviation });
 
   // Build TOC
   let tocHtml;
@@ -491,22 +599,26 @@ export function assemblePrintDocument(sections, options = {}) {
     pageHeight,
     columns,
     direction,
+    pageNumberPosition,
+    runningHeader,
     extraCss: `${rendererWebCss}\n\n${rendererPrintCss}`,
   });
 
-  // Assemble the document sections
+  // Assemble the document sections (only those selected by `show`).
+  const coverHtml = showCover
+    ? `  <div class="section cover-page">\n    ${cover}\n  </div>\n`
+    : '';
+  const copyrightHtml = showCopyright
+    ? `  <div class="section copyright-page" id="copyright-page">\n    ${copyright}\n    ${footerHtml}\n  </div>\n`
+    : '';
+  const tocHtmlBlock = showToc
+    ? `  <div class="section toc-page" id="toc">\n    ${tocHtml}\n  </div>\n`
+    : '';
+  const appendicesHtml = showAppendices ? renderAppendicesHtml(appendices) : '';
+
   const htmlStr = `<div id="pagedjs-print" style="direction: ${direction}" data-direction="${direction}">
-  <div class="section cover-page">
-    ${cover}
-  </div>
-  <div class="section copyright-page" id="copyright-page">
-    ${copyright}
-    ${footerHtml}
-  </div>
-  <div class="section toc-page" id="toc">
-    ${tocHtml}
-  </div>
-  ${body}
+${coverHtml}${copyrightHtml}${tocHtmlBlock}  ${body}
+  ${appendicesHtml}
 </div>`;
 
   // Build complete HTML document

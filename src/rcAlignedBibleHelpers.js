@@ -1,23 +1,6 @@
 import { removeAlignments } from 'usfm-alignment-remover';
-import { fetchContent } from './dcsApi.js';
+import { fetchContent, fetchLicense } from './dcsApi.js';
 import { BibleBookData } from './constants.js';
-
-async function fetchLicense(owner, repo, ref, dcs_api_url) {
-  const licensePaths = ['LICENSE.md', 'LICENSE', 'LICENSE.txt'];
-
-  for (const licensePath of licensePaths) {
-    try {
-      const license = await fetchContent(owner, repo, ref, licensePath, dcs_api_url);
-      if (license) {
-        return license.trim();
-      }
-    } catch (error) {
-      // Try next candidate path.
-    }
-  }
-
-  return '';
-}
 
 /**
  * Extract aligned Bible data and remove alignments from USFM.
@@ -85,6 +68,8 @@ export async function extractRcAlignedBibleData(catalogEntry, books = [], option
     flavorType: catalogEntry.flavor_type || '',
     flavor: catalogEntry.flavor || '',
     title: catalogEntry.title,
+    abbreviation: catalogEntry.abbreviation || catalogEntry.repo?.abbreviation || '',
+    version: catalogEntry.branch_or_tag_name || catalogEntry.ref || '',
     license,
     books: booksContent,
   };

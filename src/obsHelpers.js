@@ -319,6 +319,8 @@ export function formatObsData(data, catalogEntry) {
     flavorType: catalogEntry.flavor_type || '',
     flavor: catalogEntry.flavor || '',
     title: data.title,
+    abbreviation: catalogEntry.abbreviation || catalogEntry.repo?.abbreviation || '',
+    version: catalogEntry.branch_or_tag_name || catalogEntry.ref || '',
     front: data.front,
     license: data.license,
     stories: sortedStories,

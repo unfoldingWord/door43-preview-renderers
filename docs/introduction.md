@@ -23,24 +23,30 @@ The typical flow goes data → HTML → (optional) print:
 
 ```js static
 import {
+  getResourceData,
   renderHtmlData,
-  assemblePrintDocument,
-  generatePdfFromAssembled,
+  renderHTML,
+  renderPdf,
 } from 'door43-preview-renderers';
 
-// Fetch + parse + render a resource to HTML in one step.
-const rendered = await renderHtmlData('unfoldingWord', 'en_ult', 'master', ['tit'], {
+// 1. Fetch + parse a resource (network).
+const resourceData = await getResourceData('unfoldingWord', 'en_ult', 'master', ['tit'], {
   dcs_api_url: 'https://git.door43.org/api/v1',
-  renderOptions: { editorMode: false },
 });
 
-rendered.sections; // { cover, copyright, body, toc, css, webView? }
-rendered.fullHtml; // complete standalone HTML document
+// 2. Render to reusable HTML sections (pure, no network).
+const htmlData = renderHtmlData(resourceData, { renderOptions: { editorMode: false } });
+htmlData.sections; // { cover, copyright, body, toc, css, webView? }
 
-// Optionally assemble a print document ({ html, css }) and render a PDF.
-const assembled = assemblePrintDocument(rendered.sections, { title: rendered.title });
-const pdf = await generatePdfFromAssembled(assembled);
+// 3. Compose a standalone document — web or print.
+const webHtml = renderHTML(htmlData);                       // continuous web page
+const printHtml = renderHTML(htmlData, { media: 'print' }); // PagedJS/WeasyPrint-ready
+
+// 4. …or render a PDF directly.
+const pdf = await renderPdf(htmlData, { pageSize: 'A4_PORTRAIT' });
 ```
+
+See [Rendering options](./options.md) for every option each stage accepts.
 
 If you only want the raw parsed data (no HTML), call `getResourceData()` directly:
 

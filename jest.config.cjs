@@ -2,7 +2,7 @@ module.exports = {
   testEnvironment: 'node',
   testMatch: ['**/__tests__/**/*.js', '**/?(*.)+(spec|test).js'],
   collectCoverageFrom: [
-    'src/getAllCatalogEntriesForRendering.js',
+    'src/getAllCatalogEntries.js',
     'src/getResourceData.js',
     'src/renderHtmlData.js',
     'src/dcsApi.js',

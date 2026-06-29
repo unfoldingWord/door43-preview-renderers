@@ -1,6 +1,14 @@
-import usfm from 'usfm-js';
 import { convertNoteFromMD2HTML, convertMarkdown } from '../converters/markdownConverter.js';
+import { buildCoverPage, coverCss, renderAppendicesHtml } from './printDocumentAssembler.js';
 import { BibleBookData } from '../constants.js';
+import {
+  escapeHtml,
+  parseScriptureExtras,
+  getBibleColumns,
+  glQuoteForBibleId,
+  renderScriptureColumns,
+  renderQuoteHeader,
+} from './scriptureColumns.js';
 
 /**
  * Normalize a Translation Words reference to a canonical "category/slug" key.
@@ -12,171 +20,6 @@ function twKey(ref) {
   let p = String(ref).replace(/^rc:\/\/[^/]+\/tw\/dict\//, '').replace(/^rc:\/\/[^/]+\/tw\//, '');
   p = p.replace(/^bible\//, '');
   return p.replace(/\.md$/, '');
-}
-
-// Subjects whose verse text should appear in the TN scripture block.
-// The Greek/Hebrew originals are sources for quote conversion, NOT scripture to display.
-const GL_SCRIPTURE_SUBJECTS = new Set(['Aligned Bible', 'Bible']);
-
-function escapeHtml(value) {
-  return String(value ?? '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
-}
-
-/**
- * Recursively pull plain text out of usfm-js verseObjects, skipping footnotes,
- * cross references and any residual milestone/alignment wrappers.
- */
-function extractVerseObjectsText(verseObjects) {
-  if (!Array.isArray(verseObjects)) return '';
-  let text = '';
-  for (const obj of verseObjects) {
-    if (!obj) continue;
-    if (obj.type === 'text' || obj.type === 'word') {
-      text += obj.text || '';
-    } else if (obj.type === 'footnote' || obj.tag === 'f' || obj.tag === 'x') {
-      // Skip note/cross-reference content
-      continue;
-    } else if (Array.isArray(obj.children)) {
-      text += extractVerseObjectsText(obj.children);
-    } else if (typeof obj.text === 'string') {
-      text += obj.text;
-    }
-  }
-  return text;
-}
-
-/**
- * Parse the aligned-Bible extras once into { identifier: { abbr, chapters } } where
- * chapters maps chapter -> verse -> plain verse text. The data layer hands us raw
- * (alignment-stripped) USFM strings per book, so we parse them with usfm-js here.
- * Greek/Hebrew originals are excluded — they are quote-conversion sources, not GL scripture.
- */
-function parseScriptureExtras(extras) {
-  const parsed = {};
-  if (!extras) return parsed;
-
-  for (const [identifier, resource] of Object.entries(extras)) {
-    if (resource?.type !== 'usfm' || !resource.books) continue;
-    if (!GL_SCRIPTURE_SUBJECTS.has(resource.subject)) continue;
-
-    const chaptersByBook = {};
-    for (const [bookId, usfmContent] of Object.entries(resource.books)) {
-      if (typeof usfmContent !== 'string') continue;
-      try {
-        const json = usfm.toJSON(usfmContent);
-        const out = {};
-        for (const [ch, verses] of Object.entries(json.chapters || {})) {
-          out[ch] = {};
-          for (const [v, verseData] of Object.entries(verses)) {
-            if (v === 'front') continue;
-            const text = extractVerseObjectsText(verseData?.verseObjects).replace(/\s+/g, ' ').trim();
-            if (text) out[ch][v] = text;
-          }
-        }
-        chaptersByBook[bookId] = out;
-      } catch {
-        // Leave this book unparsed; scripture block will simply be omitted for it.
-      }
-    }
-
-    parsed[identifier] = {
-      abbr: (resource.abbreviation || identifier).toUpperCase(),
-      chapters: chaptersByBook,
-    };
-  }
-
-  return parsed;
-}
-
-
-/**
- * Build the ordered list of GL Bibles to render as parallel columns, from the
- * aligned-Bible extras. Literal (ult/glt) first, then simplified (ust/gst),
- * then any others. Returns [{ id, abbr }] where id is the extras key (e.g. 'ult').
- */
-function getBibleColumns(extras) {
-  const bibles = [];
-  for (const [id, resource] of Object.entries(extras || {})) {
-    if (resource?.type === 'usfm' && GL_SCRIPTURE_SUBJECTS.has(resource.subject)) {
-      bibles.push({ id, abbr: id.toUpperCase() });
-    }
-  }
-  const rank = (id) => (/^(ult|glt)$/i.test(id) ? 0 : /^(ust|gst)$/i.test(id) ? 1 : 2);
-  return bibles.sort((a, b) => rank(a.id) - rank(b.id));
-}
-
-/**
- * Look up the GL quote for a specific Bible from a note/TWL GLQuotes object.
- * GLQuotes is keyed by Bible repo identifier (e.g. "en_ult"); `id` is the short
- * extras key (e.g. "ult"). Matches a direct key or a repo whose final
- * underscore-segment equals the id.
- */
-function glQuoteForBibleId(glQuotes, id) {
-  if (!glQuotes || typeof glQuotes !== 'object' || !id) return '';
-  if (glQuotes[id]?.Quote) return glQuotes[id].Quote;
-  const key = Object.keys(glQuotes).find(
-    (k) => k.split('_').pop().toLowerCase() === id.toLowerCase()
-  );
-  return key ? glQuotes[key].Quote || '' : '';
-}
-
-/**
- * Render the per-verse scripture as parallel columns (one per Bible, e.g. ULT | UST).
- * Returns '' if no Bible has text for this verse.
- */
-function renderScriptureColumns(bibles, parsedExtras, bookId, ch, v) {
-  const cols = bibles.length ? bibles : [];
-  const cells = cols.map((b) => ({
-    abbr: b.abbr,
-    text: parsedExtras[b.id]?.chapters?.[bookId]?.[String(ch)]?.[String(v)] || '',
-  }));
-  if (cells.length === 0 || cells.every((c) => !c.text)) return '';
-
-  const head = cells.map((c) => `<th class="tn-col-label">${escapeHtml(c.abbr)}</th>`).join('');
-  const row = cells
-    .map((c) => `<td class="tn-scripture-text">${escapeHtml(c.text)}</td>`)
-    .join('');
-  return (
-    `<table class="tn-scripture-cols">\n` +
-    `  <thead><tr>${head}</tr></thead>\n` +
-    `  <tbody><tr>${row}</tr></tbody>\n` +
-    `</table>\n`
-  );
-}
-
-/**
- * Render a note's quote header: one line per Bible (literal Bible bold) tagged
- * with the Bible abbreviation, plus the original-language quote once. Falls back
- * to the original quote alone when no GL quotes converted.
- */
-function renderNoteQuoteHeader(note, bibles) {
-  const orig = note.Quote || '';
-  const lines = [];
-  let anyGl = false;
-  bibles.forEach((b, i) => {
-    const q = glQuoteForBibleId(note.GLQuotes, b.id);
-    if (!q) return;
-    anyGl = true;
-    const quoteHtml = i === 0 ? `<strong>${escapeHtml(q)}</strong>` : escapeHtml(q);
-    lines.push(
-      `  <div class="tn-note-quote"><span class="tn-bible-tag">${escapeHtml(b.abbr)}</span> ${quoteHtml}</div>`
-    );
-  });
-  if (!anyGl && orig) {
-    lines.push(`  <div class="tn-note-quote"><strong>${escapeHtml(orig)}</strong></div>`);
-  }
-  if (lines.length === 0) return '';
-  let html = `<div class="tn-note-header">\n${lines.join('\n')}\n`;
-  if (anyGl && orig) {
-    html += `  <div class="tn-note-orig">(${escapeHtml(orig)})</div>\n`;
-  }
-  html += `</div>\n`;
-  return html;
 }
 
 /**
@@ -217,48 +60,48 @@ function renderAppendixArticle(anchorId, article, backRefList, bookId) {
 }
 
 /**
- * Build appendix HTML for TA and TW articles referenced in notes / TWL lists.
+ * Collect TA and TW appendix articles referenced in notes / TWL lists into a
+ * keyed-by-kind object: `{ ta: { articlePath: { title, html } }, tw: {…} }`.
+ *
+ * The body is scanned for TA/TW article references (see the main loop); this
+ * turns each referenced article into its rendered HTML, keyed by its rc path.
+ * The keyed shape lets the composer (renderHTML / assemblePrintDocument) render,
+ * toggle, or link to appendices independently — see renderAppendicesHtml().
  */
-function buildAppendix(rcLinks, extras, bookId, backRefs) {
-  let html = '';
+function collectAppendices(rcLinks, extras, bookId, backRefs) {
+  const appendices = {};
 
-  // TA Appendix
   const taResource = extras?.ta;
   if (taResource?.manuals && rcLinks.ta.size > 0) {
-    let inner = '';
+    const ta = {};
     for (const articlePath of Array.from(rcLinks.ta).sort()) {
       const article = findTaArticle(taResource, articlePath);
       if (!article) continue;
       const anchorId = `nav-${bookId}--ta-${articlePath.replace(/\//g, '-')}`;
-      inner += renderAppendixArticle(anchorId, article, backRefs.ta[articlePath], bookId);
+      ta[articlePath] = {
+        title: article.title,
+        html: renderAppendixArticle(anchorId, article, backRefs.ta[articlePath], bookId),
+      };
     }
-    if (inner) {
-      html += `<section class="appendix ta" id="appendix-ta" data-toc-title="Translation Academy">\n`;
-      html += `  <h2 class="appendix-header">Translation Academy</h2>\n`;
-      html += inner;
-      html += `</section>\n`;
-    }
+    if (Object.keys(ta).length) appendices.ta = ta;
   }
 
-  // TW Appendix
   const twResource = extras?.tw;
   if (twResource?.articles && rcLinks.tw.size > 0) {
-    let inner = '';
+    const tw = {};
     for (const articlePath of Array.from(rcLinks.tw).sort()) {
       const article = findTwArticle(twResource, articlePath);
       if (!article) continue;
       const anchorId = `nav-${bookId}--tw-${articlePath.replace(/\//g, '-')}`;
-      inner += renderAppendixArticle(anchorId, article, backRefs.tw[articlePath], bookId);
+      tw[articlePath] = {
+        title: article.title,
+        html: renderAppendixArticle(anchorId, article, backRefs.tw[articlePath], bookId),
+      };
     }
-    if (inner) {
-      html += `<section class="appendix tw" id="appendix-tw" data-toc-title="Translation Words">\n`;
-      html += `  <h2 class="appendix-header">Translation Words</h2>\n`;
-      html += inner;
-      html += `</section>\n`;
-    }
+    if (Object.keys(tw).length) appendices.tw = tw;
   }
 
-  return html;
+  return appendices;
 }
 
 /**
@@ -346,6 +189,10 @@ function resolveRcLinks(html, bookId, rcLinks, extras, bookIdSet = new Set()) {
 }
 
 const tnWebCss = `
+.license-text {
+  font-size: 0.9em;
+}
+
 a.header-link {
   font-weight: inherit !important;
   font-size: inherit !important;
@@ -631,7 +478,8 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
             parsedScriptureExtras,
             bookId,
             chapterKey,
-            verseKey
+            verseKey,
+            { table: 'tn-scripture-cols', label: 'tn-col-label', text: 'tn-scripture-text' }
           );
           if (scriptureHtml) bodyParts.push(scriptureHtml);
         }
@@ -662,7 +510,12 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
           });
 
           // Quote header — one line per Bible (ULT/UST) plus the original quote
-          const quoteHeader = renderNoteQuoteHeader(note, bibles);
+          const quoteHeader = renderQuoteHeader(note, bibles, {
+            header: 'tn-note-header',
+            quote: 'tn-note-quote',
+            tag: 'tn-bible-tag',
+            orig: 'tn-note-orig',
+          });
 
           let noteArticle = `<article class="tn-note" id="${noteAnchor}">\n`;
           noteArticle += quoteHeader;
@@ -728,27 +581,53 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
     bodyParts.push(`</section>\n`);
   }
 
-  // Build appendices (after the main loop so TWL-referenced TW articles are collected)
-  const appendixHtml = buildAppendix(allRcLinks, extras, bookIds[0] || '', backRefs);
+  // Collect appendices (after the main loop so TWL-referenced TW articles are
+  // included), keyed by kind so the composer can render/toggle them separately.
+  const firstBook = bookIds[0] || '';
+  const bookIdSet = new Set(bookIds);
+  const appendices = collectAppendices(allRcLinks, extras, firstBook, backRefs);
 
-  // Resolve rc links across the whole document, including appendix cross-links
-  let body = bodyParts.join('') + appendixHtml;
-  body = resolveRcLinks(body, bookIds[0] || '', allRcLinks, extras, new Set(bookIds));
+  // Resolve rc:// links to internal anchors — across the body and across each
+  // appendix article (so their cross-links resolve to the same anchors).
+  let body = resolveRcLinks(bodyParts.join(''), firstBook, allRcLinks, extras, bookIdSet);
+  for (const kind of Object.keys(appendices)) {
+    for (const id of Object.keys(appendices[kind])) {
+      appendices[kind][id].html = resolveRcLinks(
+        appendices[kind][id].html,
+        firstBook,
+        allRcLinks,
+        extras,
+        bookIdSet
+      );
+    }
+  }
 
-  const cover = `<h3 class="cover-book-title">${escapeHtml(title)}</h3>`;
-  const css = { web: tnWebCss, print: tnPrintCss };
-  const fullHtml = buildFullHtmlDocument(title, tnWebCss + tnPrintCss, body);
+  const cover = buildCoverPage({
+    title,
+    version: resourceData.version,
+    abbreviation: resourceData.abbreviation,
+  });
+  const copyright = resourceData.license
+    ? `<div class="license-text">${convertMarkdown(resourceData.license)}</div>`
+    : '';
+  const css = { web: tnWebCss + coverCss, print: tnPrintCss };
+  const fullHtml = buildFullHtmlDocument(
+    title,
+    tnWebCss + tnPrintCss + coverCss,
+    `<div class="section cover-page">${cover}</div>\n${body}${renderAppendicesHtml(appendices)}`
+  );
 
   return {
     subject: resourceData.subject,
     title,
     sections: {
       cover,
-      copyright: '',
+      copyright,
       body,
       toc,
       css,
       webView: null,
+      appendices,
     },
     renderedBooks: {},
     fullHtml,

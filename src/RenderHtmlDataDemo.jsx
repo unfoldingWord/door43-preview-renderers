@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
+import { getResourceData } from './getResourceData';
 import { renderHtmlData } from './renderHtmlData';
+import { renderHTML } from './renderHTML';
 
 /**
  * Example resources covering every supported subject + metadata type, so the
@@ -10,10 +12,16 @@ const EXAMPLE_GROUPS = [
   {
     group: 'Scripture (USFM)',
     examples: [
-      ['RC: Aligned Bible — ULT', 'unfoldingWord', 'en_ult', 'master', 'tit'],
-      ['RC: Aligned Bible — UST', 'unfoldingWord', 'en_ust', 'master', 'tit'],
-      ['RC: Hebrew Old Testament — UHB', 'unfoldingWord', 'hbo_uhb', 'master', 'rut'],
-      ['RC: Greek New Testament — UGNT', 'unfoldingWord', 'el-x-koine_ugnt', 'master', 'tit'],
+      ['RC: Aligned Bible — ULT — Titus (v89)', 'unfoldingWord', 'en_ult', 'v89', 'tit'],
+      ['RC: Aligned Bible — UST — Romans', 'unfoldingWord', 'en_ust', 'master', 'rom'],
+      ['RC: Hebrew Old Testament — UHB — Ruth', 'unfoldingWord', 'hbo_uhb', 'master', 'rut'],
+      [
+        'RC: Greek New Testament — UGNT — Titus',
+        'unfoldingWord',
+        'el-x-koine_ugnt',
+        'master',
+        'tit',
+      ],
       ['TS: Bible — Ruth', 'adipatealberto', 'pid_rut_text_reg', 'master', 'rut'],
       ['TC: Aligned Bible — Daniel', 'christopherrsmith', 'en_ust_dan_book', 'master', 'dan'],
     ],
@@ -21,10 +29,10 @@ const EXAMPLE_GROUPS = [
   {
     group: 'TSV Bible helps',
     examples: [
-      ['Translation Notes', 'unfoldingWord', 'en_tn', 'master', 'tit'],
-      ['Translation Questions', 'unfoldingWord', 'en_tq', 'master', 'tit'],
-      ['Study Notes', 'unfoldingWord', 'en_sn', 'master', 'tit'],
-      ['Study Questions', 'unfoldingWord', 'en_sq', 'master', 'tit'],
+      ['Translation Notes — Titus (v89)', 'unfoldingWord', 'en_tn', 'v89', 'tit'],
+      ['Translation Questions — Romans (v89)', 'unfoldingWord', 'en_tq', 'v89', 'rom'],
+      ['Study Notes — Titus', 'unfoldingWord', 'en_sn', 'master', 'tit'],
+      ['Study Questions — Titus', 'unfoldingWord', 'en_sq', 'master', 'tit'],
     ],
   },
   {
@@ -90,9 +98,16 @@ export default function RenderHtmlDataDemo() {
   }, [result]);
 
   const previewFullHtml = useMemo(() => {
-    if (!result?.fullHtml) {
+    if (!result?.sections) {
       return '';
     }
+
+    // Compose a screen document from the rendered sections (stage 4). Show the
+    // cover + copyright here so the preview matches the full document.
+    const fullHtml = renderHTML(result, {
+      media: 'screen',
+      show: { cover: true, copyright: true },
+    });
 
     const wrapCss = `
       <style>
@@ -102,11 +117,11 @@ export default function RenderHtmlDataDemo() {
       </style>
     `;
 
-    if (result.fullHtml.includes('</head>')) {
-      return result.fullHtml.replace('</head>', `${wrapCss}</head>`);
+    if (fullHtml.includes('</head>')) {
+      return fullHtml.replace('</head>', `${wrapCss}</head>`);
     }
 
-    return result.fullHtml;
+    return fullHtml;
   }, [result]);
 
   const loadExample = (nextOwner, nextRepo, nextRef, nextBooksInput) => {
@@ -147,8 +162,11 @@ export default function RenderHtmlDataDemo() {
       .filter(Boolean);
 
     try {
-      const data = await renderHtmlData(owner, repo, ref, books, {
-        ...optionsJson,
+      // Stage 2: fetch + parse the resource data, then stage 3: render to HTML
+      // sections. (renderHtmlData no longer fetches — feed it the data.)
+      const resourceData = await getResourceData({ owner, repo, ref, books }, optionsJson);
+      const data = renderHtmlData(resourceData, {
+        books,
         renderOptions: renderOptionsJson,
       });
       setResult(data);

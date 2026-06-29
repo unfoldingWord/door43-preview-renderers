@@ -8,6 +8,58 @@ import {
 } from '../renderers/printDocumentAssembler.js';
 
 describe('printDocumentAssembler', () => {
+  // ─── Print toggles (show / page number / running header) ──
+
+  describe('getPrintCss toggles', () => {
+    test('defaults: page number at @bottom-center and running header on', () => {
+      const css = getPrintCss();
+      expect(css).toContain('@bottom-center {\n    content: counter(page);');
+      expect(css).toContain('content: string(doctitle)');
+      expect(css).toContain('string-set: doctitle content(text)');
+    });
+
+    test("pageNumberPosition 'top' moves the counter to @top-center", () => {
+      const css = getPrintCss({ pageNumberPosition: 'top' });
+      expect(css).toContain('@top-center {\n    content: counter(page);');
+      expect(css).not.toContain('@bottom-center {\n    content: counter(page);');
+    });
+
+    test('runningHeader false drops the doctitle header rules', () => {
+      const css = getPrintCss({ runningHeader: false });
+      expect(css).not.toContain('content: string(doctitle)');
+      expect(css).not.toContain('string-set: doctitle content(text)');
+    });
+  });
+
+  describe('assemblePrintDocument show toggles', () => {
+    const sections = {
+      cover: '<h1 class="cover-header">COVER_X</h1>',
+      copyright: '<p>COPYRIGHT_X</p>',
+      body: '<section id="nav-tit">BODY_X</section>',
+      toc: [{ id: 'nav-tit', title: 'Titus' }],
+      css: { web: '', print: '' },
+    };
+
+    test('includes cover/copyright/toc by default', () => {
+      const { innerHtml } = assemblePrintDocument(sections, {});
+      expect(innerHtml).toContain('cover-page');
+      expect(innerHtml).toContain('COPYRIGHT_X');
+      expect(innerHtml).toContain('id="toc"');
+      expect(innerHtml).toContain('BODY_X');
+    });
+
+    test('omits sections turned off via show', () => {
+      const { innerHtml } = assemblePrintDocument(sections, {
+        show: { cover: false, toc: false },
+      });
+      expect(innerHtml).not.toContain('cover-page');
+      expect(innerHtml).not.toContain('id="toc"');
+      // copyright + body remain
+      expect(innerHtml).toContain('COPYRIGHT_X');
+      expect(innerHtml).toContain('BODY_X');
+    });
+  });
+
   // ─── PAGE_SIZES ───────────────────────────────────────────
 
   describe('PAGE_SIZES', () => {
