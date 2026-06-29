@@ -83,46 +83,73 @@ module.exports = {
   },
   styleguideDir: 'styleguide',
   pagePerSection: true,
+  // Sections are ordered to mirror the rendering pipeline:
+  //   getAllCatalogEntries → getResourceData → renderHtmlData → renderHTML → renderPdf
+  // followed by reference material.
   sections: [
     {
       name: 'Introduction',
       content: 'docs/introduction.md',
     },
     {
-      name: 'Constants',
-      content: 'docs/constants.md',
+      name: 'Full Pipeline',
+      content: 'docs/pipeline.md',
+      components: 'src/PipelineDemo.jsx',
     },
     {
-      name: 'Get Resource Data',
-      content: 'docs/get-resource-data.md',
-      components: 'src/GetResourceDataDemo.jsx',
+      name: 'The pipeline',
+      sections: [
+        {
+          name: '1 · Get All Catalog Entries',
+          content: 'docs/get-all-catalog-entries.md',
+          components: 'src/GetAllCatalogEntriesDemo.jsx',
+        },
+        {
+          name: '2 · Get Resource Data',
+          content: 'docs/get-resource-data.md',
+          components: 'src/GetResourceDataDemo.jsx',
+        },
+        {
+          name: '3 · Render HTML Data',
+          content: 'docs/renderers.md',
+          components: 'src/RenderHtmlDataDemo.jsx',
+        },
+        {
+          name: '4 · Render HTML',
+          content: 'docs/render-html.md',
+          components: 'src/RenderHTMLDemo.jsx',
+        },
+        {
+          name: '5 · Render PDF',
+          content: 'docs/render-pdf.md',
+          components: 'src/RenderPDFDemo.jsx',
+        },
+      ],
     },
     {
-      name: 'Get All Catalog Entries For Rendering',
-      content: 'docs/get-all-catalog-entries-for-rendering.md',
-      components: 'src/GetAllCatalogEntriesForRenderingDemo.jsx',
-    },
-    {
-      name: 'Renderers',
-      content: 'docs/renderers.md',
-      components: 'src/RenderHtmlDataDemo.jsx',
-    },
-    {
-      name: 'Render PDF',
-      content: 'docs/render-pdf.md',
-      components: 'src/RenderPDFDemo.jsx',
-    },
-    {
-      name: 'Rendering Options',
-      content: 'docs/options.md',
-    },
-    {
-      name: 'Converters',
-      content: 'docs/converters.md',
-    },
-    {
-      name: 'API Client',
-      content: 'docs/api.md',
+      name: 'Reference',
+      sections: [
+        {
+          name: 'Rendering Options',
+          content: 'docs/options.md',
+        },
+        {
+          name: 'CLI',
+          content: 'docs/cli.md',
+        },
+        {
+          name: 'Constants',
+          content: 'docs/constants.md',
+        },
+        {
+          name: 'Converters',
+          content: 'docs/converters.md',
+        },
+        {
+          name: 'API Client',
+          content: 'docs/api.md',
+        },
+      ],
     },
   ],
   template: {

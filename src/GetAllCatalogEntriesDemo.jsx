@@ -2,12 +2,12 @@ import { useState } from 'react';
 import { getAllCatalogEntries } from './getAllCatalogEntries';
 
 /**
- * Demo component for getAllCatalogEntriesForRendering function
+ * Demo component for getAllCatalogEntries function
  *
  * @example
- * <GetAllCatalogEntriesForRenderingDemo />
+ * <GetAllCatalogEntriesDemo />
  */
-export default function GetAllCatalogEntriesForRenderingDemo() {
+export default function GetAllCatalogEntriesDemo() {
   const [owner, setOwner] = useState('unfoldingWord');
   const [repo, setRepo] = useState('en_tn');
   const [ref, setRef] = useState('v89');
@@ -64,7 +64,7 @@ export default function GetAllCatalogEntriesForRenderingDemo() {
 
   return (
     <div style={{ padding: '20px', fontFamily: 'sans-serif' }}>
-      <h2>getAllCatalogEntriesForRendering() Demo</h2>
+      <h2>getAllCatalogEntries() Demo</h2>
 
       <div
         style={{
