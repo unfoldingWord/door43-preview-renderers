@@ -41,6 +41,24 @@ printf '<!doctype html><h1>Hello PDF</h1>' \
     http://localhost:8080 -o out.pdf && file out.pdf
 ```
 
+## Published image (CI)
+
+`.github/workflows/weasyprint-image.yml` builds this Dockerfile and pushes it to
+the Door43 registry on every change to `services/weasyprint-pdf/**` on `main`
+(and on manual dispatch):
+
+- **Image:** `hub.door43.org/door43-preview-weasyprint`
+- **Tags:** `latest` (default branch) and `sha-<short>` (immutable, pinnable)
+- **Required repo secrets:** `DOCKER_BUILD_USERNAME`, `DOCKER_BUILD_TOKEN`
+
+```bash
+docker run --rm -p 8080:8080 -e ALLOW_ORIGIN='https://your-site.netlify.app' \
+  hub.door43.org/door43-preview-weasyprint:latest
+```
+
+> If the registry requires a project/namespace, adjust `IMAGE` in the workflow
+> (e.g. `hub.door43.org/<project>/door43-preview-weasyprint`).
+
 ## Deploy
 
 Netlify can't host this (no Python runtime, no containers). Use any container host:

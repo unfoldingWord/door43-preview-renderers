@@ -1,0 +1,58 @@
+name: weasyprint-pdf image
+
+# Build the services/weasyprint-pdf container and push it to hub.door43.org.
+# Runs when the service changes on main, or on demand.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'services/weasyprint-pdf/**'
+      - '.github/workflows/weasyprint-image.yml'
+  workflow_dispatch:
+
+env:
+  # Image repository on the Door43 registry. If the registry requires a project/
+  # namespace segment, change this to e.g. hub.door43.org/<project>/door43-preview-weasyprint.
+  IMAGE: hub.door43.org/door43-preview-weasyprint
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to hub.door43.org
+        uses: docker/login-action@v3
+        with:
+          registry: hub.door43.org
+          username: ${{ secrets.DOCKER_BUILD_USERNAME }}
+          password: ${{ secrets.DOCKER_BUILD_TOKEN }}
+
+      - name: Compute image tags and labels
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,format=short
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: services/weasyprint-pdf
+          file: services/weasyprint-pdf/Dockerfile
+          push: true
+          # Most container hosts are amd64; add linux/arm64 here (with QEMU) if you
+          # deploy to ARM — note arm64 emulated builds of WeasyPrint are slow.
+          platforms: linux/amd64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
