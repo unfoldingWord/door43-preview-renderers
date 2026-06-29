@@ -42,6 +42,29 @@ export const PAGE_SIZES = {
   CROWN_QUARTO: { label: 'Crown Quarto', orientation: 'portrait', width: '189mm', height: '246mm' },
 };
 
+/**
+ * Resolve a page-size option into { width, height }.
+ *
+ * Accepts:
+ *  - a PAGE_SIZES key, e.g. 'A4_PORTRAIT', 'US_LETTER_LANDSCAPE'
+ *  - a friendly label, e.g. 'A4', 'US Letter', 'Trade' (portrait assumed)
+ *  - an explicit { width, height } object (CSS lengths, e.g. '6in', '210mm')
+ * Falls back to A4 portrait.
+ */
+export function resolvePageSize(pageSize) {
+  if (pageSize && typeof pageSize === 'object' && pageSize.width && pageSize.height) {
+    return { width: pageSize.width, height: pageSize.height };
+  }
+  if (typeof pageSize === 'string') {
+    if (PAGE_SIZES[pageSize]) return PAGE_SIZES[pageSize];
+    const byLabel = Object.values(PAGE_SIZES).find(
+      (s) => s.label.toLowerCase() === pageSize.toLowerCase() && s.orientation === 'portrait'
+    );
+    if (byLabel) return byLabel;
+  }
+  return PAGE_SIZES.A4_PORTRAIT;
+}
+
 // ─── Logo mapping ───────────────────────────────────────────────────────────
 
 const ABBREVIATION_TO_LOGO = {
@@ -166,6 +189,45 @@ export function buildCoverPage({ title, version, abbreviation, extraCoverHtml })
 ${version ? `<h3 class="cover-version">${escapeHtml(version)}</h3>` : ''}
 ${extraCoverHtml || ''}`;
 }
+
+/**
+ * Centering CSS for the cover when rendered as a standalone web document
+ * (the renderers' `fullHtml`). Print uses its own cover-page rules in
+ * getPrintCss(); these rules are scoped to `.cover-page` so they only affect
+ * the cover block, not the rest of the page.
+ */
+export const coverCss = `
+.cover-page {
+  text-align: center;
+  padding-top: 2rem;
+}
+
+.cover-page .header-title {
+  display: none;
+}
+
+.cover-page .title-logo {
+  display: block;
+  margin: 0 auto 1rem auto;
+  width: 180px;
+  max-width: 60%;
+  height: auto;
+}
+
+.cover-page .cover-header,
+.cover-page .cover-version,
+.cover-page .cover-book-title,
+.cover-page .cover-resource-title {
+  text-align: center;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.cover-page .cover-version {
+  color: #666;
+  font-weight: normal;
+}
+`;
 
 // ─── Print CSS ──────────────────────────────────────────────────────────────
 
@@ -466,13 +528,10 @@ export function assemblePrintDocument(sections, options = {}) {
     css = {},
   } = sections;
 
-  // Build cover page
-  const cover = buildCoverPage({
-    title,
-    version,
-    abbreviation,
-    extraCoverHtml: coverSnippet,
-  });
+  // Prefer the renderer-provided cover (now a complete logo + title + version
+  // cover); fall back to building one from the options for callers that pass
+  // only a short snippet or none at all.
+  const cover = coverSnippet || buildCoverPage({ title, version, abbreviation });
 
   // Build TOC
   let tocHtml;

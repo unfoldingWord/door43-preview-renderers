@@ -1,4 +1,4 @@
-import { fetchContent } from './dcsApi.js';
+import { fetchContent, fetchLicense } from './dcsApi.js';
 import { addGLQuoteCols } from 'tsv-quote-converters';
 
 /**
@@ -184,6 +184,9 @@ export async function extractRcTsvData(catalogEntry, books, options = {}, catalo
     flavorType: catalogEntry.flavor_type || '',
     flavor: catalogEntry.flavor || '',
     title: catalogEntry.title,
+    abbreviation: catalogEntry.abbreviation || catalogEntry.repo?.abbreviation || '',
+    version: catalogEntry.branch_or_tag_name || catalogEntry.ref || '',
+    license: await fetchLicense(owner, repo, ref, dcs_api_url),
     books: {},
     extras: {},
   };

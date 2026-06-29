@@ -44,35 +44,40 @@ npx door43-preview-renderers getAllCatalogEntries --owner unfoldingWord --repo e
 
 ### Library Usage
 
+The renderer is a **composable chain**: each stage takes the previous stage's
+output, so you can run the whole thing or start from any cached intermediate.
+
 ```javascript
 import {
-  getAllCatalogEntriesForRendering,
   getResourceData,
   renderHtmlData,
+  renderHTML,
+  renderPdf,
 } from 'door43-preview-renderers';
 
-// Get catalog entries with all dependencies
-const result = await getAllCatalogEntriesForRendering('unfoldingWord', 'en_tn', 'v80', ['tit'], {
+// 1. Fetch + parse a resource (and its dependencies) from DCS
+const resourceData = await getResourceData('unfoldingWord', 'en_ult', 'v89', ['tit'], {
   dcs_api_url: 'https://git.door43.org/api/v1',
 });
 
-console.log(result.version); // Package version
-console.log(result.catalogEntries); // Array of catalog entries
-
-// Get resource data for a specific repository
-const data = await getResourceData('unfoldingWord', 'en_ult', 'master', ['gen'], {
-  dcs_api_url: 'https://git.door43.org/api/v1',
-});
-
-// Render HTML sections + full HTML for supported subjects
-const rendered = await renderHtmlData('unfoldingWord', 'en_ult', 'v88', ['tit'], {
-  dcs_api_url: 'https://git.door43.org/api/v1',
+// 2. Render to reusable HTML sections (pure, no network).
+//    Already have cached resourceData? Skip step 1 and pass it straight in here.
+const htmlData = renderHtmlData(resourceData, {
   renderOptions: { includeRawUsfmView: false, editorMode: false },
 });
 
-console.log(rendered.sections.body); // HTML body string
-console.log(rendered.fullHtml); // Full HTML document
+console.log(htmlData.sections.body); // HTML body string
+
+// 3. Compose a self-contained document — web or print
+const webHtml = renderHTML(htmlData); // continuous web page
+const printHtml = renderHTML(htmlData, { media: 'print', print: { pageSize: 'A4_PORTRAIT' } });
+
+// 4. …or render a PDF (requires the `weasyprint` binary)
+const pdf = await renderPdf(htmlData, { pageSize: 'A4_PORTRAIT', outputPath: 'titus.pdf' });
 ```
+
+> **📖 All options are documented in [`docs/options.md`](docs/options.md)** — every
+> argument for each function, with defaults, examples, and recipes.
 
 ### CLI Usage
 
@@ -249,50 +254,75 @@ console.log(catalogEntry.ingredients); // Array of books/chapters
 
 ### `renderHtmlData()`
 
-Fetches resource data and renders subject-specific HTML sections.
+Renders subject-specific HTML **sections** from parsed resource data. Pure and
+synchronous — **no network**. Feed it the output of `getResourceData()` (or any
+cached/hand-built resource data).
+
+> **Full option reference:** [`docs/options.md`](docs/options.md).
 
 #### Parameters
 
 ```javascript
-renderHtmlData(owner, repo, ref, books?, options?)
+renderHtmlData(resourceData, options?)
 ```
 
-- `owner` (string): Repository owner
-- `repo` (string): Repository name
-- `ref` (string): Git reference (branch, tag, or commit)
-- `books` (array, optional): Array of book identifiers to filter (default: `[]`)
+- `resourceData` (object): Output of `getResourceData()` — the parsed resource.
 - `options` (object, optional):
-  - `dcs_api_url` (string): DCS API base URL (default: `https://git.door43.org/api/v1`)
-  - `quiet` (boolean): Suppress logging output (default: `false`)
-  - `renderOptions` (object): Renderer-specific options (e.g. `includeRawUsfmView`, `editorMode`)
+  - `renderOptions` (object): Renderer-specific options (e.g. `includeRawUsfmView`, `editorMode`, `showChaptersInToc`)
+  - `books` (array | object): Book ordering/selection. Array of ids, or `{ id: range }` for per-book reference ranges (range filtering is planned).
 
 #### Current subject support
 
-- `Aligned Bible`
-- `Bible`
-- `Greek New Testament`
-- `Hebrew Old Testament`
-- `Translation Academy`
-- `Translation Words`
+- `Aligned Bible`, `Bible`, `Greek New Testament`, `Hebrew Old Testament`
+- `Translation Academy`, `Translation Words`
+- `Open Bible Stories`
+- `TSV Translation Notes` / `TSV OBS Translation Notes`
+- `TSV Translation Questions` / `Study Questions` / `Study Notes` (+ OBS variants)
 
 #### Returns
 
-Returns a Promise that resolves to a rendering package:
+An `HtmlData` package (cover/identity fields promoted to the top level):
 
 ```javascript
 {
   subject: "Aligned Bible",
   title: "unfoldingWord® Literal Text",
+  abbreviation: "ult",
+  version: "v89",
+  direction: "ltr",
   sections: {
-    cover: "<h3 ...",
+    cover: "<h1 ...",
+    copyright: "<div ...",
     body: "<div class=\"section bible-book\" ...",
     toc: [{ id: "nav-tit", title: "Titus", book: "tit" }],
-    css: { web: "..." },
+    css: { web: "...", print: "..." },
     webView: null
-  },
-  fullHtml: "<!DOCTYPE html>...",
-  resourceData: { ... } // original getResourceData output
+  }
 }
+```
+
+### `renderHTML()`
+
+Composes an `HtmlData` package into **one self-contained HTML document** for the
+screen or for print. Pure and synchronous; returns a string.
+
+> **Full option reference:** [`docs/options.md`](docs/options.md).
+
+#### Parameters
+
+```javascript
+renderHTML(htmlData, options?)
+```
+
+- `htmlData` (object): Output of `renderHtmlData()`.
+- `options` (object, optional): `media` (`'screen'`|`'print'`), `show` (which
+  sections to include), `columns`, `direction`, `engine`, and `print.*`
+  (pageSize, footerHtml, …). Screen omits cover/copyright/toc by default; print
+  includes them.
+
+```javascript
+const webHtml = renderHTML(htmlData);                                    // continuous web page
+const printHtml = renderHTML(htmlData, { media: 'print' });              // PagedJS/WeasyPrint-ready
 ```
 
 ## Development

@@ -1,5 +1,6 @@
 import axios from 'axios';
 import JSZip from 'jszip';
+import { readLicenseFromZip } from './dcsApi.js';
 
 /**
  * Extract Translation Words data from RC format (markdown files in directories)
@@ -117,6 +118,9 @@ export async function extractRcTwData(catalogEntry, _options) {
     flavorType: catalogEntry.flavor_type || '',
     flavor: catalogEntry.flavor || '',
     title: catalogEntry.title,
+    abbreviation: catalogEntry.abbreviation || catalogEntry.repo?.abbreviation || '',
+    version: catalogEntry.branch_or_tag_name || catalogEntry.ref || '',
+    license: await readLicenseFromZip(zip),
     articles,
   };
 }

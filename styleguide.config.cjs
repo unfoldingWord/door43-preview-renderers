@@ -1,3 +1,52 @@
+const path = require('path');
+const { pathToFileURL } = require('url');
+
+// WeasyPrint is a server-side (Python) tool — it cannot run in the browser where
+// the demos execute. So the styleguide dev server exposes a small endpoint that
+// accepts a renderHtmlData() result + PDF options, runs renderPdf() (assemble +
+// WeasyPrint) in Node, and streams the PDF back for the demo to embed in an iframe.
+// Requires the `weasyprint` binary on PATH (pipx install weasyprint / brew install weasyprint).
+const LIB_URL = pathToFileURL(path.resolve(__dirname, 'src/index.js')).href;
+const MAX_PDF_BODY = 96 * 1024 * 1024; // 96 MB — a full book's sections can be large
+
+function registerPdfEndpoint(app) {
+  if (!app || typeof app.post !== 'function') return;
+  app.post('/api/render-pdf', (req, res) => {
+    const chunks = [];
+    let size = 0;
+    let aborted = false;
+    req.on('data', (chunk) => {
+      if (aborted) return;
+      size += chunk.length;
+      if (size > MAX_PDF_BODY) {
+        aborted = true;
+        res.status(413).json({ error: 'Payload too large' });
+        req.destroy();
+        return;
+      }
+      chunks.push(chunk);
+    });
+    req.on('end', async () => {
+      if (aborted) return;
+      try {
+        const { renderResult, options } = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}');
+        const { renderPdf } = await import(LIB_URL);
+        const pdf = await renderPdf(renderResult, options || {});
+        const buf = Buffer.isBuffer(pdf) ? pdf : Buffer.from(pdf);
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', 'inline; filename="preview.pdf"');
+        res.setHeader('Content-Length', buf.length);
+        res.end(buf);
+      } catch (err) {
+        res.status(500).json({ error: err && err.message ? err.message : String(err) });
+      }
+    });
+    req.on('error', () => {
+      if (!res.headersSent) res.status(400).json({ error: 'Request stream error' });
+    });
+  });
+}
+
 module.exports = {
   title: 'Door43 Preview Renderers',
   // Shown under the title in the sidebar; read from package.json so it stays in sync.
@@ -19,7 +68,16 @@ module.exports = {
     resolve: {
       extensions: ['.js', '.jsx', '.json'],
       alias: {
-        'door43-preview-renderers': require('path').resolve(__dirname, 'src/index.js'),
+        'door43-preview-renderers': path.resolve(__dirname, 'src/index.js'),
+      },
+    },
+    // webpack-dev-server v4: register the /api/render-pdf endpoint once the express
+    // app exists. (Styleguidist's `configureServer` hook receives an undefined app
+    // in this wds version because it runs before the server starts.)
+    devServer: {
+      setupMiddlewares: (middlewares, devServer) => {
+        registerPdfEndpoint(devServer.app);
+        return middlewares;
       },
     },
   },
@@ -48,6 +106,15 @@ module.exports = {
       name: 'Renderers',
       content: 'docs/renderers.md',
       components: 'src/RenderHtmlDataDemo.jsx',
+    },
+    {
+      name: 'Render PDF',
+      content: 'docs/render-pdf.md',
+      components: 'src/RenderPDFDemo.jsx',
+    },
+    {
+      name: 'Rendering Options',
+      content: 'docs/options.md',
     },
     {
       name: 'Converters',

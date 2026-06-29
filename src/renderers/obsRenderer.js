@@ -1,4 +1,5 @@
 import { convertMarkdown } from '../converters/markdownConverter.js';
+import { buildCoverPage, coverCss } from './printDocumentAssembler.js';
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -171,14 +172,22 @@ export function renderObsHtml(resourceData, options = {}) {
     );
   }
 
-  const cover = `<h3 class="cover-book-title">${escapeHtml(title)}</h3>`;
+  const cover = buildCoverPage({
+    title,
+    version: resourceData.version,
+    abbreviation: resourceData.abbreviation,
+  });
   const body = `<div class="section" id="obs" data-toc-title="${escapeHtml(title)}">\n${bodyParts.join('\n')}\n</div>`;
   const css = {
-    web: obsWebCss,
+    web: obsWebCss + coverCss,
     print: obsPrintCss,
   };
 
-  const fullHtml = buildFullHtmlDocument(title, obsWebCss + obsPrintCss, body);
+  const fullHtml = buildFullHtmlDocument(
+    title,
+    obsWebCss + obsPrintCss + coverCss,
+    `<div class="section cover-page">${cover}</div>\n${body}`
+  );
 
   return {
     subject: resourceData.subject,

@@ -1,14 +1,9 @@
 import { jest } from '@jest/globals';
 
-const getResourceDataMock = jest.fn();
 const renderAlignedBibleHtmlMock = jest.fn();
 const renderTranslationAcademyHtmlMock = jest.fn();
 const renderTranslationWordsHtmlMock = jest.fn();
 const renderObsHtmlMock = jest.fn();
-
-jest.unstable_mockModule('../getResourceData.js', () => ({
-  getResourceData: getResourceDataMock,
-}));
 
 jest.unstable_mockModule('../renderers/alignedBibleRenderer.js', () => ({
   renderAlignedBibleHtml: renderAlignedBibleHtmlMock,
@@ -33,116 +28,114 @@ describe('renderHtmlData', () => {
     jest.clearAllMocks();
   });
 
-  test('throws when getResourceData returns no data', async () => {
-    getResourceDataMock.mockResolvedValueOnce(null);
+  // renderHtmlData is now pure + synchronous: it takes ResourceData directly
+  // (no fetching) and returns the HtmlData package with cover/identity fields
+  // promoted to the top level (no attached resourceData, no fullHtml).
 
-    await expect(renderHtmlData('unfoldingWord', 'en_ult', 'v88', ['tit'], {})).rejects.toThrow(
-      'No resource data was returned from getResourceData().'
-    );
+  test('throws when resourceData is missing', () => {
+    expect(() => renderHtmlData(null)).toThrow('resourceData is required');
   });
 
-  test('throws when getResourceData returns an error payload', async () => {
-    getResourceDataMock.mockResolvedValueOnce({ error: 'catalog failed' });
-
-    await expect(renderHtmlData('unfoldingWord', 'en_ult', 'v88', ['tit'], {})).rejects.toThrow(
-      'catalog failed'
-    );
+  test('throws when resourceData carries an error payload', () => {
+    expect(() => renderHtmlData({ error: 'catalog failed' })).toThrow('catalog failed');
   });
 
-  test('routes aligned Bible subjects and passes requested books/render options', async () => {
-    const resourceData = { subject: 'Aligned Bible', type: 'usfm', books: { tit: '...' } };
+  test('routes aligned Bible subjects and passes requested books/render options', () => {
+    const resourceData = {
+      subject: 'Aligned Bible',
+      type: 'usfm',
+      title: 'ULT',
+      abbreviation: 'ult',
+      version: 'v88',
+      books: { tit: '...' },
+    };
     const rendered = {
       subject: 'Aligned Bible',
-      sections: { body: '<div />' },
+      sections: { body: '<div />', toc: [], css: { web: '' } },
       fullHtml: '<html />',
     };
 
-    getResourceDataMock.mockResolvedValueOnce(resourceData);
     renderAlignedBibleHtmlMock.mockReturnValueOnce(rendered);
 
-    const result = await renderHtmlData('unfoldingWord', 'en_ult', 'v88', ['tit'], {
-      quiet: true,
+    const result = renderHtmlData(resourceData, {
+      books: ['tit'],
       renderOptions: { includeRawUsfmView: true },
     });
 
-    expect(getResourceDataMock).toHaveBeenCalledWith('unfoldingWord', 'en_ult', 'v88', ['tit'], {
-      quiet: true,
-    });
     expect(renderAlignedBibleHtmlMock).toHaveBeenCalledWith(resourceData, {
       requestedBooks: ['tit'],
       includeRawUsfmView: true,
     });
-    expect(result).toEqual({ ...rendered, resourceData });
+    expect(result).toEqual({
+      subject: 'Aligned Bible',
+      title: 'ULT',
+      abbreviation: 'ult',
+      version: 'v88',
+      direction: 'ltr',
+      sections: rendered.sections,
+    });
   });
 
-  test('routes Translation Academy subjects', async () => {
-    const resourceData = { subject: 'Translation Academy', type: 'ta', manuals: {} };
-    const rendered = {
-      subject: 'Translation Academy',
-      sections: { body: '<div />' },
-      fullHtml: '<html />',
+  test('prefers requestedBooks baked into the resource data', () => {
+    const resourceData = {
+      subject: 'Aligned Bible',
+      type: 'usfm',
+      title: 'ULT',
+      requestedBooks: ['rom'],
+      books: { rom: '...' },
     };
+    renderAlignedBibleHtmlMock.mockReturnValueOnce({ subject: 'Aligned Bible', sections: {} });
 
-    getResourceDataMock.mockResolvedValueOnce(resourceData);
+    renderHtmlData(resourceData, { books: ['tit'] });
+
+    expect(renderAlignedBibleHtmlMock).toHaveBeenCalledWith(resourceData, {
+      requestedBooks: ['rom'],
+    });
+  });
+
+  test('routes Translation Academy subjects', () => {
+    const resourceData = { subject: 'Translation Academy', type: 'ta', title: 'TA', manuals: {} };
+    const rendered = { subject: 'Translation Academy', sections: { body: '<div />' } };
+
     renderTranslationAcademyHtmlMock.mockReturnValueOnce(rendered);
 
-    const result = await renderHtmlData('unfoldingWord', 'en_ta', 'v89', [], {
-      quiet: true,
-      renderOptions: { includeAppendix: true },
-    });
+    const result = renderHtmlData(resourceData, { renderOptions: { includeAppendix: true } });
 
     expect(renderTranslationAcademyHtmlMock).toHaveBeenCalledWith(resourceData, {
       includeAppendix: true,
     });
-    expect(result).toEqual({ ...rendered, resourceData });
+    expect(result.subject).toBe('Translation Academy');
+    expect(result.sections).toBe(rendered.sections);
   });
 
-  test('routes Translation Words subjects', async () => {
-    const resourceData = { subject: 'Translation Words', type: 'tw', articles: {} };
-    const rendered = {
-      subject: 'Translation Words',
-      sections: { body: '<div />' },
-      fullHtml: '<html />',
-    };
+  test('routes Translation Words subjects', () => {
+    const resourceData = { subject: 'Translation Words', type: 'tw', title: 'TW', articles: {} };
+    const rendered = { subject: 'Translation Words', sections: { body: '<div />' } };
 
-    getResourceDataMock.mockResolvedValueOnce(resourceData);
     renderTranslationWordsHtmlMock.mockReturnValueOnce(rendered);
 
-    const result = await renderHtmlData('unfoldingWord', 'en_tw', 'v89', [], {
-      quiet: true,
-      renderOptions: { includeAppendix: true },
-    });
+    const result = renderHtmlData(resourceData, { renderOptions: { includeAppendix: true } });
 
     expect(renderTranslationWordsHtmlMock).toHaveBeenCalledWith(resourceData, {
       includeAppendix: true,
     });
-    expect(result).toEqual({ ...rendered, resourceData });
+    expect(result.subject).toBe('Translation Words');
   });
 
-  test('routes Open Bible Stories subjects', async () => {
-    const resourceData = { subject: 'Open Bible Stories', type: 'obs', stories: {} };
-    const rendered = {
-      subject: 'Open Bible Stories',
-      sections: { body: '<div />', copyright: '' },
-      fullHtml: '<html />',
-    };
+  test('routes Open Bible Stories subjects', () => {
+    const resourceData = { subject: 'Open Bible Stories', type: 'obs', title: 'OBS', stories: {} };
+    const rendered = { subject: 'Open Bible Stories', sections: { body: '<div />', copyright: '' } };
 
-    getResourceDataMock.mockResolvedValueOnce(resourceData);
     renderObsHtmlMock.mockReturnValueOnce(rendered);
 
-    const result = await renderHtmlData('unfoldingWord', 'en_obs', 'v1', [], {
-      quiet: true,
-      renderOptions: { resolution: '360px' },
-    });
+    const result = renderHtmlData(resourceData, { renderOptions: { resolution: '360px' } });
 
     expect(renderObsHtmlMock).toHaveBeenCalledWith(resourceData, { resolution: '360px' });
-    expect(result).toEqual({ ...rendered, resourceData });
+    expect(result.subject).toBe('Open Bible Stories');
   });
 
-  test('throws for unsupported subjects', async () => {
-    getResourceDataMock.mockResolvedValueOnce({ subject: 'Training Library' });
-
-    await expect(renderHtmlData('unfoldingWord', 'en_tl', 'v1', [], {})).rejects.toThrow(
+  test('throws for unsupported subjects', () => {
+    expect(() => renderHtmlData({ subject: 'Training Library' })).toThrow(
       'HTML rendering is not implemented yet for subject `Training Library`.'
     );
   });

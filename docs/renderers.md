@@ -6,11 +6,17 @@ Renderers are responsible for converting processed content into HTML format suit
 
 Use `renderHtmlData()` when you want a subject-aware rendering pipeline:
 
-```js static
-import { renderHtmlData } from 'door43-preview-renderers';
+`renderHtmlData()` is pure and synchronous — pass it parsed resource data (no
+network). See [Rendering options](./options.md) for all options.
 
-const rendered = await renderHtmlData('unfoldingWord', 'en_ult', 'v88', ['tit'], {
+```js static
+import { getResourceData, renderHtmlData } from 'door43-preview-renderers';
+
+const resourceData = await getResourceData('unfoldingWord', 'en_ult', 'v88', ['tit'], {
   dcs_api_url: 'https://git.door43.org/api/v1',
+});
+
+const rendered = renderHtmlData(resourceData, {
   renderOptions: {
     includeRawUsfmView: false,
     editorMode: false,
@@ -20,12 +26,11 @@ const rendered = await renderHtmlData('unfoldingWord', 'en_ult', 'v88', ['tit'],
 
 `renderHtmlData()` currently supports these subjects:
 
-- `Aligned Bible`
-- `Bible`
-- `Greek New Testament`
-- `Hebrew Old Testament`
-- `Translation Academy`
-- `Translation Words`
+- `Aligned Bible`, `Bible`, `Greek New Testament`, `Hebrew Old Testament`
+- `Translation Academy`, `Translation Words`
+- `Open Bible Stories`
+- `TSV Translation Notes` / `TSV OBS Translation Notes`
+- `TSV Translation Questions` / `Study Questions` / `Study Notes` (+ OBS variants)
 
 It returns:
 
