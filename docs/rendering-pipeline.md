@@ -421,8 +421,12 @@ Consequences:
 1. Promote `requestedBooks`/`direction` and add `appendices` keyed by kind
    (`{ ta, tw }`) to what each renderer produces (TN currently embeds appendices
    in `body` — `translationNotesRenderer.js:588`).
-2. Rework anchors to the `<res>-<book>-<chap|front>-<verse|front>[-<noteId>]` scheme
-   (currently `nav-<book>-…` — e.g. `alignedBibleRenderer.js:94`, `translationNotesRenderer.js:490`).
+2. ✅ **DONE** — anchors rewritten to the `<res>-<book>-<chap|front>-<verse|intro>[-<noteId>]`
+   scheme via a centralized prefix rewrite in `renderHtmlData` (`src/renderers/anchors.js`):
+   renderers keep emitting internally-consistent `nav-…`, and `renderHtmlData` swaps the
+   prefix to `resourceData.abbreviation`. Renderers + markdown converter untouched; verified
+   on real TN data (`nav-jud-front-intro-xh5n` → `tn-jud-front-intro-xh5n`). Resource-level
+   `<res>` anchor added to the screen wrapper (print wrapper TBD).
 3. Apply reference-range filtering (`books` object form) at render time (stage 3).
 4. Wire `show`/page-number toggles into the print assembler (`assemblePrintDocument`
    currently always emits cover/copyright/toc).

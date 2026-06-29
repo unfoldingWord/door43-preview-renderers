@@ -5,6 +5,7 @@ import { renderObsHtml } from './renderers/obsRenderer.js';
 import { renderTranslationNotesHtml } from './renderers/translationNotesRenderer.js';
 import { renderTsvQuestionsHtml } from './renderers/tsvQuestionsRenderer.js';
 import { parseBooksOption } from './renderOptions.js';
+import { rewriteSectionAnchors } from './renderers/anchors.js';
 
 const alignedBibleSubjects = new Set([
   'Aligned Bible',
@@ -77,14 +78,21 @@ export function renderHtmlData(resourceData, options = {}) {
     throw new Error(`HTML rendering is not implemented yet for subject \`${resourceData.subject}\`.`);
   }
 
+  // Apply the resource-scoped anchor scheme (nav- -> `${abbreviation}-`) so the
+  // app can deep-link to unique anchors. Centralized here; see renderers/anchors.js.
+  const abbreviation = resourceData.abbreviation;
+  const sections = abbreviation
+    ? rewriteSectionAnchors(rendered.sections, abbreviation)
+    : rendered.sections;
+
   // Promote cover/identity fields onto HtmlData so downstream stages
   // (renderHTML, renderPdf) never need the resourceData again.
   return {
     subject: rendered.subject ?? resourceData.subject,
     title: rendered.title ?? resourceData.title,
-    abbreviation: resourceData.abbreviation,
+    abbreviation,
     version: resourceData.version,
     direction: resourceData.direction || rendered.direction || 'ltr',
-    sections: rendered.sections,
+    sections,
   };
 }

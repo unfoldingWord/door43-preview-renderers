@@ -76,6 +76,30 @@ describe('renderHtmlData', () => {
     });
   });
 
+  test('applies the resource abbreviation as the anchor prefix', () => {
+    const resourceData = {
+      subject: 'Aligned Bible',
+      type: 'usfm',
+      title: 'ULT',
+      abbreviation: 'ult',
+      books: { tit: '...' },
+    };
+    renderAlignedBibleHtmlMock.mockReturnValueOnce({
+      subject: 'Aligned Bible',
+      sections: {
+        body: '<div id="nav-tit"><a href="#nav-tit-1-1">v</a></div>',
+        toc: [{ id: 'nav-tit', title: 'Titus' }],
+        css: { web: '' },
+      },
+    });
+
+    const result = renderHtmlData(resourceData);
+
+    expect(result.sections.body).toContain('id="ult-tit"');
+    expect(result.sections.body).toContain('href="#ult-tit-1-1"');
+    expect(result.sections.toc[0].id).toBe('ult-tit');
+  });
+
   test('prefers requestedBooks baked into the resource data', () => {
     const resourceData = {
       subject: 'Aligned Bible',

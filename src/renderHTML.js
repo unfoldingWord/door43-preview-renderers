@@ -62,6 +62,8 @@ function buildScreenDocument(htmlData, opts) {
   const { sections } = htmlData;
   const css = sections.css?.web || '';
   const dir = opts.direction;
+  // Resource-level anchor (e.g. `#tn`) so the app can scroll to the whole resource.
+  const resourceId = htmlData.abbreviation ? ` id="${escapeHtml(htmlData.abbreviation)}"` : '';
   const parts = [];
 
   if (opts.show.cover && sections.cover) {
@@ -97,7 +99,7 @@ function buildScreenDocument(htmlData, opts) {
   <style>${css}</style>
 </head>
 <body>
-  <div class="door43-preview" dir="${dir}" data-direction="${dir}">
+  <div class="door43-preview"${resourceId} dir="${dir}" data-direction="${dir}">
 ${parts.join('\n')}
   </div>
 </body>

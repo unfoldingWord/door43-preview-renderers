@@ -168,6 +168,25 @@ renderPdf(htmlData, { pageSize: { width: '160mm', height: '240mm' } });
 
 ---
 
+## Anchors (deep-linking)
+
+Every rendered element gets a unique, hierarchical `id` prefixed with the
+resource abbreviation, so an app can put `#anchor` in the URL and scroll to it.
+The prefix is the resource's `abbreviation` (e.g. `tn`, `tw`, `ta`, `ult`, `obs`):
+
+| Level | Pattern | Example |
+|---|---|---|
+| Resource | `<res>` | `tn` |
+| Book | `<res>-<book>` | `tn-rut` |
+| Chapter | `<res>-<book>-<chap\|front>` | `tn-rut-4`, `tn-rut-front` |
+| Verse | `<res>-<book>-<chap\|front>-<verse\|intro>` | `tn-rut-4-1`, `tn-rut-front-intro` |
+| Note (TN) | `<res>-<book>-<chap>-<verse>-<noteId>` | `tn-rut-4-1-e2fa` |
+
+Internal cross-references (`href="#…"`) and the Table of Contents use the same
+anchors, so links resolve within the document. ✅ Active (the resource-level
+`<res>` anchor currently appears in the **screen** wrapper; adding it to the
+print wrapper is planned).
+
 ## Common recipes
 
 **Web preview (body only):**
