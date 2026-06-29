@@ -446,14 +446,20 @@ Consequences:
 anchor in the print wrapper.
 
 **Phase 2 — Source stages.**
-5. Rename + de-overload → `getAllCatalogEntries(source, options)`; fold in
-   `getFilteredCatalogEntries`; split `resourceVersion`/`libraryVersion`.
-6. Rewrite `getResourceData(input, options)` with discriminated input; reuse a
-   passed `CatalogSet` (no second `/catalog/bp/`); move `is_extra`→`options.isExtra`.
-7. Factor the content fetch behind a provider (HTTP vs `fs`); add
-   `getResourceDataFromDirectory(catalogEntries, dirPath, options)` taking FULL
-   catalogEntries, reading `${dirPath}/${repo.name}/${ingredient.path}` (no
-   manifest read), reusing the extractors. RC/SB/TC only — not TS.
+5. ✅ **DONE** — `getAllCatalogEntries(source, options)` (renamed from
+   `getAllCatalogEntriesForRendering`, no alias); discriminated source; returns a
+   CatalogSet with `resourceVersion`/`libraryVersion` split. (Filtering stays in
+   `getResourceData` to keep the "all" semantics honest.)
+6. ✅ **DONE** — `getResourceData(input, options)` discriminated input (descriptor
+   | CatalogSet reuse | catalog entry | ResourceData passthrough); reuses a passed
+   CatalogSet via `options.preEntries` (no redundant `/catalog/entry/` or
+   `/catalog/bp/`); `is_extra`→`options.isExtra`. CLI + demos rewired; verified
+   end-to-end on real DCS data.
+7. ⏳ **PENDING (2c)** — `getResourceDataFromDirectory(catalogEntries, dirPath, options)`:
+   needs a content-provider abstraction (HTTP vs `fs`) threaded through every
+   extractor (incl. the TA/TW archive-zip path) so they can read
+   `${dirPath}/${repo.name}/${ingredient.path}` from disk. RC/SB/TC only — not TS.
+   A cross-cutting refactor; best as a focused follow-up.
 
 **Phase 3 — Tail + orchestrator.**
 8. Teach `renderPdf(input, options)` to accept a composed print string; force
