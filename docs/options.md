@@ -62,15 +62,15 @@ resource data.
 | Option | Type | Default | Status | Description |
 |---|---|---|---|---|
 | `renderOptions` | object | `{}` | ✅ | Subject-specific knobs passed to the renderer (see below). |
-| `books` | string[] **or** `{ id: range }` | `[]` | partial | Book ordering/selection. The **array form** and the **ids** of the object form are ✅ honored for ordering; per-book **reference ranges** (the object values) are 🚧 planned. |
+| `books` | string[] **or** `{ id: range }` | `[]` | ✅ | Book ordering/selection. Array form selects/orders whole books; object form additionally applies a per-book **reference range** (the value). Works for TSV (TN/TQ/Study) and USFM (Aligned Bible). |
 
-**`books` object form** (ranges) — accepted now, range-filtering 🚧 planned:
+**`books` object form** (ranges) — ✅ active for TSV and USFM resources:
 
 ```js
 renderHtmlData(resourceData, {
   books: { '1ki': '10:1-13', '2ch': '9:1-12' }, // a story spanning two books
 });
-// range grammar: '10' | '10-12' | '10:1-13' | '10:1-12:5' | '*' (whole book)
+// range grammar: '10' | '10-12' | '10:1-13' | '10:1-12:5' | '10:5' | '*' (whole book)
 ```
 
 **`renderOptions` by subject** (✅ Active):

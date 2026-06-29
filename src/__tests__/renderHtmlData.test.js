@@ -100,6 +100,27 @@ describe('renderHtmlData', () => {
     expect(result.sections.toc[0].id).toBe('ult-tit');
   });
 
+  test('applies per-book reference ranges before rendering (USFM slice)', () => {
+    const resourceData = {
+      subject: 'Aligned Bible',
+      type: 'usfm',
+      title: 'ULT',
+      abbreviation: 'ult',
+      books: { tit: '\\id TIT\n\\c 1\n\\v 1 one\n\\v 2 two\n\\c 2\n\\v 1 three\n' },
+    };
+    renderAlignedBibleHtmlMock.mockReturnValueOnce({ subject: 'Aligned Bible', sections: {} });
+
+    renderHtmlData(resourceData, { books: { tit: '2' } });
+
+    const passed = renderAlignedBibleHtmlMock.mock.calls[0][0];
+    expect(passed.books.tit).toContain('\\c 2');
+    expect(passed.books.tit).not.toContain('\\c 1');
+    expect(passed.books.tit).toContain('three');
+    expect(passed.books.tit).not.toContain('one');
+    // original resourceData not mutated
+    expect(resourceData.books.tit).toContain('\\c 1');
+  });
+
   test('prefers requestedBooks baked into the resource data', () => {
     const resourceData = {
       subject: 'Aligned Bible',

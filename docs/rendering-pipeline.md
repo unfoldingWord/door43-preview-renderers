@@ -429,16 +429,21 @@ Consequences:
    prefix to `resourceData.abbreviation`. Renderers + markdown converter untouched; verified
    on real TN data (`nav-jud-front-intro-xh5n` → `tn-jud-front-intro-xh5n`). Resource-level
    `<res>` anchor added to the screen wrapper (print wrapper TBD).
-3. Apply reference-range filtering (`books` object form) at render time (stage 3).
+3. ✅ **DONE** — reference-range filtering (`books` object form) applied as a
+   stage-3 pre-filter in `renderHtmlData` (`src/rangeFilter.js`): TSV resources
+   are sliced by chapter/verse object; Aligned-Bible USFM is sliced by `\c`/`\v`
+   (header preserved, boundary verses trimmed). Verified end-to-end — sliced
+   alignment-marked USFM renders cleanly through Proskomma. Renderers untouched.
 4. ✅ **DONE** — `show` (cover/copyright/toc/appendices), `print.pageNumber.position`
    (top/bottom), and `print.runningHeader` (on/off) are wired through `renderHTML`
    into `assemblePrintDocument`/`getPrintCss`, with defaults that preserve the
    current output. *(Pending: per-section `print.pageNumber.show` — needs named
    pages — and `print.margins`.)*
 
-**Phase 1b — still pending:** reference-range filtering (item 3); per-book
-`books` object-form ranges parse today but aren't applied. USFM (Aligned Bible)
-slicing deferred pending a safe design; TSV/OBS slicing is the easy first step.
+**Phase 1b — COMPLETE.** Remaining minor follow-ups (not blocking): promoting
+`requestedBooks`/`direction` into the data layer (Phase 2 territory), per-section
+`print.pageNumber.show` (needs named pages), `print.margins`, and the resource-level
+anchor in the print wrapper.
 
 **Phase 2 — Source stages.**
 5. Rename + de-overload → `getAllCatalogEntries(source, options)`; fold in

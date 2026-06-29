@@ -6,6 +6,7 @@ import { renderTranslationNotesHtml } from './renderers/translationNotesRenderer
 import { renderTsvQuestionsHtml } from './renderers/tsvQuestionsRenderer.js';
 import { parseBooksOption } from './renderOptions.js';
 import { rewriteSectionAnchors } from './renderers/anchors.js';
+import { filterResourceDataByRanges } from './rangeFilter.js';
 
 const alignedBibleSubjects = new Set([
   'Aligned Bible',
@@ -56,26 +57,32 @@ export function renderHtmlData(resourceData, options = {}) {
 
   // Book ordering/selection: prefer the selection baked into the data; fall back
   // to the `books` option for callers that pass it alongside un-tagged data.
+  const { ids, ranges } = parseBooksOption(options.books);
   const requestedBooks =
     Array.isArray(resourceData.requestedBooks) && resourceData.requestedBooks.length
       ? resourceData.requestedBooks
-      : parseBooksOption(options.books).ids;
+      : ids;
+
+  // Apply per-book reference ranges (e.g. { '1ki': '10:1-13' }) before rendering.
+  const data = Object.keys(ranges).length
+    ? filterResourceDataByRanges(resourceData, ranges)
+    : resourceData;
 
   let rendered;
-  if (alignedBibleSubjects.has(resourceData.subject)) {
-    rendered = renderAlignedBibleHtml(resourceData, { requestedBooks, ...renderOptions });
-  } else if (translationAcademySubjects.has(resourceData.subject)) {
-    rendered = renderTranslationAcademyHtml(resourceData, renderOptions);
-  } else if (translationWordsSubjects.has(resourceData.subject)) {
-    rendered = renderTranslationWordsHtml(resourceData, renderOptions);
-  } else if (obsSubjects.has(resourceData.subject)) {
-    rendered = renderObsHtml(resourceData, renderOptions);
-  } else if (translationNotesSubjects.has(resourceData.subject)) {
-    rendered = renderTranslationNotesHtml(resourceData, renderOptions);
-  } else if (tsvQuestionsSubjects.has(resourceData.subject)) {
-    rendered = renderTsvQuestionsHtml(resourceData, renderOptions);
+  if (alignedBibleSubjects.has(data.subject)) {
+    rendered = renderAlignedBibleHtml(data, { requestedBooks, ...renderOptions });
+  } else if (translationAcademySubjects.has(data.subject)) {
+    rendered = renderTranslationAcademyHtml(data, renderOptions);
+  } else if (translationWordsSubjects.has(data.subject)) {
+    rendered = renderTranslationWordsHtml(data, renderOptions);
+  } else if (obsSubjects.has(data.subject)) {
+    rendered = renderObsHtml(data, renderOptions);
+  } else if (translationNotesSubjects.has(data.subject)) {
+    rendered = renderTranslationNotesHtml(data, renderOptions);
+  } else if (tsvQuestionsSubjects.has(data.subject)) {
+    rendered = renderTsvQuestionsHtml(data, renderOptions);
   } else {
-    throw new Error(`HTML rendering is not implemented yet for subject \`${resourceData.subject}\`.`);
+    throw new Error(`HTML rendering is not implemented yet for subject \`${data.subject}\`.`);
   }
 
   // Apply the resource-scoped anchor scheme (nav- -> `${abbreviation}-`) so the
