@@ -39,7 +39,7 @@ export default function GetResourceDataDemo() {
     }
 
     try {
-      const data = await getResourceData(owner, repo, ref, books, optionsJSON);
+      const data = await getResourceData({ owner, repo, ref, books }, optionsJSON);
       setResult(data);
     } catch (err) {
       setError(err.message);

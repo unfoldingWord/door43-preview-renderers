@@ -164,7 +164,7 @@ export default function RenderHtmlDataDemo() {
     try {
       // Stage 2: fetch + parse the resource data, then stage 3: render to HTML
       // sections. (renderHtmlData no longer fetches — feed it the data.)
-      const resourceData = await getResourceData(owner, repo, ref, books, optionsJson);
+      const resourceData = await getResourceData({ owner, repo, ref, books }, optionsJson);
       const data = renderHtmlData(resourceData, {
         books,
         renderOptions: renderOptionsJson,

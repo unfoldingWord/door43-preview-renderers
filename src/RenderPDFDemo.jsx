@@ -70,9 +70,10 @@ export default function RenderPDFDemo() {
       // 1) Fetch + parse the resource data, then render the HTML sections in the
       //    browser (stages 2–3; same pipeline as the renderHtmlData demo).
       setStatus('rendering');
-      const resourceData = await getResourceData(owner, repo, ref, books, {
-        dcs_api_url: 'https://git.door43.org/api/v1',
-      });
+      const resourceData = await getResourceData(
+        { owner, repo, ref, books },
+        { dcs_api_url: 'https://git.door43.org/api/v1' }
+      );
       const data = renderHtmlData(resourceData, { books });
 
       // 2) Hand the rendered sections to the dev-server endpoint, which runs

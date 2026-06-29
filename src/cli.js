@@ -13,8 +13,20 @@ import path from 'path';
 import { getAllCatalogEntries } from './getAllCatalogEntries.js';
 import { getResourceData } from './getResourceData.js';
 import { renderHtmlData } from './renderHtmlData.js';
-import { assemblePrintDocument, PAGE_SIZES } from './renderers/printDocumentAssembler.js';
-import { generatePdf } from './pdf/generatePdf.js';
+import { renderHTML } from './renderHTML.js';
+import { renderPdf } from './pdf/renderPdf.js';
+
+// Map the CLI's short page-size keys to PAGE_SIZES keys understood by renderHTML/renderPdf.
+function resolveCliPageSize(shortKey) {
+  const map = {
+    A4: 'A4_PORTRAIT',
+    A5: 'A5_PORTRAIT',
+    USL: 'US_LETTER_PORTRAIT',
+    TRADE: 'TRADE',
+    CQ: 'CROWN_QUARTO',
+  };
+  return map[(shortKey || 'A4').toUpperCase()] || 'A4_PORTRAIT';
+}
 
 // Parse command line arguments
 function parseArgs(args) {
@@ -169,16 +181,9 @@ async function main() {
           console.error(`Fetching resource data for ${params.owner}/${params.repo}...`);
         }
         const resourceBooks = params.bookId ? [params.bookId] : [];
-        const resourceOptions = {
-          dcs_api_url: params.dcsApiUrl || 'https://git.door43.org/api/v1',
-          quiet: quiet,
-        };
         result = await getResourceData(
-          params.owner,
-          params.repo,
-          params.ref,
-          resourceBooks,
-          resourceOptions
+          { owner: params.owner, repo: params.repo, ref: params.ref, books: resourceBooks },
+          { dcs_api_url: params.dcsApiUrl || 'https://git.door43.org/api/v1', quiet }
         );
         break;
       }
@@ -188,20 +193,12 @@ async function main() {
           console.error(`Rendering HTML for ${params.owner}/${params.repo}...`);
         }
         const renderBooks = params.bookId ? [params.bookId] : [];
-        const renderOpts = {
-          dcs_api_url: params.dcsApiUrl || 'https://git.door43.org/api/v1',
-          quiet: quiet,
-        };
-        const rendered = await renderHtmlData(
-          params.owner,
-          params.repo,
-          params.ref,
-          renderBooks,
-          renderOpts
+        const resourceData = await getResourceData(
+          { owner: params.owner, repo: params.repo, ref: params.ref, books: renderBooks },
+          { dcs_api_url: params.dcsApiUrl || 'https://git.door43.org/api/v1', quiet }
         );
-        // Remove resourceData from JSON output (too large), keep sections
-        const { resourceData: _rd, ...outputData } = rendered;
-        result = outputData;
+        // HtmlData package (identity + sections); the body can be large.
+        result = renderHtmlData(resourceData, { books: renderBooks });
         break;
       }
 
@@ -210,47 +207,25 @@ async function main() {
           console.error(`Assembling print document for ${params.owner}/${params.repo}...`);
         }
         const printBooks = params.bookId ? [params.bookId] : [];
-        const printOpts = {
-          dcs_api_url: params.dcsApiUrl || 'https://git.door43.org/api/v1',
-          quiet: quiet,
-        };
-        const printRendered = await renderHtmlData(
-          params.owner,
-          params.repo,
-          params.ref,
-          printBooks,
-          printOpts
+        const resourceData = await getResourceData(
+          { owner: params.owner, repo: params.repo, ref: params.ref, books: printBooks },
+          { dcs_api_url: params.dcsApiUrl || 'https://git.door43.org/api/v1', quiet }
         );
-
-        // Resolve page size
-        const pageSizeKey = (params.pageSize || 'A4').toUpperCase();
-        const pageSizeMap = {
-          A4: PAGE_SIZES.A4_PORTRAIT,
-          A5: PAGE_SIZES.A5_PORTRAIT,
-          USL: PAGE_SIZES.US_LETTER_PORTRAIT,
-          TRADE: PAGE_SIZES.TRADE,
-          CQ: PAGE_SIZES.CROWN_QUARTO,
-        };
-        const pageSize = pageSizeMap[pageSizeKey] || PAGE_SIZES.A4_PORTRAIT;
-
-        const printDoc = assemblePrintDocument(printRendered.sections || printRendered, {
-          title: printRendered.title || 'Document',
-          version: params.ref || '',
-          abbreviation: printRendered.resourceData?.catalogEntry?.abbreviation || '',
-          pageWidth: pageSize.width,
-          pageHeight: pageSize.height,
+        const htmlData = renderHtmlData(resourceData, { books: printBooks });
+        const html = renderHTML(htmlData, {
+          media: 'print',
           columns: params.columns || 1,
-          direction: printRendered.resourceData?.catalogEntry?.language_direction || 'ltr',
+          print: { pageSize: resolveCliPageSize(params.pageSize) },
         });
 
         // For assemblePrint, output the raw HTML, not JSON
         if (output) {
           const outputPath = path.resolve(output);
-          fs.writeFileSync(outputPath, printDoc.html);
+          fs.writeFileSync(outputPath, html);
           console.error(`✓ Print-ready HTML written to ${outputPath}`);
           process.exit(0);
         } else {
-          process.stdout.write(printDoc.html + '\n', () => {
+          process.stdout.write(html + '\n', () => {
             process.exit(0);
           });
         }
@@ -266,34 +241,18 @@ async function main() {
           console.error(`Generating PDF for ${params.owner}/${params.repo}...`);
         }
         const pdfBooks = params.bookId ? [params.bookId] : [];
-        const pdfRendered = await renderHtmlData(params.owner, params.repo, params.ref, pdfBooks, {
-          dcs_api_url: params.dcsApiUrl || 'https://git.door43.org/api/v1',
-          quiet: quiet,
-        });
-
-        const pdfPageSizeKey = (params.pageSize || 'A4').toUpperCase();
-        const pdfPageSizeMap = {
-          A4: PAGE_SIZES.A4_PORTRAIT,
-          A5: PAGE_SIZES.A5_PORTRAIT,
-          USL: PAGE_SIZES.US_LETTER_PORTRAIT,
-          TRADE: PAGE_SIZES.TRADE,
-          CQ: PAGE_SIZES.CROWN_QUARTO,
-        };
-        const pdfPageSize = pdfPageSizeMap[pdfPageSizeKey] || PAGE_SIZES.A4_PORTRAIT;
-
-        const pdfDoc = assemblePrintDocument(pdfRendered.sections || pdfRendered, {
-          title: pdfRendered.title || 'Document',
-          version: params.ref || '',
-          abbreviation: pdfRendered.resourceData?.catalogEntry?.abbreviation || '',
-          pageWidth: pdfPageSize.width,
-          pageHeight: pdfPageSize.height,
-          columns: params.columns || 1,
-          direction: pdfRendered.resourceData?.catalogEntry?.language_direction || 'ltr',
-          engine: 'weasyprint',
-        });
-
+        const resourceData = await getResourceData(
+          { owner: params.owner, repo: params.repo, ref: params.ref, books: pdfBooks },
+          { dcs_api_url: params.dcsApiUrl || 'https://git.door43.org/api/v1', quiet }
+        );
+        const htmlData = renderHtmlData(resourceData, { books: pdfBooks });
         const pdfOutputPath = path.resolve(output);
-        await generatePdf(pdfDoc.html, { outputPath: pdfOutputPath, quiet });
+        await renderPdf(htmlData, {
+          pageSize: resolveCliPageSize(params.pageSize),
+          columns: params.columns || 1,
+          outputPath: pdfOutputPath,
+          quiet,
+        });
         console.error(`✓ PDF written to ${pdfOutputPath}`);
         process.exit(0);
         return;

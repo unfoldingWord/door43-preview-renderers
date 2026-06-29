@@ -211,7 +211,7 @@ export async function extractRcTsvData(catalogEntry, books, options = {}, catalo
     // quotes (e.g. TSV Translation Words Links fetched as an extra of TN), the parent
     // passes its already-resolved bible entries via options.glBibleEntries.
     const bibleEntriesForGl =
-      !options.is_extra && catalogEntries.length > 1
+      !options.isExtra && catalogEntries.length > 1
         ? catalogEntries
         : options.glBibleEntries || [];
 
@@ -250,8 +250,8 @@ export async function extractRcTsvData(catalogEntry, books, options = {}, catalo
     throw new Error('No valid books were processed from the TSV data');
   }
 
-  // Use catalogEntries from getAllCatalogEntriesForRendering instead of fetching separately
-  if (catalogEntries.length > 1 && !options.is_extra) {
+  // Use the already-resolved catalogEntries instead of fetching separately
+  if (catalogEntries.length > 1 && !options.isExtra) {
     // Skip the first entry (which is the main catalogEntry) and process the rest
     const extraEntries = catalogEntries.slice(1);
 
@@ -273,12 +273,14 @@ export async function extractRcTsvData(catalogEntry, books, options = {}, catalo
       // (e.g., Hebrew OT won't have New Testament books like 'tit').
       try {
         const resourceData = await getResourceData(
-          entryOwner,
-          entryRepo,
-          entryRef,
-          books,
-          { dcs_api_url, quiet: options.quiet || false, glBibleEntries, catalogEntry: entry },
-          true // is_extra = true to prevent recursive fetching
+          { owner: entryOwner, repo: entryRepo, ref: entryRef, books },
+          {
+            dcs_api_url,
+            quiet: options.quiet || false,
+            glBibleEntries,
+            catalogEntry: entry,
+            isExtra: true, // prevent recursive dependency fetching
+          }
         );
 
         if (resourceData && !resourceData.error) {
