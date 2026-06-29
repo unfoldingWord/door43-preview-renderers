@@ -430,8 +430,15 @@ Consequences:
    on real TN data (`nav-jud-front-intro-xh5n` → `tn-jud-front-intro-xh5n`). Resource-level
    `<res>` anchor added to the screen wrapper (print wrapper TBD).
 3. Apply reference-range filtering (`books` object form) at render time (stage 3).
-4. Wire `show`/page-number toggles into the print assembler (`assemblePrintDocument`
-   currently always emits cover/copyright/toc).
+4. ✅ **DONE** — `show` (cover/copyright/toc/appendices), `print.pageNumber.position`
+   (top/bottom), and `print.runningHeader` (on/off) are wired through `renderHTML`
+   into `assemblePrintDocument`/`getPrintCss`, with defaults that preserve the
+   current output. *(Pending: per-section `print.pageNumber.show` — needs named
+   pages — and `print.margins`.)*
+
+**Phase 1b — still pending:** reference-range filtering (item 3); per-book
+`books` object-form ranges parse today but aren't applied. USFM (Aligned Bible)
+slicing deferred pending a safe design; TSV/OBS slicing is the easy first step.
 
 **Phase 2 — Source stages.**
 5. Rename + de-overload → `getAllCatalogEntries(source, options)`; fold in

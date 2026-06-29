@@ -281,9 +281,14 @@ export function getPrintCss(options = {}) {
     columns = 1,
     direction = 'ltr',
     extraCss = '',
+    pageNumberPosition = 'bottom',
+    runningHeader = true,
   } = options;
 
   const isRtl = direction === 'rtl';
+  // The page-number counter lives in one margin box; the running header (if on)
+  // occupies @top-left/@top-right, so a 'top' page number uses @top-center.
+  const pnBox = pageNumberPosition === 'top' ? '@top-center' : '@bottom-center';
 
   return `
 /* ─── Page Setup ─────────────────────────────────────────── */
@@ -299,13 +304,13 @@ export function getPrintCss(options = {}) {
     font-size: 8pt;
   }
 
-  @bottom-center {
+  ${pnBox} {
     content: counter(page);
   }
 }
 
 @page :first {
-  @bottom-center { content: none; }
+  ${pnBox} { content: none; }
 }
 
 @page :blank {
@@ -328,34 +333,35 @@ export function getPrintCss(options = {}) {
 @page :left {
   margin-right: 30mm;
   margin-left: 20mm;
-
+${runningHeader ? `
   @top-left {
     font-size: 10px;
     content: string(doctitle);
     text-align: left;
-  }
+  }` : ''}
 }
 
 @page :right {
   margin-left: 30mm;
   margin-right: 20mm;
-
+${runningHeader ? `
   @top-right {
     font-size: 10px;
     content: string(doctitle);
     text-align: right;
-  }
+  }` : ''}
 }
 
 /* ─── Running Header ─────────────────────────────────────── */
 /* The running title is captured from the cover header via string-set and
    echoed into the page margin boxes with string(). This works natively in
    WeasyPrint/Prince and in the PagedJS browser preview — no JS reflow needed
-   for the header, and no positioned running element. */
-
+   for the header, and no positioned running element. Omitted when the running
+   header is disabled. */
+${runningHeader ? `
 .cover-header {
   string-set: doctitle content(text);
-}
+}` : ''}
 
 /* ─── Footnotes (USFM) ──────────────────────────────────── */
 
@@ -550,7 +556,17 @@ export function assemblePrintDocument(sections, options = {}) {
     includePagedJsPolyfill = engine === 'pagedjs',
     pagedJsUrl = 'https://unpkg.com/pagedjs/dist/paged.polyfill.js',
     footerHtml = '',
+    // Which top-level sections to include (defaults preserve the full document).
+    show = {},
+    // Page-number margin box ('bottom' | 'top') and running-header toggle.
+    pageNumberPosition = 'bottom',
+    runningHeader = true,
   } = options;
+
+  const showCover = show.cover !== false;
+  const showCopyright = show.copyright !== false;
+  const showToc = show.toc !== false;
+  const showAppendices = show.appendices !== false;
 
   const {
     cover: coverSnippet = '',
@@ -583,23 +599,26 @@ export function assemblePrintDocument(sections, options = {}) {
     pageHeight,
     columns,
     direction,
+    pageNumberPosition,
+    runningHeader,
     extraCss: `${rendererWebCss}\n\n${rendererPrintCss}`,
   });
 
-  // Assemble the document sections
+  // Assemble the document sections (only those selected by `show`).
+  const coverHtml = showCover
+    ? `  <div class="section cover-page">\n    ${cover}\n  </div>\n`
+    : '';
+  const copyrightHtml = showCopyright
+    ? `  <div class="section copyright-page" id="copyright-page">\n    ${copyright}\n    ${footerHtml}\n  </div>\n`
+    : '';
+  const tocHtmlBlock = showToc
+    ? `  <div class="section toc-page" id="toc">\n    ${tocHtml}\n  </div>\n`
+    : '';
+  const appendicesHtml = showAppendices ? renderAppendicesHtml(appendices) : '';
+
   const htmlStr = `<div id="pagedjs-print" style="direction: ${direction}" data-direction="${direction}">
-  <div class="section cover-page">
-    ${cover}
-  </div>
-  <div class="section copyright-page" id="copyright-page">
-    ${copyright}
-    ${footerHtml}
-  </div>
-  <div class="section toc-page" id="toc">
-    ${tocHtml}
-  </div>
-  ${body}
-  ${renderAppendicesHtml(appendices)}
+${coverHtml}${copyrightHtml}${tocHtmlBlock}  ${body}
+  ${appendicesHtml}
 </div>`;
 
   // Build complete HTML document

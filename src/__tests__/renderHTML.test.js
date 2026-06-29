@@ -54,4 +54,18 @@ describe('renderHTML', () => {
     expect(html).toContain('8.5in');
     expect(html).toContain('11in');
   });
+
+  test('print: show + page-number + running-header toggles flow to the assembler', () => {
+    const html = renderHTML(sampleHtmlData(), {
+      media: 'print',
+      show: { cover: false },
+      print: { pageNumber: { position: 'top' }, runningHeader: false },
+    });
+    // The cover *div* is gone (note: ".cover-page"/"@page cover-page" still appear in CSS).
+    expect(html).not.toContain('<div class="section cover-page">');
+    expect(html).toContain('@top-center {\n    content: counter(page);');
+    expect(html).not.toContain('content: string(doctitle)');
+    // body still renders
+    expect(html).toContain('SENTINEL_BODY');
+  });
 });

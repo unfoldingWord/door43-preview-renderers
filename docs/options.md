@@ -100,20 +100,20 @@ for the screen or for print. Returns a string.
 | Option | Type | Default | Status | Description |
 |---|---|---|---|---|
 | `media` | `'screen'` \| `'print'` | `'screen'` | ✅ | Layout target. `screen` = continuous web page; `print` = paged, PagedJS/WeasyPrint-ready. |
-| `show.cover` | boolean | screen `false` / print `true` | screen ✅ / print 🚧 | Include the cover page. |
-| `show.copyright` | boolean | screen `false` / print `true` | screen ✅ / print 🚧 | Include the license/copyright page. |
-| `show.toc` | boolean | screen `false` / print `true` | screen ✅ / print 🚧 | Include a static Table of Contents page. (The TOC *data* is always on `htmlData.sections.toc` for an app's interactive selector.) |
+| `show.cover` | boolean | screen `false` / print `true` | ✅ | Include the cover page. |
+| `show.copyright` | boolean | screen `false` / print `true` | ✅ | Include the license/copyright page. |
+| `show.toc` | boolean | screen `false` / print `true` | ✅ | Include a static Table of Contents page. (The TOC *data* is always on `htmlData.sections.toc` for an app's interactive selector.) |
 | `show.body` | boolean | `true` | ✅ | Include the main content. |
-| `show.appendices` | boolean \| `['ta','tw']` | `true` | screen ✅ / print 🚧 | Include the TA/TW appendices (now a keyed `{ ta, tw }` section). Screen honors the boolean; print always includes them, and per-kind `['ta','tw']` selection is 🚧 planned. |
+| `show.appendices` | boolean \| `['ta','tw']` | `true` | ✅ (boolean) | Include the TA/TW appendices (a keyed `{ ta, tw }` section). The boolean is honored in screen and print; per-kind `['ta','tw']` selection is 🚧 planned. |
 | `columns` | number | `1` | print ✅ / screen 🚧 | Body column count (currently applied to print only). |
 | `direction` | `'ltr'` \| `'rtl'` | from `htmlData.direction` | ✅ | Text direction. |
 | `engine` | `'weasyprint'` \| `'pagedjs'` | `'weasyprint'` | ✅ | Print engine. `pagedjs` injects the PagedJS polyfill `<script>` for in-browser preview. |
 | `print.pageSize` | string \| `{width,height}` | `'A4_PORTRAIT'` | ✅ | Page size (see [Page sizes](#page-sizes)). `media:'print'` only. |
 | `print.footerHtml` | string | `''` | ✅ | Extra footer HTML on the copyright page (e.g. app version). |
 | `print.margins` | `{top,right,bottom,left}` | theme default | 🚧 | Page margins. |
-| `print.runningHeader` | boolean | `true` | 🚧 | Show the running header (book/chapter, from the renderer). |
-| `print.pageNumber.position` | `'top'` \| `'bottom'` | `'bottom'` | 🚧 | Where the page number prints. |
-| `print.pageNumber.show` | per-section booleans | toc/body/appendices `true` | 🚧 | Which sections get a page number. |
+| `print.runningHeader` | boolean | `true` | ✅ | Show the running header (book/chapter title, from the renderer). |
+| `print.pageNumber.position` | `'top'` \| `'bottom'` | `'bottom'` | ✅ | Where the page number prints (the counter moves to `@top-center`/`@bottom-center`). |
+| `print.pageNumber.show` | per-section booleans | toc/body/appendices `true` | 🚧 | Which sections get a page number (needs named pages per section). |
 
 > **About running headers:** the header text (`{book} {chapter}:{verse}`) comes
 > from the renderer and only appears in print/PDF (and the PagedJS preview) — never

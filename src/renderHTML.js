@@ -47,6 +47,9 @@ export function renderHTML(htmlData, options = {}) {
       direction: opts.direction,
       engine: options.engine || 'weasyprint',
       footerHtml: opts.print.footerHtml,
+      show: opts.show,
+      pageNumberPosition: opts.print.pageNumber.position,
+      runningHeader: opts.print.runningHeader,
     });
     return assembled.html;
   }
