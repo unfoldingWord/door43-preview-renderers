@@ -1,20 +1,35 @@
 # Render PDF
 
-`renderPdf()` turns the result of `renderHtmlData()` into a print-ready PDF using
-[WeasyPrint](https://weasyprint.org/) — a native CSS Paged Media engine (no
-browser, no PagedJS reflow). It assembles the cover, copyright, table of contents
-and `@page` rules, then renders the paged document.
+There are **two ways** to turn an `HtmlData` into a PDF — the demo below runs both
+side by side so you can compare:
+
+- **WeasyPrint** (`renderPdf()`) — a native CSS Paged Media engine (Python binary,
+  **no browser**). This is the headless library/CLI path: fast, high fidelity, runs
+  in Node. It needs the `weasyprint` binary installed, so in the styleguide it only
+  works on **localhost** (via the dev server). It cannot run on a static deploy.
+- **PagedJS** (`renderHTML(htmlData, { media: 'print', engine: 'pagedjs' })`) — a
+  client-side paginator that runs **in the browser**, so it works **anywhere**
+  (including the static Netlify deploy). Produce a PDF with the browser's
+  *Save as PDF*. Slower than WeasyPrint and needs the print dialog, but zero server.
+
+## `renderPdf()` (WeasyPrint, Node/CLI)
 
 ```js static
 import { getResourceData, renderHtmlData, renderPdf } from 'door43-preview-renderers';
 
-const resourceData = await getResourceData('unfoldingWord', 'en_tn', 'v89', ['tit'], {
-  dcs_api_url: 'https://git.door43.org/api/v1',
-});
+const resourceData = await getResourceData(
+  { owner: 'unfoldingWord', repo: 'en_tn', ref: 'v89', books: ['tit'] }
+);
 const htmlData = renderHtmlData(resourceData);
 
 // PDF bytes (Buffer); pass `outputPath` to write to disk instead.
 const pdf = await renderPdf(htmlData, { pageSize: 'A4_PORTRAIT' });
+```
+
+Or straight from the command line (headless, no browser, no server):
+
+```
+node src/cli.js generatePdf --owner unfoldingWord --repo en_tn --ref v89 --book tit --output tit.pdf
 ```
 
 ## Options
