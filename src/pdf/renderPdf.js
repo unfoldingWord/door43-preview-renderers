@@ -1,5 +1,6 @@
 import { assemblePrintDocument, resolvePageSize } from '../renderers/printDocumentAssembler.js';
 import { generatePdf } from './generatePdf.js';
+import { generatePdfViaService } from './generatePdfViaService.js';
 
 // resolvePageSize now lives with PAGE_SIZES in printDocumentAssembler.js so the
 // browser-safe renderHTML composer can use it without importing this Node module.
@@ -25,10 +26,13 @@ export { resolvePageSize };
  * @param {string} [options.version] - Cover version override
  * @param {string} [options.abbreviation] - Cover abbreviation override (logo selection)
  * @param {string} [options.outputPath] - Write the PDF here instead of returning bytes
- * @param {string} [options.weasyprintPath] - Path/name of the weasyprint binary
- * @param {string} [options.baseUrl] - Base URL for resolving relative resources
- * @param {number} [options.timeoutMs] - Kill WeasyPrint after this many ms
- * @param {boolean} [options.quiet] - Suppress WeasyPrint stderr in the error message
+ * @param {string} [options.pdfServiceUrl] - If set, POST the assembled HTML to a remote
+ *   WeasyPrint service (services/weasyprint-pdf/) instead of using the local binary —
+ *   for hosts without `weasyprint` installed.
+ * @param {string} [options.weasyprintPath] - Path/name of the weasyprint binary (local mode)
+ * @param {string} [options.baseUrl] - Base URL for resolving relative resources (local mode)
+ * @param {number} [options.timeoutMs] - Kill WeasyPrint / time out the request after this many ms
+ * @param {boolean} [options.quiet] - Suppress WeasyPrint stderr in the error message (local mode)
  * @returns {Promise<Buffer|string>} PDF bytes, or the outputPath when `outputPath` is given
  */
 export async function renderPdf(renderResult, options = {}) {
@@ -44,7 +48,8 @@ export async function renderPdf(renderResult, options = {}) {
     title,
     version,
     abbreviation,
-    // generatePdf passthrough
+    // delivery
+    pdfServiceUrl,
     outputPath,
     weasyprintPath,
     baseUrl,
@@ -66,5 +71,9 @@ export async function renderPdf(renderResult, options = {}) {
     ...(footerHtml != null ? { footerHtml } : {}),
   });
 
+  // Remote service (no local binary needed) vs the local `weasyprint` binary.
+  if (pdfServiceUrl) {
+    return generatePdfViaService(assembled.html, { pdfServiceUrl, outputPath, timeoutMs });
+  }
   return generatePdf(assembled.html, { outputPath, weasyprintPath, baseUrl, timeoutMs, quiet });
 }

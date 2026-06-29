@@ -41,6 +41,8 @@ export default function RenderPDFDemo() {
   const [ref, setRef] = useState('master');
   const [booksInput, setBooksInput] = useState('tit');
   const [pageSize, setPageSize] = useState('A4_PORTRAIT');
+  // Optional hosted weasyprint-pdf service; when set, WeasyPrint works anywhere.
+  const [pdfServiceUrl, setPdfServiceUrl] = useState('');
 
   const [htmlData, setHtmlData] = useState(() => htmlDataFixtures[0].data);
   const [loadStatus, setLoadStatus] = useState('');
@@ -113,21 +115,18 @@ export default function RenderPDFDemo() {
     setWpMeta(null);
     const t0 = performance.now();
     try {
-      const renderResult = {
-        subject: htmlData.subject,
-        title: htmlData.title,
-        abbreviation: htmlData.abbreviation,
-        version: htmlData.version,
-        sections: htmlData.sections,
-      };
-      const res = await fetch('/api/render-pdf', {
+      // Same contract everywhere: assemble the print HTML, POST it, get a PDF.
+      // Target the hosted service when a URL is given, else the local dev endpoint.
+      const target = pdfServiceUrl.trim() || '/api/render-pdf';
+      const html = renderHTML(htmlData, { media: 'print', print: { pageSize } });
+      const res = await fetch(target, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ renderResult, options: { pageSize } }),
+        headers: { 'Content-Type': 'text/html' },
+        body: html,
       });
       if (!res.ok) {
-        const detail = await res.json().catch(() => ({ error: res.statusText }));
-        throw new Error(detail.error || `PDF request failed (${res.status})`);
+        const detail = await res.text().catch(() => res.statusText);
+        throw new Error(detail || `PDF request failed (${res.status})`);
       }
       const blob = await res.blob();
       setWpUrl(URL.createObjectURL(blob));
@@ -139,13 +138,17 @@ export default function RenderPDFDemo() {
     }
   };
 
+  // WeasyPrint is reachable when on localhost (dev endpoint) or when a hosted
+  // weasyprint-pdf service URL is provided.
+  const wpAvailable = isLocalhost || !!pdfServiceUrl.trim();
+
   return (
     <div style={{ fontFamily: 'sans-serif', width: '100%', maxWidth: '100vw' }}>
       <h2>Render PDF Demo — PagedJS vs WeasyPrint</h2>
       <p style={{ color: '#555', marginTop: 0 }}>
         Same document, two engines: <strong>PagedJS</strong> paginates in the browser (works
-        anywhere — use <em>Save as PDF</em>), while <strong>WeasyPrint</strong> renders a real PDF
-        on the local dev server (only on <code>localhost</code>).
+        anywhere — use <em>Save as PDF</em>), while <strong>WeasyPrint</strong> renders a real PDF on
+        the dev server (<code>localhost</code>) or a hosted <code>weasyprint-pdf</code> service.
       </p>
 
       {/* ─── Source ─── */}
@@ -221,19 +224,32 @@ export default function RenderPDFDemo() {
         <div style={card}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
             <h3 style={{ margin: 0 }}>WeasyPrint</h3>
-            <span style={{ fontSize: 12, color: '#888', fontWeight: 'bold' }}>localhost only</span>
-            {isLocalhost && (
-              <button type="button" onClick={renderWeasyPrint} disabled={!htmlData || wpStatus === 'rendering'} style={{ marginLeft: 'auto', padding: '6px 10px' }}>
-                {wpStatus === 'rendering' ? 'Rendering…' : 'Render PDF'}
-              </button>
-            )}
+            <span style={{ fontSize: 12, color: '#888', fontWeight: 'bold' }}>
+              {pdfServiceUrl.trim() ? 'via service' : 'localhost / service'}
+            </span>
+            <button
+              type="button"
+              onClick={renderWeasyPrint}
+              disabled={!htmlData || wpStatus === 'rendering' || !wpAvailable}
+              style={{ marginLeft: 'auto', padding: '6px 10px' }}
+            >
+              {wpStatus === 'rendering' ? 'Rendering…' : 'Render PDF'}
+            </button>
           </div>
 
-          {!isLocalhost ? (
+          <input
+            value={pdfServiceUrl}
+            onChange={(e) => setPdfServiceUrl(e.target.value)}
+            placeholder="PDF service URL (optional) — e.g. https://weasyprint-pdf.example.com"
+            style={{ width: '100%', padding: 6, marginBottom: 8, fontSize: 13, boxSizing: 'border-box' }}
+          />
+
+          {!wpAvailable ? (
             <div style={{ fontSize: 13, color: '#555', padding: '8px 0' }}>
-              WeasyPrint is a native (Python) engine that runs on the dev server — it can't run on a
-              static deploy. Run the styleguide locally (<code>pnpm run styleguide</code>) to compare it
-              here, or generate PDFs from the CLI: <code>node src/cli.js generatePdf …</code>.
+              WeasyPrint is a native (Python) engine — it can't run in the browser. Run the styleguide
+              locally (<code>pnpm run styleguide</code>), paste a hosted <code>weasyprint-pdf</code>{' '}
+              service URL above, or generate PDFs from the CLI:{' '}
+              <code>node src/cli.js generatePdf …</code>.
             </div>
           ) : (
             <>

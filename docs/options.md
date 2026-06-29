@@ -141,7 +141,8 @@ Assembles the print document and runs WeasyPrint. `input` is the `htmlData` from
 | `version` | string | `htmlData.version` | ✅ | Cover version override. |
 | `abbreviation` | string | `htmlData.abbreviation` | ✅ | Cover abbreviation (selects the logo). |
 | `outputPath` | string | — | ✅ | Write the PDF here instead of returning bytes. |
-| `weasyprintPath` | string | `weasyprint` | ✅ | Path/name of the WeasyPrint binary. |
+| `pdfServiceUrl` | string | — | ✅ | POST the assembled HTML to a hosted [weasyprint-pdf](https://github.com/unfoldingWord/door43-preview-renderers/tree/main/services/weasyprint-pdf) service instead of using the local binary — for hosts/browsers without `weasyprint`. |
+| `weasyprintPath` | string | `weasyprint` | ✅ | Path/name of the WeasyPrint binary (local mode). |
 | `baseUrl` | string | — | ✅ | Base URL for resolving relative resources. |
 | `timeoutMs` | number | — | ✅ | Kill WeasyPrint after this many ms. |
 | `quiet` | boolean | `false` | ✅ | Suppress WeasyPrint stderr in error messages. |
