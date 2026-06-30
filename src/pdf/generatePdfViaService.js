@@ -2,9 +2,10 @@ import axios from 'axios';
 import { writeFile } from 'node:fs/promises';
 
 /**
- * Generate a PDF by POSTing a complete HTML document to a remote WeasyPrint
- * service (see services/weasyprint-pdf/). The service runs WeasyPrint and returns
- * the PDF bytes, so environments without the local `weasyprint` binary (a browser,
+ * Generate a PDF by POSTing a complete HTML document to a remote WeasyPrint HTTP
+ * service (e.g. the weasyprint-service in door43-preview-app). The service runs
+ * WeasyPrint and returns the PDF bytes, so environments without the local
+ * `weasyprint` binary (a browser,
  * or a Node host that can't install it — e.g. a serverless deploy) can still get a
  * real, high-fidelity PDF.
  *

@@ -27,8 +27,8 @@ export { resolvePageSize };
  * @param {string} [options.abbreviation] - Cover abbreviation override (logo selection)
  * @param {string} [options.outputPath] - Write the PDF here instead of returning bytes
  * @param {string} [options.pdfServiceUrl] - If set, POST the assembled HTML to a remote
- *   WeasyPrint service (services/weasyprint-pdf/) instead of using the local binary —
- *   for hosts without `weasyprint` installed.
+ *   WeasyPrint HTTP service (HTML in, PDF out) instead of using the local binary —
+ *   for hosts/browsers without `weasyprint` installed.
  * @param {string} [options.weasyprintPath] - Path/name of the weasyprint binary (local mode)
  * @param {string} [options.baseUrl] - Base URL for resolving relative resources (local mode)
  * @param {number} [options.timeoutMs] - Kill WeasyPrint / time out the request after this many ms
