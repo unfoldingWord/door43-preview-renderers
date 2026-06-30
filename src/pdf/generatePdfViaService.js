@@ -16,7 +16,8 @@ import { writeFile } from 'node:fs/promises';
  * @param {Object} options
  * @param {string} options.pdfServiceUrl - URL of the HTML→PDF service
  * @param {string} [options.outputPath] - If set, write the PDF here and resolve with this path
- * @param {number} [options.timeoutMs] - Request timeout (default 120000)
+ * @param {number} [options.timeoutMs] - Request timeout (default 300000 / 5m).
+ *   A full-book render (e.g. Romans TN) is synchronous and can take minutes.
  * @returns {Promise<Buffer|string>} PDF bytes, or the outputPath when `outputPath` is given
  */
 export async function generatePdfViaService(html, options = {}) {
@@ -24,7 +25,7 @@ export async function generatePdfViaService(html, options = {}) {
     throw new Error('generatePdfViaService: `html` must be a non-empty HTML string.');
   }
 
-  const { pdfServiceUrl, outputPath, timeoutMs = 120000 } = options;
+  const { pdfServiceUrl, outputPath, timeoutMs = 300000 } = options;
   if (!pdfServiceUrl) {
     throw new Error('generatePdfViaService: `pdfServiceUrl` is required.');
   }
