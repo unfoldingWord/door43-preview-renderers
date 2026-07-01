@@ -2,7 +2,7 @@
 node_modules/
 .pnp
 .pnp.js
-pnpm-lock.yaml
+# pnpm-lock.yaml is committed for reproducible CI installs + npm release builds
 
 # Testing
 coverage/
