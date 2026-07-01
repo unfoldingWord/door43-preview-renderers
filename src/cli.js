@@ -10,11 +10,16 @@
 
 import fs from 'fs';
 import path from 'path';
-import { getAllCatalogEntries } from './getAllCatalogEntries.js';
-import { getResourceData } from './getResourceData.js';
-import { renderHtmlData } from './renderHtmlData.js';
-import { renderHTML } from './renderHTML.js';
-import { renderPdf } from './pdf/renderPdf.js';
+// Import from the built package entry, not src siblings: only dist/index.esm.js
+// and this file are published, so the installed `door43-renderers` bin must
+// resolve against dist. (Running from source therefore requires `pnpm build`.)
+import {
+  getAllCatalogEntries,
+  getResourceData,
+  renderHtmlData,
+  renderHTML,
+  renderPdf,
+} from '../dist/index.esm.js';
 
 // Map the CLI's short page-size keys to PAGE_SIZES keys understood by renderHTML/renderPdf.
 function resolveCliPageSize(shortKey) {
