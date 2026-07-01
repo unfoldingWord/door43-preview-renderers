@@ -1,16 +1,19 @@
 {
-  "name": "door43-preview-renderers",
+  "name": "@unfoldingword/door43-preview-renderers",
   "version": "1.5.0",
   "type": "module",
   "description": "JavaScript library for gathering content from various repositories and rendering HTML snippets for web previews and PDFs",
   "main": "dist/index.js",
   "module": "dist/index.esm.js",
-  "types": "dist/index.d.ts",
   "bin": {
-    "door43-renderers": "./src/cli.js"
+    "door43-renderers": "src/cli.js"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "files": [
-    "dist",
+    "dist/index.js",
+    "dist/index.esm.js",
     "src/cli.js"
   ],
   "scripts": {

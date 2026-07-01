@@ -1,0 +1,65 @@
+name: Publish to npm
+
+# Publishes @unfoldingword/door43-preview-renderers to npm when a GitHub release
+# is published. Uses an npm AUTOMATION token (secrets.NPM_TOKEN) which is exempt
+# from the org's 2FA-on-write requirement, so no interactive OTP is needed.
+#
+# Idempotent: if the version in package.json is already on the registry, the
+# publish step is skipped (so re-running, or the v1.5.0 release that matches the
+# already-published version, passes green instead of erroring).
+#
+# Create a release tagged vX.Y.Z (matching package.json's version) to trigger it.
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Test
+        run: pnpm test
+
+      - name: Verify release tag matches package.json version
+        if: github.event_name == 'release'
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          PKG="$(node -p "require('./package.json').version")"
+          if [ "$TAG" != "$PKG" ]; then
+            echo "::error::Release tag ($TAG) does not match package.json version ($PKG)."
+            exit 1
+          fi
+
+      - name: Publish to npm (skip if version already published)
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          NAME="$(node -p "require('./package.json').name")"
+          VER="$(node -p "require('./package.json').version")"
+          if npm view "$NAME@$VER" version >/dev/null 2>&1; then
+            echo "$NAME@$VER is already on the registry — skipping publish."
+          else
+            # prepare script builds dist/ via rollup; publishConfig sets public access
+            npm publish
+          fi
