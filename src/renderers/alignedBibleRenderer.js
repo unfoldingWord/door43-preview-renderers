@@ -104,6 +104,14 @@ function decorateBibleBookHtml(html, bookId, showChapters = true) {
     }$2><a href="#nav-${bookId}-$1-1" class="header-link">$3</a></span>`
   );
 
+  // Anchor the descriptive title (\d — e.g. a Psalm superscription) as a "front"
+  // verse so it is navigable at <abbr>-<book>-<chapter>-front. The \d paragraph
+  // follows \c, so it carries the chapter label span; take the chapter from it.
+  content = content.replace(
+    new RegExp(`<p class="paras_usfm_d">(\\s*<span id="nav-${bookId}-(\\d+)")`, 'g'),
+    `<p class="paras_usfm_d" id="nav-${bookId}-$2-front">$1`
+  );
+
   content = content.replace(/<span([^>]+style="[^">]+#CCC[^">]+")/gi, '<span$1 class="footnote"');
 
   content = content.replace(/[\u00A0\u202F\u2009 ]+/g, ' ');
