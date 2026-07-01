@@ -29,9 +29,12 @@ function registerPdfEndpoint(app) {
     req.on('end', async () => {
       if (aborted) return;
       try {
-        const { renderResult, options } = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}');
-        const { renderPdf } = await import(LIB_URL);
-        const pdf = await renderPdf(renderResult, options || {});
+        // Same contract as the hosted weasyprint-pdf service (services/weasyprint-pdf):
+        // POST the complete print HTML, get back PDF bytes. The client assembles the
+        // print HTML via renderHTML(htmlData, { media: 'print' }).
+        const html = Buffer.concat(chunks).toString('utf8');
+        const { generatePdf } = await import(LIB_URL);
+        const pdf = await generatePdf(html, { quiet: true });
         const buf = Buffer.isBuffer(pdf) ? pdf : Buffer.from(pdf);
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', 'inline; filename="preview.pdf"');

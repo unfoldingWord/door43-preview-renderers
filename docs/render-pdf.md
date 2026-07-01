@@ -32,6 +32,28 @@ Or straight from the command line (headless, no browser, no server):
 node src/cli.js generatePdf --owner unfoldingWord --repo en_tn --ref v89 --book tit --output tit.pdf
 ```
 
+### Offload WeasyPrint to a hosted service (`pdfServiceUrl`)
+
+For hosts that can't install the `weasyprint` binary (or to let the **browser**
+get a real WeasyPrint PDF on a static deploy), run a WeasyPrint HTTP service —
+e.g. the [weasyprint-service](https://github.com/unfoldingWord/door43-preview-app/tree/develop/weasyprint-service)
+in door43-preview-app — and pass its URL. `renderPdf()` then assembles the HTML
+locally and POSTs it to the service instead of spawning the binary:
+
+```js static
+await renderPdf(htmlData, { pdfServiceUrl: 'https://weasyprint-pdf.example.com', outputPath: 'tit.pdf' });
+```
+
+```
+node src/cli.js generatePdf --owner unfoldingWord --repo en_tn --ref v89 --book tit \
+  --pdf-service-url https://weasyprint-pdf.example.com --output tit.pdf
+```
+
+The service contract is dumb and reusable: `POST` an HTML document
+(`Content-Type: text/html`) → get back `application/pdf`. The styleguide dev
+endpoint (`/api/render-pdf`) uses the same contract, and the Render PDF demo's
+WeasyPrint panel will use a `pdfServiceUrl` when you provide one.
+
 ## Options
 
 `renderPdf(htmlData, options)` — `options` are PDF-rendering specific (see the full

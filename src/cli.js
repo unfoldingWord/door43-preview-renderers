@@ -95,6 +95,7 @@ Options:
   --quiet, -q             Suppress logging output (no API URLs or progress messages)
   --page-size <size>      Page size for assemblePrint (A4, A5, USL, TRADE, CQ; default A4)
   --columns <n>           Number of columns for assemblePrint (default 1)
+  --pdf-service-url <url> generatePdf: use a hosted weasyprint-pdf service instead of the local binary
 
 Examples:
   # Get catalog entries and output to stdout
@@ -251,6 +252,8 @@ async function main() {
           pageSize: resolveCliPageSize(params.pageSize),
           columns: params.columns || 1,
           outputPath: pdfOutputPath,
+          // Offload to a hosted weasyprint-pdf service instead of the local binary.
+          pdfServiceUrl: params.pdf_service_url,
           quiet,
         });
         console.error(`✓ PDF written to ${pdfOutputPath}`);
