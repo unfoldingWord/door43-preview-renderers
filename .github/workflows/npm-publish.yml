@@ -24,14 +24,16 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up pnpm
+        # v11 to match local + read pnpm-workspace.yaml's `allowBuilds:` key
+        # (pnpm 9 errors "packages field missing or empty" on that file).
         uses: pnpm/action-setup@v4
         with:
-          version: 9
+          version: 11
 
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           registry-url: https://registry.npmjs.org
           cache: pnpm
 
