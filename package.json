@@ -1,6 +1,6 @@
 {
   "name": "@unfoldingword/door43-preview-renderers",
-  "version": "1.5.2",
+  "version": "1.5.3",
   "type": "module",
   "description": "JavaScript library for gathering content from various repositories and rendering HTML snippets for web previews and PDFs",
   "main": "dist/index.esm.js",
@@ -81,7 +81,7 @@
     "markdown-it": "^14.1.1",
     "proskomma-core": "^0.10.17",
     "proskomma-json-tools": "0.8.12",
-    "tsv-quote-converters": "^1.1.18",
+    "tsv-quote-converters": "^1.1.22",
     "usfm-alignment-remover": "^0.1.6",
     "usfm-js": "^3.4.3"
   },
