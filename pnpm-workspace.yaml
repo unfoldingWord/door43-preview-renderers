@@ -6,3 +6,5 @@ allowBuilds:
   netlify-cli: true
   sharp: true
   unix-dgram: true
+minimumReleaseAgeExclude:
+  - tsv-quote-converters@1.1.22
