@@ -211,9 +211,7 @@ export async function extractRcTsvData(catalogEntry, books, options = {}, catalo
     // quotes (e.g. TSV Translation Words Links fetched as an extra of TN), the parent
     // passes its already-resolved bible entries via options.glBibleEntries.
     const bibleEntriesForGl =
-      !options.isExtra && catalogEntries.length > 1
-        ? catalogEntries
-        : options.glBibleEntries || [];
+      !options.isExtra && catalogEntries.length > 1 ? catalogEntries : options.glBibleEntries || [];
 
     // Add GL quote columns if aligned bibles are available
     if (bibleEntriesForGl.length > 0) {
@@ -230,9 +228,7 @@ export async function extractRcTsvData(catalogEntry, books, options = {}, catalo
     // When there's exactly one aligned bible, addGLQuoteCols outputs "GLQuote"/"GLOccurrence"
     // without a repo suffix — pass the single repo name so normalization can key it properly.
     const bibleLinks = buildBibleLinks(bibleEntriesForGl);
-    const singleBibleRepo = bibleLinks.length === 1
-      ? bibleLinks[0].split('/')[1]
-      : null;
+    const singleBibleRepo = bibleLinks.length === 1 ? bibleLinks[0].split('/')[1] : null;
     const rows = parseTsv(tsvContent);
     const normalizedRows = normalizeTsvColumns(rows, singleBibleRepo);
     const chapters = groupByChapterVerse(normalizedRows);
