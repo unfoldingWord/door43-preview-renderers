@@ -9,6 +9,13 @@ import {
   renderScriptureColumns,
   renderQuoteHeader,
 } from './scriptureColumns.js';
+import {
+  isObsSubject,
+  findObsExtra,
+  findObsStory,
+  obsStoryLabel,
+  renderObsFrame,
+} from './obsFrames.js';
 
 /**
  * Normalize a Translation Words reference to a canonical "category/slug" key.
@@ -254,6 +261,26 @@ td.tn-scripture-text {
   font-style: italic;
 }
 
+/* OBS story frame — the picture and text the notes are about, standing in for
+   the scripture columns of a Bible resource. */
+.tn-frame-text {
+  background-color: #f9f9f9;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  padding: 8px 12px;
+  margin: 4px 0 8px 0;
+}
+
+.tn-frame-text p {
+  margin: 0;
+}
+
+.tn-frame-image {
+  display: block;
+  margin: 0 auto 8px auto;
+  max-width: 100%;
+}
+
 .tn-verse-twl-header {
   font-size: 0.85em;
   font-weight: bold;
@@ -431,7 +458,8 @@ section > .tn-chapter-header:first-child {
 /* The ULT/UST verse block is read as one thing — never split it. (This used to
    name .tn-scripture-block, which the renderer never emits, so the rule matched
    nothing; the class is tn-scripture-cols.) */
-table.tn-scripture-cols {
+table.tn-scripture-cols,
+.tn-frame-text {
   break-inside: avoid;
 }
 
@@ -508,6 +536,10 @@ hr.note-divider {
  *
  * @param {Object} resourceData - Output from getResourceData() with type 'tsv'
  * @param {Object} [options] - Rendering options
+ * @param {boolean} [options.showChaptersInToc] - Force chapter entries in the TOC
+ * @param {string} [options.resolution='none'] - OBS frame picture resolution:
+ *   'none' omits the pictures, '360px' / '2160px' include them. The frame *text*
+ *   is always rendered — the notes are about it.
  * @returns {Object} Rendered HTML package
  */
 export function renderTranslationNotesHtml(resourceData, options = {}) {
@@ -517,10 +549,16 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
 
   const title = resourceData.title || 'Translation Notes';
   const extras = resourceData.extras || {};
+  // OBS notes are about story frames, not verses: the frame's picture and text
+  // stand in for the scripture columns, and there are no aligned Bibles to quote
+  // from — the TSV Quote is already in the Gateway Language.
+  const isObs = isObsSubject(resourceData.subject);
+  const resolution = options.resolution || 'none';
+  const obsData = isObs ? findObsExtra(extras) : null;
   // Parse aligned-Bible USFM once up front so per-verse scripture lookups are cheap.
-  const parsedScriptureExtras = parseScriptureExtras(extras);
+  const parsedScriptureExtras = isObs ? {} : parseScriptureExtras(extras);
   // Ordered GL Bibles (e.g. ULT, UST) rendered as parallel columns for scripture + TWL.
-  const bibles = getBibleColumns(extras);
+  const bibles = isObs ? [] : getBibleColumns(extras);
   const toc = [];
   const bodyParts = [];
 
@@ -593,7 +631,14 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
     for (const chapterKey of chapterKeys) {
       const chapter = book.chapters[chapterKey];
       const isFront = chapterKey === 'front';
-      const chapterLabel = isFront ? `${bookTitle} Introduction` : `${bookTitle} ${chapterKey}`;
+      const story = isObs ? findObsStory(obsData, chapterKey) : null;
+      const chapterLabel = isFront
+        ? isObs
+          ? 'Introduction'
+          : `${bookTitle} Introduction`
+        : isObs
+        ? obsStoryLabel(story, chapterKey)
+        : `${bookTitle} ${chapterKey}`;
       const chapterAnchor = `nav-${bookId}-${isFront ? 'front' : chapterKey}`;
 
       if (showChaptersInTocResolved) {
@@ -629,6 +674,8 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
           ? chapterLabel
           : isIntro
           ? `${chapterLabel} Introduction`
+          : isObs
+          ? `${chapterKey}:${verseKey}`
           : `${bookTitle} ${chapterKey}:${verseKey}`;
         const verseAnchor = isBookIntro
           ? chapterAnchor
@@ -642,17 +689,28 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
           );
         }
 
-        // Scripture as parallel columns (one per aligned Bible, e.g. ULT | UST)
+        // What the notes are about: an OBS story frame, or the verse in parallel
+        // scripture columns (one per aligned Bible, e.g. ULT | UST).
         if (!isIntro && !isFront) {
-          const scriptureHtml = renderScriptureColumns(
-            bibles,
-            parsedScriptureExtras,
-            bookId,
-            chapterKey,
-            verseKey,
-            { table: 'tn-scripture-cols', label: 'tn-col-label', text: 'tn-scripture-text' }
-          );
-          if (scriptureHtml) bodyParts.push(scriptureHtml);
+          if (isObs) {
+            const frameHtml = renderObsFrame(story?.frames?.[parseInt(verseKey, 10)], {
+              chapterKey,
+              verseKey,
+              resolution,
+              classes: { panel: 'tn-frame-text', image: 'tn-frame-image' },
+            });
+            if (frameHtml) bodyParts.push(frameHtml);
+          } else {
+            const scriptureHtml = renderScriptureColumns(
+              bibles,
+              parsedScriptureExtras,
+              bookId,
+              chapterKey,
+              verseKey,
+              { table: 'tn-scripture-cols', label: 'tn-col-label', text: 'tn-scripture-text' }
+            );
+            if (scriptureHtml) bodyParts.push(scriptureHtml);
+          }
         }
 
         // Individual notes — flat articles, no nesting wrapper

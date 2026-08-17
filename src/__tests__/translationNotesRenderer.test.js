@@ -258,7 +258,9 @@ describe('renderTranslationNotesHtml', () => {
   test('never splits the ULT/UST verse block across pages', () => {
     // The rule used to name .tn-scripture-block, which the renderer never emits,
     // so it styled nothing. It must target the class the body actually carries.
-    expect(sections.css.print).toMatch(/table\.tn-scripture-cols\s*{[^}]*break-inside:\s*avoid/);
+    expect(sections.css.print).toMatch(
+      /table\.tn-scripture-cols,[\s\S]*?{[^}]*break-inside:\s*avoid/
+    );
     expect(sections.css.print).not.toMatch(/\.tn-scripture-block\s*{/);
     expect(sections.body).toContain('tn-scripture-cols');
   });
@@ -334,5 +336,75 @@ describe('renderTranslationNotesHtml chapter listing in the TOC', () => {
   test('showChaptersInToc forces chapters back on', () => {
     const { sections } = renderTranslationNotesHtml(twoBooks(), { showChaptersInToc: true });
     expect(sections.toc[0].sections[0].sections.length).toBeGreaterThan(0);
+  });
+});
+
+describe('renderTranslationNotesHtml — OBS', () => {
+  function buildObsData() {
+    return {
+      type: 'tsv',
+      subject: 'TSV OBS Translation Notes',
+      title: 'unfoldingWord® OBS Translation Notes',
+      books: {
+        obs: {
+          title: 'unfoldingWord® OBS Translation Notes',
+          chapters: {
+            '1': {
+              verses: {
+                '1': [{ ID: 'o1', Reference: '1:1', Quote: 'God made', Note: 'A note about it.' }],
+              },
+            },
+          },
+        },
+      },
+      extras: {
+        obs: {
+          type: 'obs',
+          subject: 'Open Bible Stories',
+          stories: {
+            1: {
+              title: '1. The Creation',
+              frames: {
+                1: {
+                  text: 'This is how God made everything in the beginning.',
+                  img: 'https://cdn.door43.org/obs/jpg/360px/obs-en-01-01.jpg',
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+  }
+
+  test('shows the frame text the notes are about', () => {
+    const { sections } = renderTranslationNotesHtml(buildObsData());
+    expect(sections.body).toContain('tn-frame-text');
+    expect(sections.body).toContain('This is how God made everything in the beginning.');
+  });
+
+  test('labels stories and frames instead of repeating the resource title', () => {
+    const { sections } = renderTranslationNotesHtml(buildObsData());
+    expect(sections.body).toContain('>1. The Creation<');
+    expect(sections.body).toContain('>1:1<');
+    expect(sections.body).not.toContain('OBS Translation Notes 1:1');
+  });
+
+  test('uses the TSV quote directly — no Bible tag, no scripture columns', () => {
+    const { sections } = renderTranslationNotesHtml(buildObsData());
+    expect(sections.body).toContain('<strong>God made</strong>');
+    expect(sections.body).not.toContain('tn-bible-tag');
+    expect(sections.body).not.toContain('tn-scripture-cols');
+  });
+
+  test('omits the picture by default and includes it when a resolution is asked for', () => {
+    const off = renderTranslationNotesHtml(buildObsData());
+    expect(off.sections.body).not.toContain('tn-frame-image');
+    // ...but the text is there either way — the notes are about it.
+    expect(off.sections.body).toContain('This is how God made everything');
+
+    const on = renderTranslationNotesHtml(buildObsData(), { resolution: '360px' });
+    expect(on.sections.body).toContain('tn-frame-image');
+    expect(on.sections.body).toContain('obs-en-01-01.jpg');
   });
 });
