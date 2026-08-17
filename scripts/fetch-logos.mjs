@@ -10,6 +10,7 @@
 import { writeFile, mkdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { inflateSync } from 'node:zlib';
 
 const CDN_BASE = 'https://cdn.door43.org/assets/uw-icons';
 
@@ -34,8 +35,58 @@ async function fetchLogo(file) {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`${file}: HTTP ${res.status}`);
   const buf = Buffer.from(await res.arrayBuffer());
+  verifyPng(file, buf);
   const type = res.headers.get('content-type') || 'image/png';
   return `data:${type};base64,${buf.toString('base64')}`;
+}
+
+/**
+ * Walk the PNG chunks, check every CRC, then inflate the pixel data.
+ *
+ * These bytes get committed and shipped, so a bad fetch is permanent and silent.
+ * v1.5.3 carried logo-uta and logo-utw with two flipped bytes each: the length and
+ * chunk structure still looked correct and only the IDAT CRC and the trailing zlib
+ * checksum disagreed, so the images decoded ~98% of the way and then failed. The
+ * cover logo simply vanished from every Translation Academy and Translation Words
+ * PDF. Fail loudly here rather than write a corrupt file.
+ */
+function verifyPng(file, buf) {
+  const SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+  if (!buf.subarray(0, 8).equals(SIGNATURE)) {
+    throw new Error(`${file}: not a PNG (${buf.length} bytes)`);
+  }
+  const idat = [];
+  let off = 8;
+  let sawIend = false;
+  while (off + 12 <= buf.length) {
+    const len = buf.readUInt32BE(off);
+    const type = buf.toString('latin1', off + 4, off + 8);
+    if (off + 12 + len > buf.length) throw new Error(`${file}: truncated ${type} chunk`);
+    if (crc32(buf.subarray(off + 4, off + 8 + len)) !== buf.readUInt32BE(off + 8 + len)) {
+      throw new Error(`${file}: bad CRC on ${type} at offset ${off} — corrupt download`);
+    }
+    if (type === 'IDAT') idat.push(buf.subarray(off + 8, off + 8 + len));
+    if (type === 'IEND') sawIend = true;
+    off += 12 + len;
+  }
+  if (!sawIend) throw new Error(`${file}: no IEND chunk — truncated file`);
+  try {
+    inflateSync(Buffer.concat(idat));
+  } catch (err) {
+    throw new Error(`${file}: pixel data will not inflate (${err.message}) — corrupt download`);
+  }
+}
+
+const CRC_TABLE = Uint32Array.from({ length: 256 }, (_, n) => {
+  let c = n;
+  for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+  return c >>> 0;
+});
+
+function crc32(buf) {
+  let c = 0xffffffff;
+  for (const byte of buf) c = CRC_TABLE[(c ^ byte) & 0xff] ^ (c >>> 8);
+  return (c ^ 0xffffffff) >>> 0;
 }
 
 async function main() {
