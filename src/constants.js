@@ -104,6 +104,20 @@ export const requiredSubjectsMap = {
 };
 
 /**
+ * Subjects rendered as continuous scripture by the Aligned Bible renderer.
+ *
+ * These are the only bodies laid out in `.section.bible-book`, which is what the
+ * `columns` composition option targets — see supportsBodyColumns() in
+ * renderOptions.js.
+ */
+export const alignedBibleSubjects = new Set([
+  'Aligned Bible',
+  'Bible',
+  'Greek New Testament',
+  'Hebrew Old Testament',
+]);
+
+/**
  * Maps subject names to their repository identifiers for catalog searches
  */
 export const subjectIdentifierMap = {

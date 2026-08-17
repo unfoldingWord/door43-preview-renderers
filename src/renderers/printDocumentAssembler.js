@@ -383,6 +383,10 @@ export function getPrintCss(options = {}) {
   size: ${pageWidth} ${pageHeight};
   margin: 1cm;
 
+  /* Footnotes restart at 1 on every page. Honoured by PagedJS; WeasyPrint
+     ignores it — see the Footnotes section below for why. */
+  counter-reset: footnote;
+
   @footnote {
     float: bottom;
     border-top: black 1px solid;
@@ -454,6 +458,16 @@ ${runningHeader ? `
 span.paras_usfm_f {
   float: footnote;
 }
+
+/* Footnote numbering restarts on every page — see the counter-reset in the
+   @page rule above.
+   That is honoured by PagedJS, which paginates in the browser and so still has
+   live counters once pages exist. WeasyPrint (68.1) ignores it: it fixes the
+   footnote counter while building boxes, before pages exist, and its source
+   carries a TODO to "define the footnote counter where it can be updated by
+   page". Measured, no reset point works there — not @page, not @footnote, not
+   an ordinary ancestor element — so WeasyPrint keeps counting up across the
+   document until that lands upstream. */
 
 ::footnote-call {
   font-weight: 700;

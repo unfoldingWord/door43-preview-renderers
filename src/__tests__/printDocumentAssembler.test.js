@@ -31,6 +31,15 @@ describe('printDocumentAssembler', () => {
       expect(css).not.toContain('string-set: doctitle content(text)');
     });
 
+    test('restarts footnote numbering on every page', () => {
+      // Honoured by PagedJS (verified: a real ULT render shows 1..4 on a page
+      // that would otherwise read 4..7). WeasyPrint ignores it — it fixes the
+      // footnote counter before pages exist — so it is a no-op there, not a
+      // regression.
+      const css = getPrintCss();
+      expect(css).toMatch(/@page\s*{[^@]*counter-reset:\s*footnote/);
+    });
+
     test('appendices start a new page and span their heading across the columns', () => {
       const css = getPrintCss();
       expect(css).toMatch(/\.appendix\s*{[^}]*break-before:\s*page/);

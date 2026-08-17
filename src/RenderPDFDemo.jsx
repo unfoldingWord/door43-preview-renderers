@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { getResourceData } from './getResourceData';
 import { renderHtmlData } from './renderHtmlData';
 import { renderHTML } from './renderHTML';
+import { supportsBodyColumns } from './renderOptions';
 import { htmlDataFixtures } from './fixtures';
 import { PAGE_SIZES } from './renderers/printDocumentAssembler';
 
@@ -15,8 +16,13 @@ const isLocalhost =
 
 // Inject a tiny timing hook before PagedJS runs so the iframe can report how long
 // pagination took and how many pages it produced (for the side-by-side comparison).
-function buildPagedHtml(htmlData, pageSize) {
-  const base = renderHTML(htmlData, { media: 'print', engine: 'pagedjs', print: { pageSize } });
+function buildPagedHtml(htmlData, pageSize, columns) {
+  const base = renderHTML(htmlData, {
+    media: 'print',
+    engine: 'pagedjs',
+    columns,
+    print: { pageSize },
+  });
   const timing =
     '<script>window.__t0=performance.now();window.PagedConfig={auto:true,' +
     'after:function(flow){try{parent.postMessage({type:"pagedjs-done",' +
@@ -41,6 +47,7 @@ export default function RenderPDFDemo() {
   const [ref, setRef] = useState('master');
   const [booksInput, setBooksInput] = useState('tit');
   const [pageSize, setPageSize] = useState('A4_PORTRAIT');
+  const [columns, setColumns] = useState(1);
   // Optional hosted weasyprint-pdf service; when set, WeasyPrint works anywhere.
   const [pdfServiceUrl, setPdfServiceUrl] = useState('');
 
@@ -58,9 +65,13 @@ export default function RenderPDFDemo() {
   const [wpStatus, setWpStatus] = useState('');
   const [wpError, setWpError] = useState(null);
 
+  // `columns` lays out the body of an Aligned Bible in newspaper columns; only
+  // Aligned Bible bodies carry the .section.bible-book that the rule targets.
+  const columnsApply = supportsBodyColumns(htmlData);
+
   const pagedHtml = useMemo(
-    () => (htmlData ? buildPagedHtml(htmlData, pageSize) : ''),
-    [htmlData, pageSize]
+    () => (htmlData ? buildPagedHtml(htmlData, pageSize, columns) : ''),
+    [htmlData, pageSize, columns]
   );
 
   // Reset PagedJS timing whenever the preview is rebuilt, then listen for the hook.
@@ -118,7 +129,7 @@ export default function RenderPDFDemo() {
       // Same contract everywhere: assemble the print HTML, POST it, get a PDF.
       // Target the hosted service when a URL is given, else the local dev endpoint.
       const target = pdfServiceUrl.trim() || '/api/render-pdf';
-      const html = renderHTML(htmlData, { media: 'print', print: { pageSize } });
+      const html = renderHTML(htmlData, { media: 'print', columns, print: { pageSize } });
       const res = await fetch(target, {
         method: 'POST',
         headers: { 'Content-Type': 'text/html' },
@@ -194,7 +205,31 @@ export default function RenderPDFDemo() {
               ))}
             </select>
           </label>
+
+          <label title={columnsApply ? '' : 'Only Aligned Bible bodies lay out in columns'}>
+            <span style={{ marginRight: 6, fontSize: 13, color: columnsApply ? '#555' : '#aaa' }}>
+              Columns
+            </span>
+            <select
+              value={columns}
+              onChange={(e) => setColumns(Number(e.target.value))}
+              disabled={!columnsApply}
+              style={{ padding: 8 }}
+            >
+              {[1, 2, 3].map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
+        {!columnsApply && (
+          <div style={{ marginTop: 8, fontSize: 13, color: '#777' }}>
+            <code>columns</code> lays out the body of an <strong>Aligned Bible</strong> (ULT, UST,
+            UHB, UGNT) — pick one above to try it. Notes, Questions and OBS bodies are unaffected.
+          </div>
+        )}
         {loadError && <div style={{ color: '#842029', marginTop: 8 }}>Error: {loadError}</div>}
       </div>
 
