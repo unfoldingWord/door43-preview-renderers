@@ -79,7 +79,7 @@ renderHtmlData(resourceData, {
 |---|---|---|---|
 | Aligned Bible / Bible / Greek NT / Hebrew OT | `editorMode` | boolean | Keep implied-word brackets visible. |
 | | `includeRawUsfmView` | boolean | Also produce a raw-USFM-as-HTML view in `sections.webView`. |
-| | `showChaptersInToc` | boolean | Force chapter entries in the TOC (auto when < 3 books). |
+| All book-scoped subjects (Aligned Bible, TSV Translation Notes, TSV Questions/Study Notes) | `showChaptersInToc` | boolean | Force chapter entries in the TOC on or off. **Default: on for a single-book document, off once it covers more than one book** — the TOC then lists book names only, each linking to the start of that book. Chapter `id` anchors are always emitted either way, so deep links keep working; only the `data-toc-title` marker is withheld. |
 
 **Returns** `HtmlData`:
 

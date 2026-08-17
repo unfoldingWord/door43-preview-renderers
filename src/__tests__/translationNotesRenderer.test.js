@@ -281,3 +281,34 @@ describe('renderTranslationNotesHtml book introduction', () => {
     expect(sections.body).not.toContain('id="nav-tit-front-intro"');
   });
 });
+
+describe('renderTranslationNotesHtml chapter listing in the TOC', () => {
+  function twoBooks() {
+    const data = buildResourceData();
+    data.books.phm = JSON.parse(JSON.stringify(data.books.tit));
+    data.books.phm.title = 'Philemon';
+    data.books.phm.identifier = 'phm';
+    data.books.phm.sort = 58;
+    return data;
+  }
+
+  test('lists chapters under the book for a single-book document', () => {
+    const { sections } = renderTranslationNotesHtml(buildResourceData());
+    expect(sections.toc[0].sections).toEqual([{ id: 'nav-tit-1', title: 'Titus 1' }]);
+    expect(sections.body).toContain('data-toc-title="Titus 1"');
+  });
+
+  test('lists only book names once a document covers more than one book', () => {
+    const { sections } = renderTranslationNotesHtml(twoBooks());
+    expect(sections.toc).toHaveLength(2);
+    for (const entry of sections.toc) expect(entry.sections).toEqual([]);
+    // The chapter anchor survives for deep links; only the TOC marker goes.
+    expect(sections.body).toContain('id="nav-tit-1"');
+    expect(sections.body).not.toContain('data-toc-title="Titus 1"');
+  });
+
+  test('showChaptersInToc forces chapters back on', () => {
+    const { sections } = renderTranslationNotesHtml(twoBooks(), { showChaptersInToc: true });
+    expect(sections.toc[0].sections.length).toBeGreaterThan(0);
+  });
+});

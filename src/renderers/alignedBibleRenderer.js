@@ -225,8 +225,12 @@ export function renderAlignedBibleHtml(resourceData, options = {}) {
     throw new Error('No books available to render for this Aligned Bible resource.');
   }
 
+  // Chapters are listed in the TOC only for a single-book document. Once a
+  // document covers more than one book the chapter list swamps the book names —
+  // the TOC should get the reader to a book, and the book's own headings take it
+  // from there. Callers can force either way with `showChaptersInToc`.
   const showChapterAnchors =
-    typeof showChaptersInToc === 'boolean' ? showChaptersInToc : booksMap.size < 3;
+    typeof showChaptersInToc === 'boolean' ? showChaptersInToc : booksMap.size === 1;
 
   const pk = new Proskomma();
   const renderer = new SofriaRenderFromProskomma({
