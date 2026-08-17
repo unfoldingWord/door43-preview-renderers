@@ -214,6 +214,23 @@ describe('renderTranslationNotesHtml', () => {
     expect(sections.css.print).toMatch(/\.back-refs\s*{[^}]*break-inside:\s*avoid/);
   });
 
+  test('starts each verse on a new page', () => {
+    // A verse's scripture, notes and Translation Words are read together, so the
+    // break is expressed on the heading that opens each verse (the body markup
+    // is flat, with no per-verse wrapper to hang it on).
+    expect(sections.css.print).toMatch(
+      /\.tn-verse-header,\s*\.tn-chapter-header\s*{[^}]*break-before:\s*page/
+    );
+  });
+
+  test('keeps a heading on the same page as the section it opens', () => {
+    // The first chapter opens under the book heading and a chapter's first verse
+    // opens under the chapter heading; neither pair may be split by the rule above.
+    expect(sections.css.print).toMatch(
+      /\.tn-book-header \+ \.tn-chapter-header,\s*\.tn-chapter-header \+ \.tn-verse-header\s*{[^}]*break-before:\s*avoid/
+    );
+  });
+
   test('lets a long note body break across pages so it cannot strand the headings', () => {
     // An unbreakable note taller than the space left pushes the whole
     // book/chapter/verse heading run onto a page of its own.

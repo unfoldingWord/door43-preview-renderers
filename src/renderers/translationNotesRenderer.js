@@ -406,6 +406,25 @@ const tnPrintCss = `
   break-after: avoid !important;
 }
 
+/* One verse per page. Everything a verse owns — its scripture columns, its notes
+   and its Translation Words — is read together, so the next verse starts on a
+   fresh page. Book and chapter introductions are verses too (front:intro and
+   <chapter>:intro), so they get a page of their own on the same rule. The body
+   markup is deliberately flat (no per-verse wrapper), so the break is expressed
+   on the heading that opens each verse rather than on a container. */
+.tn-verse-header,
+.tn-chapter-header {
+  break-before: page !important;
+}
+
+/* ...but a heading must never be left behind on the previous page. The first
+   chapter opens under the book heading, and a chapter's first verse opens under
+   the chapter heading — those pairs stay together and share the new page. */
+.tn-book-header + .tn-chapter-header,
+.tn-chapter-header + .tn-verse-header {
+  break-before: avoid !important;
+}
+
 .tn-scripture-block {
   break-inside: avoid;
 }
