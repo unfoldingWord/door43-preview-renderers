@@ -173,6 +173,10 @@ describe('renderTsvQuestionsHtml — Bible-versed', () => {
       /\.tq-chapter-header \+ \.tq-verse-block\s*{[^}]*break-before:\s*avoid/
     );
   });
+
+  test('lists chapters under the book for a single-book document', () => {
+    expect(sections.toc[0].sections.length).toBeGreaterThan(0);
+  });
 });
 
 describe('renderTsvQuestionsHtml — OBS', () => {
@@ -200,5 +204,27 @@ describe('renderTsvQuestionsHtml — OBS', () => {
     const { sections: shown } = renderTsvQuestionsHtml(...buildObsData('360px'));
     expect(shown.body).toContain('obs-en-01-01.jpg');
     expect(shown.body).toContain('tq-frame-image');
+  });
+});
+
+describe('renderTsvQuestionsHtml chapter listing in the TOC', () => {
+  function twoBooks() {
+    const data = buildBibleVersedData();
+    const [firstId] = Object.keys(data.books);
+    data.books.phm = JSON.parse(JSON.stringify(data.books[firstId]));
+    data.books.phm.title = 'Philemon';
+    data.books.phm.sort = 58;
+    return data;
+  }
+
+  test('lists only book names once a document covers more than one book', () => {
+    const { sections } = renderTsvQuestionsHtml(twoBooks());
+    expect(sections.toc).toHaveLength(2);
+    for (const entry of sections.toc) expect(entry.sections).toEqual([]);
+  });
+
+  test('showChaptersInToc forces chapters back on', () => {
+    const { sections } = renderTsvQuestionsHtml(twoBooks(), { showChaptersInToc: true });
+    expect(sections.toc[0].sections.length).toBeGreaterThan(0);
   });
 });

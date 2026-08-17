@@ -44,6 +44,30 @@ describe('renderAlignedBibleHtml', () => {
     expect(result.fullHtml).toContain('Test Bible');
   });
 
+  test('lists chapters in the TOC for one book, but not for several', () => {
+    const render = (books, options) =>
+      renderAlignedBibleHtml(
+        { type: 'usfm', subject: 'Aligned Bible', title: 'Test Bible', books },
+        options
+      );
+
+    // One book: the TOC gets the reader to a chapter.
+    const one = render({ tit: titUsfm });
+    expect(one.sections.toc[0].sections.length).toBeGreaterThan(0);
+
+    // Two books: book names only — chapters would swamp them.
+    const two = render({ tit: titUsfm, phm: phmUsfm });
+    expect(two.sections.toc).toHaveLength(2);
+    for (const entry of two.sections.toc) expect(entry.sections).toEqual([]);
+    // The chapter anchor still exists for deep links; only the TOC marker goes.
+    expect(two.sections.body).toContain('id="nav-tit-1"');
+    expect(two.sections.body).not.toContain('data-toc-title="Titus 1"');
+
+    // ...and a caller can force them back on.
+    const forced = render({ tit: titUsfm, phm: phmUsfm }, { showChaptersInToc: true });
+    expect(forced.sections.toc[0].sections.length).toBeGreaterThan(0);
+  });
+
   test('supports requestedBooks and raw USFM preview', () => {
     const result = renderAlignedBibleHtml(
       {

@@ -531,6 +531,15 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
     return aSort - bSort;
   });
 
+  // Chapters are listed in the TOC only for a single-book document. Once a
+  // document covers more than one book the chapter list swamps the book names —
+  // the TOC should get the reader to a book, and the book's own headings take it
+  // from there. Callers can force either way with `showChaptersInToc`.
+  const showChaptersInTocResolved =
+    typeof options.showChaptersInToc === 'boolean'
+      ? options.showChaptersInToc
+      : bookIds.length === 1;
+
   for (const bookId of bookIds) {
     const book = resourceData.books[bookId];
     const bookTitle = book.title || BibleBookData[bookId]?.title || bookId;
@@ -559,11 +568,16 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
       const chapterLabel = isFront ? `${bookTitle} Introduction` : `${bookTitle} ${chapterKey}`;
       const chapterAnchor = `nav-${bookId}-${isFront ? 'front' : chapterKey}`;
 
-      bookToc.sections.push({ id: chapterAnchor, title: chapterLabel });
+      if (showChaptersInTocResolved) {
+        bookToc.sections.push({ id: chapterAnchor, title: chapterLabel });
+      }
 
-      // Chapter header
+      // Chapter header. `data-toc-title` marks an element for the TOC, so it is
+      // only emitted when chapters belong there; the id anchor always remains.
       bodyParts.push(
-        `<h2 class="tn-chapter-header" id="${chapterAnchor}" data-toc-title="${escapeHtml(chapterLabel)}">` +
+        `<h2 class="tn-chapter-header" id="${chapterAnchor}"` +
+        (showChaptersInTocResolved ? ` data-toc-title="${escapeHtml(chapterLabel)}"` : '') +
+        `>` +
         `<a href="#${chapterAnchor}" class="header-link">${escapeHtml(chapterLabel)}</a></h2>\n`
       );
 
