@@ -82,6 +82,12 @@ module.exports = {
         registerPdfEndpoint(devServer.app);
         return middlewares;
       },
+      // Styleguidist and webpack each define process.env.NODE_ENV, which webpack
+      // reports as a DefinePlugin conflict. It is harmless but the default overlay
+      // covers the whole demo on every page load, so show errors only.
+      client: {
+        overlay: { errors: true, warnings: false },
+      },
     },
   },
   styleguideDir: 'styleguide',

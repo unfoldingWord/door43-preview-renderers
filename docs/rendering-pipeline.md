@@ -128,10 +128,11 @@ cover/identity fields and `requestedBooks` to **required**:
     cover:      string,        // HTML snippet
     copyright:  string,        // HTML snippet (license page)
     toc:        Array<{ id, title, sections? }>,   // TOC *data* — always produced
+                               // level 1 = book/manual (h1), level 2 = chapter/article (h2)
     body:       string,        // main content HTML (carries hidden .header-title spans for running headers)
     appendices: {              // keyed by kind; built by scanning body for referenced articles
-      ta?: { [articleId]: { title, html } },   // Translation Academy articles cited by TN
-      tw?: { [articleId]: { title, html } },   // Translation Words articles cited by TN
+      ta?: { [articleId]: { id, title, html } },   // Translation Academy articles cited by TN
+      tw?: { [articleId]: { id, title, html } },   // Translation Words articles cited by TN
     },
     css:        { web: string, print: string },
   },
@@ -144,6 +145,11 @@ cover/identity fields and `requestedBooks` to **required**:
 > `direction`. `sections.toc` is always the structured *data* — the screen view's
 > interactive chapter/verse selector is built from it by the app; whether a static
 > TOC *page* is rendered is an option (§6, `show.toc`).
+
+> `sections.toc` covers the *body* only. Appendices are composed in stage 4 (they
+> are not part of `sections.body`), so their TOC entries are derived there by
+> `buildAppendicesToc(sections.appendices)` and appended — which keeps them out of
+> the TOC when `show.appendices` is false.
 
 ### 4.4 stage 4 output — a single HTML string
 

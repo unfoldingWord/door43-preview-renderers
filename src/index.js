@@ -25,6 +25,8 @@ export {
   assemblePrintDocument,
   generateTocHtml,
   generateTocFromHtml,
+  buildAppendicesToc,
+  renderAppendicesHtml,
   buildCoverPage,
   coverCss,
   getPrintCss,

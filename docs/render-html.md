@@ -9,6 +9,8 @@ from `renderHtmlData()` into one self-contained HTML document. Pure and synchron
   on by default), honoring `print.pageSize`, page-number position, and the running header.
 - `show` toggles which sections appear; `columns`/`direction` control layout.
 
-The demo below composes a **cached `HtmlData` fixture** — change the media and `show`
-toggles and watch it recompose with zero latency. See
+The demo below composes either a **cached `HtmlData` fixture** or a resource fetched
+**live from DCS** (any owner/repo/ref/book) — the same source picker as the
+[Render PDF](./render-pdf.md) demo. Only fetching the resource data touches the
+network; changing the media and `show` toggles recomposes with zero latency. See
 [Rendering Options](./options.md) for the full option reference.

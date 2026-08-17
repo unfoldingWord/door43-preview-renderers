@@ -2,6 +2,7 @@ import {
   generateTocHtml,
   generateTocFromHtml,
   buildCoverPage,
+  buildAppendicesToc,
   getPrintCss,
   assemblePrintDocument,
   PAGE_SIZES,
@@ -28,6 +29,25 @@ describe('printDocumentAssembler', () => {
       const css = getPrintCss({ runningHeader: false });
       expect(css).not.toContain('content: string(doctitle)');
       expect(css).not.toContain('string-set: doctitle content(text)');
+    });
+
+    test('appendices start a new page and span their heading across the columns', () => {
+      const css = getPrintCss();
+      expect(css).toMatch(/\.appendix\s*{[^}]*break-before:\s*page/);
+      expect(css).toMatch(/\.appendix-header\s*{[^}]*column-span:\s*all/);
+    });
+
+    test('sets appendices in two columns on wide pages', () => {
+      for (const pageWidth of ['210mm', '8.5in', '189mm']) {
+        expect(getPrintCss({ pageWidth })).toMatch(/\.appendix\s*{[^}]*columns:\s*2/);
+      }
+    });
+
+    test('falls back to one appendix column on narrow pages', () => {
+      // A5 and Trade are too narrow for two readable columns of prose.
+      for (const pageWidth of ['148.5mm', '6in']) {
+        expect(getPrintCss({ pageWidth })).toMatch(/\.appendix\s*{[^}]*columns:\s*1/);
+      }
     });
   });
 
@@ -227,6 +247,74 @@ describe('printDocumentAssembler', () => {
     test('omits version when not provided', () => {
       const cover = buildCoverPage({ title: 'Test' });
       expect(cover).not.toContain('cover-version');
+    });
+
+    test('adds the book name as a third heading, after the version', () => {
+      const cover = buildCoverPage({
+        title: 'unfoldingWord® Translation Notes',
+        version: 'master',
+        bookTitle: '1 John',
+      });
+      expect(cover).toContain('<h3 class="cover-book-title">1 John</h3>');
+      expect(cover.indexOf('cover-header')).toBeLessThan(cover.indexOf('cover-version'));
+      expect(cover.indexOf('cover-version')).toBeLessThan(cover.indexOf('cover-book-title'));
+    });
+
+    test('omits the book heading when no book title is given', () => {
+      const cover = buildCoverPage({ title: 'Test', version: 'v1' });
+      expect(cover).not.toContain('cover-book-title');
+    });
+  });
+
+  // ─── buildAppendicesToc ───────────────────────────────────
+
+  describe('buildAppendicesToc', () => {
+    const appendices = {
+      ta: {
+        'translate/figs-metaphor': {
+          id: 'tn-tit--ta-translate-figs-metaphor',
+          title: 'Metaphor',
+          html: '<article id="tn-tit--ta-translate-figs-metaphor">…</article>',
+        },
+      },
+    };
+
+    test('nests appendix articles one level under the appendix heading', () => {
+      const [entry] = buildAppendicesToc(appendices);
+      expect(entry.id).toBe('appendix-ta');
+      expect(entry.title).toBe('Appendix: Translation Academy');
+      expect(entry.sections).toEqual([
+        { id: 'tn-tit--ta-translate-figs-metaphor', title: 'Metaphor' },
+      ]);
+    });
+
+    test('falls back to the anchor in the article HTML when no id is recorded', () => {
+      const [entry] = buildAppendicesToc({
+        tw: { 'kt/love': { title: 'love', html: '<article id="tn-tit--tw-kt-love">…</article>' } },
+      });
+      expect(entry.sections).toEqual([{ id: 'tn-tit--tw-kt-love', title: 'love' }]);
+    });
+
+    test('returns nothing for missing or empty appendices', () => {
+      expect(buildAppendicesToc(null)).toEqual([]);
+      expect(buildAppendicesToc({ ta: {} })).toEqual([]);
+    });
+
+    test('assemblePrintDocument appends appendix entries to the TOC, honouring show', () => {
+      const sections = {
+        cover: '',
+        copyright: '',
+        body: '<section id="nav-tit">BODY_X</section>',
+        toc: [{ id: 'nav-tit', title: 'Titus' }],
+        css: {},
+        appendices,
+      };
+      const withAppendices = assemblePrintDocument(sections, {}).innerHtml;
+      expect(withAppendices).toContain('href="#appendix-ta"');
+      expect(withAppendices).toContain('href="#tn-tit--ta-translate-figs-metaphor"');
+
+      const without = assemblePrintDocument(sections, { show: { appendices: false } }).innerHtml;
+      expect(without).not.toContain('href="#appendix-ta"');
     });
   });
 

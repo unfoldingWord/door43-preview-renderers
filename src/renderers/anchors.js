@@ -74,15 +74,22 @@ export function rewriteSectionAnchors(sections, prefix) {
     next.toc = rewriteTocIds(next.toc, prefix);
   }
 
-  // Appendices keyed by kind ({ ta: { id: { title, html } }, tw: {…} }).
+  // Appendices keyed by kind ({ ta: { key: { id, title, html } }, tw: {…} }).
+  // `id` is the article's anchor, used to build the appendix TOC entries.
   if (next.appendices && typeof next.appendices === 'object') {
     const rewritten = {};
     for (const kind of Object.keys(next.appendices)) {
       const articles = next.appendices[kind] || {};
       const out = {};
-      for (const id of Object.keys(articles)) {
-        const article = articles[id] || {};
-        out[id] = { ...article, html: applyAnchorPrefix(article.html, prefix) };
+      for (const key of Object.keys(articles)) {
+        const article = articles[key] || {};
+        out[key] = {
+          ...article,
+          html: applyAnchorPrefix(article.html, prefix),
+          ...(typeof article.id === 'string' && article.id.startsWith('nav-')
+            ? { id: `${prefix}-${article.id.slice('nav-'.length)}` }
+            : {}),
+        };
       }
       rewritten[kind] = out;
     }
