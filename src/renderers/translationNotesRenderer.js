@@ -406,14 +406,47 @@ const tnPrintCss = `
   break-after: avoid !important;
 }
 
-.tn-scripture-block {
+/* One verse per page. Everything a verse owns — its scripture columns, its notes
+   and its Translation Words — is read together, so the next verse starts on a
+   fresh page. Book and chapter introductions are verses too (front:intro and
+   <chapter>:intro), so they get a page of their own on the same rule. The body
+   markup is deliberately flat (no per-verse wrapper), so the break is expressed
+   on the heading that opens each verse rather than on a container. */
+.tn-verse-header,
+.tn-chapter-header {
+  break-before: page !important;
+}
+
+/* ...but a heading must never be left behind on the previous page. The first
+   chapter opens under the book heading, and a chapter's first verse opens under
+   the chapter heading — those pairs stay together and share the new page. */
+.tn-book-header + .tn-chapter-header,
+.tn-chapter-header + .tn-verse-header {
+  break-before: avoid !important;
+}
+
+/* The ULT/UST verse block is read as one thing — never split it. (This used to
+   name .tn-scripture-block, which the renderer never emits, so the rule matched
+   nothing; the class is tn-scripture-cols.) */
+table.tn-scripture-cols {
   break-inside: avoid;
 }
 
-/* Keep the quote box whole and glued to the start of its note, but let a long
-   note body flow across pages. Making the whole note unbreakable strands the
-   book/chapter/verse heading run on a page of its own whenever the note that
-   follows is taller than the space left — book intros always are. */
+/* A note is a single thought, and the Translation Words list closes the verse —
+   a break in the middle of either one is a break in the middle of a unit. */
+article.tn-note,
+.tn-verse-twls {
+  break-inside: avoid;
+}
+
+/* ...except the introduction notes. Those are single articles that run for
+   pages, and an unbreakable block taller than the page is pushed to the next
+   page whole, leaving its heading stranded behind it. They have to flow. */
+article.tn-note-intro {
+  break-inside: auto;
+}
+
+/* Keep the quote box whole and glued to the start of its note. */
 .tn-note-header {
   break-inside: avoid;
   break-after: avoid;
@@ -613,7 +646,10 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
             orig: 'tn-note-orig',
           });
 
-          let noteArticle = `<article class="tn-note" id="${noteAnchor}">\n`;
+          // Introduction notes are marked so print CSS can let them flow; every
+          // other note is kept whole on one page.
+          let noteArticle =
+            `<article class="tn-note${isIntro ? ' tn-note-intro' : ''}" id="${noteAnchor}">\n`;
           noteArticle += quoteHeader;
           noteArticle += `  <div class="tn-note-body">${noteHtml}</div>\n`;
 

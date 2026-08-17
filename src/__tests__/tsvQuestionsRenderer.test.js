@@ -138,6 +138,41 @@ describe('renderTsvQuestionsHtml — Bible-versed', () => {
     expect(sections.css.print).toBeTruthy();
     expect(sections.toc.length).toBeGreaterThan(0);
   });
+
+  test('starts each chapter on a new page', () => {
+    expect(sections.css.print).toMatch(
+      /\.tq-chapter-header\s*{[^}]*break-before:\s*page/
+    );
+  });
+
+  test('keeps the first chapter on the same page as the book heading', () => {
+    expect(sections.css.print).toMatch(
+      /\.tq-book-header \+ \.tq-chapter-header,[\s\S]*?{[^}]*break-before:\s*avoid/
+    );
+  });
+
+  test('never splits the ULT/UST verse block across pages', () => {
+    expect(sections.css.print).toMatch(
+      /table\.tq-scripture-cols,\s*\.tq-frame-text\s*{[^}]*break-inside:\s*avoid/
+    );
+  });
+
+  test('wraps each verse so its scripture and questions can be kept on one page', () => {
+    // Flat sibling selectors cannot group a verse's scripture with its questions,
+    // so this is the one place the markup needs a container.
+    expect(body).toContain('<div class="tq-verse-block">');
+    expect(sections.css.print).toMatch(/\.tq-verse-block\s*{[^}]*break-inside:\s*avoid/);
+  });
+
+  test('keeps an individual question whole even when its verse block cannot fit', () => {
+    expect(sections.css.print).toMatch(/article\.tq-question\s*{[^}]*break-inside:\s*avoid/);
+  });
+
+  test("keeps a chapter's first verse block on the same page as the chapter heading", () => {
+    expect(sections.css.print).toMatch(
+      /\.tq-chapter-header \+ \.tq-verse-block\s*{[^}]*break-before:\s*avoid/
+    );
+  });
 });
 
 describe('renderTsvQuestionsHtml — OBS', () => {

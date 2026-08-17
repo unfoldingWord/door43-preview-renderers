@@ -198,23 +198,48 @@ const tqPrintCss = `
   break-after: avoid !important;
 }
 
+/* One chapter per page: a chapter's questions are worked through together, so
+   the next chapter starts on a fresh page. (Translation Notes break per verse
+   instead — a TN verse carries far more material than a TQ one.) */
+.tq-chapter-header {
+  break-before: page !important;
+}
+
+/* ...but the first chapter opens under the book heading and shares its page,
+   rather than leaving that heading behind on the previous one, and a chapter's
+   first verse block opens under the chapter heading for the same reason. */
+.tq-book-header + .tq-chapter-header,
+.tq-chapter-header + .tq-verse-block {
+  break-before: avoid !important;
+}
+
+/* The ULT/UST verse block (and the OBS frame that stands in for it) is read as
+   one thing — never split it. */
 table.tq-scripture-cols,
 .tq-frame-text {
   break-inside: avoid;
 }
 
-/* Keep the quote box and the question line whole and glued to what follows, but
-   let a long body flow across pages — an unbreakable block taller than the space
-   left strands the book/chapter/verse heading run on a page of its own. */
+/* A verse is read as a unit — its scripture block, its questions and their
+   responses stay together on one page. Most verses carry only one or two
+   questions, so this fits comfortably. When a verse is genuinely taller than a
+   page the engine drops the constraint, and the per-question rule below still
+   keeps each individual question whole. */
+.tq-verse-block {
+  break-inside: avoid;
+}
+
+article.tq-question {
+  break-inside: avoid;
+  orphans: 2;
+  widows: 2;
+}
+
+/* Keep the quote box and the question line whole and glued to what follows. */
 .tq-quote-header,
 .tq-entry-question {
   break-inside: avoid;
   break-after: avoid;
-}
-
-article.tq-question {
-  orphans: 2;
-  widows: 2;
 }
 
 /* In print/PDF there is no interactivity: always show answers, hide the toggle. */
@@ -384,6 +409,12 @@ export function renderTsvQuestionsHtml(resourceData, options = {}) {
           ? chapterAnchor
           : `nav-${bookId}-${chapterKey}-${verseKey}`;
 
+        // A verse is one unit of work — its scripture, its questions and their
+        // responses are wrapped together so print CSS can keep them on one page.
+        // Flat sibling selectors cannot group them, so this is the one place the
+        // markup needs a container (see .tq-verse-block in the print CSS).
+        bodyParts.push(`<div class="tq-verse-block">\n`);
+
         if (!isBookIntro) {
           bodyParts.push(
             `<h3 class="tq-verse-header" id="${verseAnchor}">` +
@@ -431,6 +462,8 @@ export function renderTsvQuestionsHtml(resourceData, options = {}) {
             })
           );
         }
+
+        bodyParts.push(`</div>\n`);
       }
     }
 
