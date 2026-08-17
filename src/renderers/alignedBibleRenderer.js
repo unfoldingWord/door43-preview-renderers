@@ -97,11 +97,19 @@ function decorateBibleBookHtml(html, bookId, showChapters = true) {
     `<span id="nav-${bookId}-$1-$2"$3><a href="#nav-${bookId}-$1-$2" class="header-link">$4</a></span>`
   );
 
+  const chapters = [];
   content = content.replaceAll(
     /<span id="chapter-(\d+)"([^>]+)>([\d]+)<\/span>/gi,
-    `<span id="nav-${bookId}-$1"${
-      showChapters ? ` data-toc-title="${escapeHtml(titleText)} $1"` : ''
-    }$2><a href="#nav-${bookId}-$1-1" class="header-link">$3</a></span>`
+    (match, chapterNum, attrs, label) => {
+      if (showChapters) {
+        chapters.push({ id: `nav-${bookId}-${chapterNum}`, title: `${titleText} ${chapterNum}` });
+      }
+      return (
+        `<span id="nav-${bookId}-${chapterNum}"` +
+        (showChapters ? ` data-toc-title="${escapeHtml(titleText)} ${chapterNum}"` : '') +
+        `${attrs}><a href="#nav-${bookId}-${chapterNum}-1" class="header-link">${label}</a></span>`
+      );
+    }
   );
 
   // Anchor the descriptive title (\d — e.g. a Psalm superscription) as a "front"
@@ -128,6 +136,7 @@ function decorateBibleBookHtml(html, bookId, showChapters = true) {
 
   return {
     title: titleText,
+    chapters,
     html: `<div class="section bible-book" id="nav-${bookId}" data-toc-title="${escapeHtml(
       titleText
     )}">${content}</div>`,
@@ -235,6 +244,7 @@ export function renderAlignedBibleHtml(resourceData, options = {}) {
   const toc = [];
   const renderedBooks = {};
   const bodyParts = [];
+  const bookTitles = new Map();
 
   booksMap.forEach((usfm, bookId) => {
     const imported = pk.importDocument({ lang: 'xxx', abbr: bookId.toUpperCase() }, 'usfm', usfm);
@@ -251,10 +261,14 @@ export function renderAlignedBibleHtml(resourceData, options = {}) {
 
     const parsed = decorateBibleBookHtml(output.paras || '', bookId, showChapterAnchors);
     renderedBooks[bookId] = parsed.html;
+    bookTitles.set(bookId, parsed.title);
+    // Book entry (level 1); chapter entries are nested under it (level 2) when
+    // chapter anchors are on (single/few-book documents).
     toc.push({
       id: `nav-${bookId}`,
       title: parsed.title,
       book: bookId,
+      sections: parsed.chapters,
     });
     bodyParts.push(parsed.html);
   });
@@ -268,6 +282,8 @@ export function renderAlignedBibleHtml(resourceData, options = {}) {
     title: coverTitle,
     version: resourceData.version,
     abbreviation: resourceData.abbreviation,
+    // Single-book documents name the book on the cover, under the version.
+    bookTitle: booksMap.size === 1 ? bookTitles.values().next().value || '' : '',
   });
   const copyright = resourceData.license
     ? `<div class="license-text">${convertMarkdown(resourceData.license)}</div>`

@@ -79,6 +79,7 @@ function collectAppendices(rcLinks, extras, bookId, backRefs) {
       if (!article) continue;
       const anchorId = `nav-${bookId}--ta-${articlePath.replace(/\//g, '-')}`;
       ta[articlePath] = {
+        id: anchorId,
         title: article.title,
         html: renderAppendixArticle(anchorId, article, backRefs.ta[articlePath], bookId),
       };
@@ -94,6 +95,7 @@ function collectAppendices(rcLinks, extras, bookId, backRefs) {
       if (!article) continue;
       const anchorId = `nav-${bookId}--tw-${articlePath.replace(/\//g, '-')}`;
       tw[articlePath] = {
+        id: anchorId,
         title: article.title,
         html: renderAppendixArticle(anchorId, article, backRefs.tw[articlePath], bookId),
       };
@@ -323,6 +325,50 @@ hr.note-divider {
   margin-bottom: 16px;
 }
 
+/* Articles run on rather than each taking a page, so they need a visible
+   separator. The first article sits directly under the appendix heading. */
+.appendix-article + .appendix-article {
+  border-top: 1px solid #ddd;
+  padding-top: 12px;
+}
+
+.appendix-article-header {
+  margin-top: 0;
+}
+
+/* Long words (Greek/Hebrew, transliterations, Strong's lists) must not spill out
+   of a narrow appendix column. */
+.appendix-article-body,
+.back-refs {
+  overflow-wrap: break-word;
+}
+
+/* A narrow appendix column cannot afford the default 40px-a-side blockquote
+   indent: TA articles nest quotes, so the inner one is left with a handful of
+   words per line. A rule plus a small indent reads better and still nests. */
+.appendix-article-body blockquote {
+  margin: 0.5em 0 0.5em 0.8em;
+  padding-left: 0.7em;
+  border-left: 2px solid #ddd;
+}
+
+.appendix-article-body ul,
+.appendix-article-body ol {
+  margin-left: 0;
+  padding-left: 1.3em;
+}
+
+.appendix-article-body table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+
+.appendix-article-body img {
+  max-width: 100%;
+  height: auto;
+}
+
 .appendix-article-body h1,
 .appendix-article-body h2,
 .appendix-article-body h3,
@@ -364,18 +410,54 @@ const tnPrintCss = `
   break-inside: avoid;
 }
 
-article.tn-note {
+/* Keep the quote box whole and glued to the start of its note, but let a long
+   note body flow across pages. Making the whole note unbreakable strands the
+   book/chapter/verse heading run on a page of its own whenever the note that
+   follows is taller than the space left — book intros always are. */
+.tn-note-header {
   break-inside: avoid;
+  break-after: avoid;
+}
+
+article.tn-note {
   orphans: 2;
   widows: 2;
 }
 
-hr {
+hr.note-divider {
   break-before: avoid !important;
 }
 
+/* Appendix articles flow continuously down the two appendix columns (see the
+   .appendix rules in getPrintCss) — one article per page left most pages
+   three-quarters empty. They are separated by a rule, not a page break, and only
+   the TA/TW appendix sections themselves start a new page. */
 .appendix-article {
-  break-after: page !important;
+  break-inside: auto;
+  orphans: 2;
+  widows: 2;
+}
+
+/* Nothing may be left dangling at the foot of a column: not the article title,
+   not a heading inside the article body, not the back-reference heading. */
+.appendix-article-header,
+.appendix-article-body h1,
+.appendix-article-body h2,
+.appendix-article-body h3,
+.appendix-article-body h4,
+.appendix-article-body h5,
+.appendix-article-body h6 {
+  break-after: avoid !important;
+}
+
+.appendix-article-body blockquote,
+.appendix-article-body li,
+.appendix-article-body table {
+  break-inside: avoid;
+}
+
+.back-refs {
+  break-inside: avoid;
 }
 `;
 
@@ -421,7 +503,9 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
     const bookTitle = book.title || BibleBookData[bookId]?.title || bookId;
     const bookAnchor = `nav-${bookId}`;
 
-    toc.push({ id: bookAnchor, title: `${title} - ${bookTitle}`, book: bookId });
+    // Book entry (level 1); chapter entries are nested under it (level 2).
+    const bookToc = { id: bookAnchor, title: `${title} - ${bookTitle}`, book: bookId, sections: [] };
+    toc.push(bookToc);
 
     // Book header
     bodyParts.push(
@@ -439,8 +523,10 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
     for (const chapterKey of chapterKeys) {
       const chapter = book.chapters[chapterKey];
       const isFront = chapterKey === 'front';
-      const chapterLabel = isFront ? 'Introduction' : `${bookTitle} ${chapterKey}`;
+      const chapterLabel = isFront ? `${bookTitle} Introduction` : `${bookTitle} ${chapterKey}`;
       const chapterAnchor = `nav-${bookId}-${isFront ? 'front' : chapterKey}`;
+
+      bookToc.sections.push({ id: chapterAnchor, title: chapterLabel });
 
       // Chapter header
       bodyParts.push(
@@ -460,16 +546,26 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
         if (!notes || notes.length === 0) continue;
 
         const isIntro = verseKey === 'intro';
-        const verseLabel = isIntro
+        // The book intro is the only content under the "front" chapter, so its own
+        // header would just repeat the chapter header ("3 John Introduction"
+        // twice). Skip it and let the chapter header anchor the intro notes.
+        const isBookIntro = isFront && isIntro;
+        const verseLabel = isBookIntro
+          ? chapterLabel
+          : isIntro
           ? `${chapterLabel} Introduction`
           : `${bookTitle} ${chapterKey}:${verseKey}`;
-        const verseAnchor = `nav-${bookId}-${chapterKey}-${verseKey}`;
+        const verseAnchor = isBookIntro
+          ? chapterAnchor
+          : `nav-${bookId}-${chapterKey}-${verseKey}`;
 
         // Verse header
-        bodyParts.push(
-          `<h3 class="tn-verse-header" id="${verseAnchor}">` +
-          `<a href="#${verseAnchor}" class="header-link">${escapeHtml(verseLabel)}</a></h3>\n`
-        );
+        if (!isBookIntro) {
+          bodyParts.push(
+            `<h3 class="tn-verse-header" id="${verseAnchor}">` +
+            `<a href="#${verseAnchor}" class="header-link">${escapeHtml(verseLabel)}</a></h3>\n`
+          );
+        }
 
         // Scripture as parallel columns (one per aligned Bible, e.g. ULT | UST)
         if (!isIntro && !isFront) {
@@ -606,6 +702,11 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
     title,
     version: resourceData.version,
     abbreviation: resourceData.abbreviation,
+    // Single-book documents name the book on the cover, under the version.
+    bookTitle:
+      bookIds.length === 1
+        ? resourceData.books[bookIds[0]].title || BibleBookData[bookIds[0]]?.title || bookIds[0]
+        : '',
   });
   const copyright = resourceData.license
     ? `<div class="license-text">${convertMarkdown(resourceData.license)}</div>`

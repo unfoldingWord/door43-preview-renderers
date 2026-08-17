@@ -2,6 +2,7 @@ import {
   assemblePrintDocument,
   resolvePageSize,
   generateTocHtml,
+  buildAppendicesToc,
   renderAppendicesHtml,
 } from './renderers/printDocumentAssembler.js';
 import { resolveComposeOptions } from './renderOptions.js';
@@ -77,7 +78,12 @@ function buildScreenDocument(htmlData, opts) {
     parts.push(`<div class="section copyright-page">${sections.copyright}</div>`);
   }
   if (opts.show.toc && Array.isArray(sections.toc) && sections.toc.length) {
-    parts.push(`<div class="section toc-page" id="toc">${generateTocHtml(sections.toc)}</div>`);
+    // Appendices are composed here rather than carried in sections.body, so their
+    // TOC entries are appended only when the appendices are actually shown.
+    const tocEntries = opts.show.appendices
+      ? [...sections.toc, ...buildAppendicesToc(sections.appendices)]
+      : sections.toc;
+    parts.push(`<div class="section toc-page" id="toc">${generateTocHtml(tocEntries)}</div>`);
   }
   if (opts.show.body && sections.body) {
     parts.push(sections.body);

@@ -42,6 +42,27 @@ export const PAGE_SIZES = {
   CROWN_QUARTO: { label: 'Crown Quarto', orientation: 'portrait', width: '189mm', height: '246mm' },
 };
 
+/** Convert a CSS absolute length ('210mm', '8.5in', '595pt') to millimetres. */
+function cssLengthToMm(value) {
+  const match = String(value ?? '').match(/^\s*([\d.]+)\s*(mm|cm|in|pt|pc|px)?\s*$/);
+  if (!match) return 0;
+  const n = parseFloat(match[1]);
+  switch (match[2]) {
+    case 'cm':
+      return n * 10;
+    case 'in':
+      return n * 25.4;
+    case 'pt':
+      return (n / 72) * 25.4;
+    case 'pc':
+      return (n / 6) * 25.4;
+    case 'px':
+      return (n / 96) * 25.4;
+    default:
+      return n;
+  }
+}
+
 /**
  * Resolve a page-size option into { width, height }.
  *
@@ -144,7 +165,20 @@ function buildTocEntry(entry) {
  * @returns {string} HTML for the TOC page
  */
 export function generateTocFromHtml(bodyHtml) {
-  if (!bodyHtml) return '';
+  const entries = extractTocEntriesFromHtml(bodyHtml);
+  if (entries.length === 0) return '';
+  return generateTocHtml(entries);
+}
+
+/**
+ * Scan an HTML body for elements carrying both `id` and `data-toc-title` and
+ * return them as flat TOC entries `[{ id, title }]`.
+ *
+ * @param {string} bodyHtml
+ * @returns {Array<Object>}
+ */
+function extractTocEntriesFromHtml(bodyHtml) {
+  if (!bodyHtml) return [];
 
   // Match elements with both id and data-toc-title (in either order)
   const pattern = /<[^>]+?\bid="([^"]+)"[^>]*?\bdata-toc-title="([^"]+)"[^>]*?>|<[^>]+?\bdata-toc-title="([^"]+)"[^>]*?\bid="([^"]+)"[^>]*?>/g;
@@ -159,17 +193,20 @@ export function generateTocFromHtml(bodyHtml) {
     }
   }
 
-  if (entries.length === 0) return '';
-
-  return generateTocHtml(entries);
+  return entries;
 }
 
 // ─── Appendices ──────────────────────────────────────────────────────────────
 
 const APPENDIX_LABELS = { ta: 'Translation Academy', tw: 'Translation Words' };
 
+/** The visible heading (and TOC entry) for an appendix kind. */
+function appendixLabel(kind) {
+  return `Appendix: ${APPENDIX_LABELS[kind] || kind.toUpperCase()}`;
+}
+
 /**
- * Render the keyed appendices object ({ ta: { id: { title, html } }, tw: {…} })
+ * Render the keyed appendices object ({ ta: { id: { id, title, html } }, tw: {…} })
  * into HTML: one `<section class="appendix <kind>">` per kind, with a heading and
  * the collected article HTML. Returns '' when there are no appendices.
  *
@@ -185,7 +222,7 @@ export function renderAppendicesHtml(appendices) {
     const ids = Object.keys(articles);
     if (!ids.length) continue;
 
-    const label = APPENDIX_LABELS[kind] || kind.toUpperCase();
+    const label = appendixLabel(kind);
     html += `<section class="appendix ${kind}" id="appendix-${kind}" data-toc-title="${escapeHtml(label)}">\n`;
     html += `  <h2 class="appendix-header">${escapeHtml(label)}</h2>\n`;
     for (const id of ids) {
@@ -196,19 +233,61 @@ export function renderAppendicesHtml(appendices) {
   return html;
 }
 
+/**
+ * Build TOC entries for the appendices, mirroring renderAppendicesHtml(): one
+ * top-level entry per kind (the `<h2 class="appendix-header">`) with its articles
+ * (the `<h3 class="appendix-article-header">`) nested one level below.
+ *
+ * Appendices are assembled by the composer rather than baked into `sections.body`,
+ * so their TOC entries are built here too — that keeps them out of the TOC when
+ * `show.appendices` is false.
+ *
+ * @param {Object} appendices - sections.appendices from a renderer
+ * @returns {Array<Object>} TOC entries `[{ id, title, sections }]`
+ */
+export function buildAppendicesToc(appendices) {
+  if (!appendices || typeof appendices !== 'object') return [];
+
+  const entries = [];
+  for (const kind of Object.keys(appendices)) {
+    const articles = appendices[kind] || {};
+    const keys = Object.keys(articles);
+    if (!keys.length) continue;
+
+    entries.push({
+      id: `appendix-${kind}`,
+      title: appendixLabel(kind),
+      sections: keys
+        .map((key) => {
+          const article = articles[key] || {};
+          // Renderers record the article's anchor on `id`; fall back to reading it
+          // out of the rendered HTML for callers that build appendices by hand.
+          const id = article.id || article.html?.match(/\bid="([^"]+)"/)?.[1];
+          return id ? { id, title: article.title || key } : null;
+        })
+        .filter(Boolean),
+    });
+  }
+  return entries;
+}
+
 // ─── Cover Generation ───────────────────────────────────────────────────────
 
 /**
  * Build a cover page with logo, title, version, and optional extra content.
  *
+ * The cover headings are, in order: the resource title (h1), the version/ref (h3),
+ * and — for a document scoped to one book — that book's name (h3).
+ *
  * @param {Object} options
  * @param {string} options.title - Resource title
  * @param {string} [options.version] - Version/tag string
  * @param {string} [options.abbreviation] - Resource abbreviation for logo
+ * @param {string} [options.bookTitle] - Book name, when the document covers a single book
  * @param {string} [options.extraCoverHtml] - Extra HTML for the cover (from renderer)
  * @returns {string} Cover page HTML
  */
-export function buildCoverPage({ title, version, abbreviation, extraCoverHtml }) {
+export function buildCoverPage({ title, version, abbreviation, bookTitle, extraCoverHtml }) {
   let logoFile = 'uW-app-256.png';
   if (abbreviation && abbreviation in ABBREVIATION_TO_LOGO) {
     logoFile = `logo-${ABBREVIATION_TO_LOGO[abbreviation]}-256.png`;
@@ -219,6 +298,7 @@ export function buildCoverPage({ title, version, abbreviation, extraCoverHtml })
 <img class="title-logo" src="${resolveLogoSrc(logoFile)}" alt="Logo">
 <h1 class="header cover-header section-header">${escapeHtml(title || '')}</h1>
 ${version ? `<h3 class="cover-version">${escapeHtml(version)}</h3>` : ''}
+${bookTitle ? `<h3 class="cover-book-title">${escapeHtml(bookTitle)}</h3>` : ''}
 ${extraCoverHtml || ''}`;
 }
 
@@ -286,6 +366,12 @@ export function getPrintCss(options = {}) {
   } = options;
 
   const isRtl = direction === 'rtl';
+  // Appendices are reference material — short entries that read well in two
+  // columns and waste most of a wide page in one. Two columns need the width to
+  // stay readable, so A5/Trade and narrower keep a single column. (The CSS
+  // `columns: <width> <count>` shorthand would express this directly, but
+  // WeasyPrint silently collapses it to one column, so decide it here.)
+  const appendixColumns = cssLengthToMm(pageWidth) >= 170 ? 2 : 1;
   // The page-number counter lives in one margin box; the running header (if on)
   // occupies @top-left/@top-right, so a 'top' page number uses @top-center.
   const pnBox = pageNumberPosition === 'top' ? '@top-center' : '@bottom-center';
@@ -428,6 +514,18 @@ h1, h2, h3, h4, h5, h6 {
 .section.toc-page,
 .section.copyright-page {
   break-before: page;
+}
+
+/* Each appendix (see renderAppendicesHtml) starts a fresh page and sets its
+   articles in columns; the appendix heading spans the full width above them. */
+.appendix {
+  break-before: page;
+  columns: ${appendixColumns};
+  column-gap: 1.5em;
+}
+
+.appendix-header {
+  column-span: all;
 }
 
 /* ─── Cover Page ─────────────────────────────────────────── */
@@ -582,13 +680,15 @@ export function assemblePrintDocument(sections, options = {}) {
   // only a short snippet or none at all.
   const cover = coverSnippet || buildCoverPage({ title, version, abbreviation });
 
-  // Build TOC
+  // Build TOC. The body entries come from the renderer; the appendix entries are
+  // derived here because the appendices themselves are assembled here.
+  const appendicesToc = showAppendices ? buildAppendicesToc(appendices) : [];
   let tocHtml;
   if (Array.isArray(tocData) && tocData.length > 0) {
-    tocHtml = generateTocHtml(tocData);
+    tocHtml = generateTocHtml([...tocData, ...appendicesToc]);
   } else {
     // Fallback: extract from body HTML
-    tocHtml = generateTocFromHtml(body);
+    tocHtml = generateTocHtml([...extractTocEntriesFromHtml(body), ...appendicesToc]);
   }
 
   // Build CSS

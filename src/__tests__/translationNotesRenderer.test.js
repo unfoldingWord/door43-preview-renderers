@@ -181,4 +181,66 @@ describe('renderTranslationNotesHtml', () => {
     expect(sections.css.print).toBeTruthy();
     expect(sections.toc.length).toBeGreaterThan(0);
   });
+
+  test('names the single book on the cover, after the resource title and version', () => {
+    expect(sections.cover).toContain('<h3 class="cover-book-title">Titus</h3>');
+  });
+
+  test('nests chapter entries (level 2) under the book entry (level 1) in the TOC', () => {
+    expect(sections.toc).toHaveLength(1);
+    const [book] = sections.toc;
+    expect(book.id).toBe('nav-tit');
+    expect(book.sections).toEqual([{ id: 'nav-tit-1', title: 'Titus 1' }]);
+  });
+
+  test('records the anchor id on each appendix article so the TOC can link to it', () => {
+    expect(sections.appendices.ta['translate/figs-abstractnouns'].id).toBe(
+      'nav-tit--ta-translate-figs-abstractnouns'
+    );
+    expect(sections.appendices.tw['names/paul'].id).toBe('nav-tit--tw-names-paul');
+  });
+
+  test('appendix articles run on instead of taking a page each', () => {
+    // Only the TA/TW appendix sections break to a new page (see getPrintCss);
+    // the articles inside them flow down the appendix columns.
+    expect(sections.css.print).not.toMatch(/\.appendix-article\s*{[^}]*break-after:\s*page/);
+    expect(sections.css.print).toMatch(/\.appendix-article\s*{[^}]*break-inside:\s*auto/);
+  });
+
+  test('keeps appendix headings attached to the text that follows them', () => {
+    expect(sections.css.print).toMatch(
+      /\.appendix-article-header,[\s\S]*?{[^}]*break-after:\s*avoid/
+    );
+    expect(sections.css.print).toMatch(/\.back-refs\s*{[^}]*break-inside:\s*avoid/);
+  });
+
+  test('lets a long note body break across pages so it cannot strand the headings', () => {
+    // An unbreakable note taller than the space left pushes the whole
+    // book/chapter/verse heading run onto a page of its own.
+    expect(sections.css.print).not.toMatch(/article\.tn-note\s*{[^}]*break-inside:\s*avoid/);
+    expect(sections.css.print).toMatch(/\.tn-note-header\s*{[^}]*break-inside:\s*avoid/);
+  });
+});
+
+describe('renderTranslationNotesHtml book introduction', () => {
+  function withFrontMatter() {
+    const data = buildResourceData();
+    data.books.tit.chapters.front = {
+      verses: { intro: [{ ID: 'in01', Reference: 'front:intro', Note: '# Introduction to Titus' }] },
+    };
+    return data;
+  }
+
+  const { sections } = renderTranslationNotesHtml(withFrontMatter());
+
+  test('labels the front chapter with the book name, not a bare "Introduction"', () => {
+    expect(sections.body).toContain('data-toc-title="Titus Introduction"');
+    expect(sections.toc[0].sections[0]).toEqual({ id: 'nav-tit-front', title: 'Titus Introduction' });
+  });
+
+  test('does not repeat the heading as "Introduction Introduction"', () => {
+    expect(sections.body).not.toContain('Introduction Introduction');
+    // The intro notes hang off the chapter header; no duplicate verse header.
+    expect(sections.body).not.toContain('id="nav-tit-front-intro"');
+  });
 });

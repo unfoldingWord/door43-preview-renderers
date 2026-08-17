@@ -203,8 +203,16 @@ table.tq-scripture-cols,
   break-inside: avoid;
 }
 
-article.tq-question {
+/* Keep the quote box and the question line whole and glued to what follows, but
+   let a long body flow across pages — an unbreakable block taller than the space
+   left strands the book/chapter/verse heading run on a page of its own. */
+.tq-quote-header,
+.tq-entry-question {
   break-inside: avoid;
+  break-after: avoid;
+}
+
+article.tq-question {
   orphans: 2;
   widows: 2;
 }
@@ -315,7 +323,9 @@ export function renderTsvQuestionsHtml(resourceData, options = {}) {
     const bookTitle = book.title || BibleBookData[bookId]?.title || bookId;
     const bookAnchor = `nav-${bookId}`;
 
-    toc.push({ id: bookAnchor, title: `${title} - ${bookTitle}`, book: bookId });
+    // Book entry (level 1); chapter/story entries are nested under it (level 2).
+    const bookToc = { id: bookAnchor, title: `${title} - ${bookTitle}`, book: bookId, sections: [] };
+    toc.push(bookToc);
 
     bodyParts.push(
       `<section id="${bookAnchor}" data-toc-title="${escapeHtml(title)} - ${escapeHtml(bookTitle)}">\n` +
@@ -333,11 +343,15 @@ export function renderTsvQuestionsHtml(resourceData, options = {}) {
       const isFront = chapterKey === 'front';
       const story = isObs && !isFront ? obsData?.stories?.[parseInt(chapterKey, 10)] : null;
       const chapterLabel = isFront
-        ? 'Introduction'
+        ? isObs
+          ? 'Introduction'
+          : `${bookTitle} Introduction`
         : isObs
         ? story?.title || `Story ${chapterKey}`
         : `${bookTitle} ${chapterKey}`;
       const chapterAnchor = `nav-${bookId}-${isFront ? 'front' : chapterKey}`;
+
+      bookToc.sections.push({ id: chapterAnchor, title: chapterLabel });
 
       bodyParts.push(
         `<h2 class="tq-chapter-header" id="${chapterAnchor}" data-toc-title="${escapeHtml(chapterLabel)}">` +
@@ -355,17 +369,27 @@ export function renderTsvQuestionsHtml(resourceData, options = {}) {
         if (!questions || questions.length === 0) continue;
 
         const isIntro = verseKey === 'intro';
-        const verseLabel = isIntro
+        // The book intro is the only content under the "front" chapter, so its own
+        // header would just repeat the chapter header. Skip it and let the chapter
+        // header anchor the intro content.
+        const isBookIntro = isFront && isIntro;
+        const verseLabel = isBookIntro
+          ? chapterLabel
+          : isIntro
           ? `${chapterLabel} Introduction`
           : isObs
           ? `${chapterKey}:${verseKey}`
           : `${bookTitle} ${chapterKey}:${verseKey}`;
-        const verseAnchor = `nav-${bookId}-${chapterKey}-${verseKey}`;
+        const verseAnchor = isBookIntro
+          ? chapterAnchor
+          : `nav-${bookId}-${chapterKey}-${verseKey}`;
 
-        bodyParts.push(
-          `<h3 class="tq-verse-header" id="${verseAnchor}">` +
-          `<a href="#${verseAnchor}" class="header-link">${escapeHtml(verseLabel)}</a></h3>\n`
-        );
+        if (!isBookIntro) {
+          bodyParts.push(
+            `<h3 class="tq-verse-header" id="${verseAnchor}">` +
+            `<a href="#${verseAnchor}" class="header-link">${escapeHtml(verseLabel)}</a></h3>\n`
+          );
+        }
 
         if (!isIntro && !isFront) {
           if (isObs) {
@@ -417,6 +441,12 @@ export function renderTsvQuestionsHtml(resourceData, options = {}) {
     title,
     version: resourceData.version,
     abbreviation: resourceData.abbreviation,
+    // Single-book documents name the book on the cover, under the version.
+    // OBS-based questions are not book-scoped, so they get no book heading.
+    bookTitle:
+      !isObs && bookIds.length === 1
+        ? resourceData.books[bookIds[0]].title || BibleBookData[bookIds[0]]?.title || bookIds[0]
+        : '',
   });
   const copyright = resourceData.license
     ? `<div class="license-text">${convertMarkdown(resourceData.license)}</div>`
