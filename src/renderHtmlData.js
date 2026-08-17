@@ -5,15 +5,10 @@ import { renderObsHtml } from './renderers/obsRenderer.js';
 import { renderTranslationNotesHtml } from './renderers/translationNotesRenderer.js';
 import { renderTsvQuestionsHtml } from './renderers/tsvQuestionsRenderer.js';
 import { parseBooksOption } from './renderOptions.js';
+import { alignedBibleSubjects } from './constants.js';
 import { rewriteSectionAnchors } from './renderers/anchors.js';
 import { filterResourceDataByRanges } from './rangeFilter.js';
 
-const alignedBibleSubjects = new Set([
-  'Aligned Bible',
-  'Bible',
-  'Greek New Testament',
-  'Hebrew Old Testament',
-]);
 const translationAcademySubjects = new Set(['Translation Academy']);
 const translationWordsSubjects = new Set(['Translation Words']);
 const obsSubjects = new Set(['Open Bible Stories']);

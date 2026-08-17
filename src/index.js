@@ -8,7 +8,13 @@ export { renderHtmlData } from './renderHtmlData.js';
 export { renderHTML } from './renderHTML.js';
 export { resolveComposeOptions, parseBooksOption } from './renderOptions.js';
 export { getAllCatalogEntries } from './getAllCatalogEntries.js';
-export { BibleBookData, requiredSubjectsMap, subjectIdentifierMap } from './constants.js';
+export {
+  BibleBookData,
+  requiredSubjectsMap,
+  subjectIdentifierMap,
+  alignedBibleSubjects,
+} from './constants.js';
+export { supportsBodyColumns } from './renderOptions.js';
 export { fetchResource } from './api/client.js';
 export { renderAlignedBibleHtml } from './renderers/alignedBibleRenderer.js';
 export { renderTranslationAcademyHtml } from './renderers/translationAcademyRenderer.js';

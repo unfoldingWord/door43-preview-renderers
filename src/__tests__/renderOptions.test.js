@@ -1,4 +1,8 @@
-import { parseBooksOption, resolveComposeOptions } from '../renderOptions.js';
+import {
+  parseBooksOption,
+  resolveComposeOptions,
+  supportsBodyColumns,
+} from '../renderOptions.js';
 
 describe('parseBooksOption', () => {
   test('returns empty for undefined', () => {
@@ -71,5 +75,26 @@ describe('resolveComposeOptions', () => {
   test('runningHeader defaults on, can be disabled', () => {
     expect(resolveComposeOptions({}).print.runningHeader).toBe(true);
     expect(resolveComposeOptions({ print: { runningHeader: false } }).print.runningHeader).toBe(false);
+  });
+});
+
+describe('supportsBodyColumns', () => {
+  test('is true for the subjects the Aligned Bible renderer handles', () => {
+    // Only those bodies carry .section.bible-book, which `columns` targets.
+    for (const subject of ['Aligned Bible', 'Bible', 'Greek New Testament', 'Hebrew Old Testament']) {
+      expect(supportsBodyColumns(subject)).toBe(true);
+    }
+  });
+
+  test('is false for Notes, Questions and OBS, where `columns` does nothing', () => {
+    for (const subject of ['TSV Translation Notes', 'TSV Translation Questions', 'Open Bible Stories']) {
+      expect(supportsBodyColumns(subject)).toBe(false);
+    }
+  });
+
+  test('accepts anything carrying a subject, and tolerates nothing', () => {
+    expect(supportsBodyColumns({ subject: 'Aligned Bible' })).toBe(true);
+    expect(supportsBodyColumns(undefined)).toBe(false);
+    expect(supportsBodyColumns({})).toBe(false);
   });
 });

@@ -1,3 +1,5 @@
+import { alignedBibleSubjects } from './constants.js';
+
 /**
  * Option normalization for the staged rendering pipeline.
  *
@@ -43,6 +45,25 @@ export function parseBooksOption(books) {
   }
 
   return { ids: [], ranges: {} };
+}
+
+/**
+ * Whether the `columns` option does anything for a given resource.
+ *
+ * `columns` sets the column count on `.section.bible-book`, which only the
+ * Aligned Bible renderer emits — Notes/Questions/OBS bodies are unaffected by it
+ * (their appendices lay out in columns on their own rule). It also applies to
+ * `media: 'print'` only. Exposed so callers and demos can label or disable the
+ * control instead of offering an option that silently does nothing.
+ *
+ * @param {string|{subject?: string}} subjectOrHtmlData - A subject, or anything
+ *   carrying one (ResourceData, HtmlData)
+ * @returns {boolean}
+ */
+export function supportsBodyColumns(subjectOrHtmlData) {
+  const subject =
+    typeof subjectOrHtmlData === 'string' ? subjectOrHtmlData : subjectOrHtmlData?.subject;
+  return alignedBibleSubjects.has(subject);
 }
 
 const SCREEN_SHOW_DEFAULTS = {

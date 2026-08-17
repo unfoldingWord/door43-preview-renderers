@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { getResourceData } from './getResourceData';
 import { renderHtmlData } from './renderHtmlData';
 import { renderHTML } from './renderHTML';
+import { supportsBodyColumns } from './renderOptions';
 import { htmlDataFixtures } from './fixtures';
 import { PAGE_SIZES } from './renderers/printDocumentAssembler';
 
@@ -36,6 +37,7 @@ export default function RenderHTMLDemo() {
 
   const [media, setMedia] = useState('screen');
   const [pageSize, setPageSize] = useState('A4_PORTRAIT');
+  const [columns, setColumns] = useState(1);
   const [show, setShow] = useState({ cover: true, copyright: true, toc: true, appendices: true });
 
   // Switching back to the fixture source restores the selected fixture, so the
@@ -69,10 +71,15 @@ export default function RenderHTMLDemo() {
     }
   };
 
+  // `columns` lays out the body of an Aligned Bible in newspaper columns. It is
+  // print-only, and only Aligned Bible bodies carry the .section.bible-book that
+  // the rule targets — so the control is offered only where it does something.
+  const columnsApply = media === 'print' && supportsBodyColumns(htmlData);
+
   const html = useMemo(() => {
     if (!htmlData) return '';
-    return renderHTML(htmlData, { media, show, print: { pageSize } });
-  }, [htmlData, media, show, pageSize]);
+    return renderHTML(htmlData, { media, show, columns, print: { pageSize } });
+  }, [htmlData, media, show, columns, pageSize]);
 
   const toggle = (key) => setShow((s) => ({ ...s, [key]: !s[key] }));
 
@@ -181,7 +188,35 @@ export default function RenderHTMLDemo() {
               </select>
             </label>
           )}
+
+          {media === 'print' && (
+            <label title={columnsApply ? '' : 'Only Aligned Bible bodies lay out in columns'}>
+              <span style={{ marginRight: 6, fontSize: 13, color: columnsApply ? '#555' : '#aaa' }}>
+                Columns
+              </span>
+              <select
+                value={columns}
+                onChange={(e) => setColumns(Number(e.target.value))}
+                disabled={!columnsApply}
+                style={{ padding: 8 }}
+              >
+                {[1, 2, 3].map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
         </div>
+
+        {media === 'print' && !columnsApply && (
+          <div style={{ marginTop: 8, fontSize: 13, color: '#777' }}>
+            <code>columns</code> lays out the body of an <strong>Aligned Bible</strong> (ULT, UST,
+            UHB, UGNT) — pick one above to try it. Notes, Questions and OBS bodies are unaffected;
+            their appendices already lay out in columns on their own rule.
+          </div>
+        )}
         {loadError && <div style={{ color: '#842029', marginTop: 8 }}>Error: {loadError}</div>}
       </div>
 
