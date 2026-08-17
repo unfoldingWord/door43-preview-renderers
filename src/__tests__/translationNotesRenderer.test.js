@@ -231,10 +231,26 @@ describe('renderTranslationNotesHtml', () => {
     );
   });
 
-  test('lets a long note body break across pages so it cannot strand the headings', () => {
-    // An unbreakable note taller than the space left pushes the whole
-    // book/chapter/verse heading run onto a page of its own.
-    expect(sections.css.print).not.toMatch(/article\.tn-note\s*{[^}]*break-inside:\s*avoid/);
+  test('never splits a note or the Translation Words list across pages', () => {
+    expect(sections.css.print).toMatch(
+      /article\.tn-note,\s*\.tn-verse-twls\s*{[^}]*break-inside:\s*avoid/
+    );
+  });
+
+  test('never splits the ULT/UST verse block across pages', () => {
+    // The rule used to name .tn-scripture-block, which the renderer never emits,
+    // so it styled nothing. It must target the class the body actually carries.
+    expect(sections.css.print).toMatch(/table\.tn-scripture-cols\s*{[^}]*break-inside:\s*avoid/);
+    expect(sections.css.print).not.toMatch(/\.tn-scripture-block\s*{/);
+    expect(sections.body).toContain('tn-scripture-cols');
+  });
+
+  test('lets introduction notes flow so they cannot strand the headings', () => {
+    // Notes are unbreakable, but an intro note runs for pages: unbreakable and
+    // taller than the page means it is pushed whole to the next page, leaving
+    // its heading behind. Verified: without this exemption, Titus page 5 holds
+    // the book and chapter headings and nothing else.
+    expect(sections.css.print).toMatch(/article\.tn-note-intro\s*{[^}]*break-inside:\s*auto/);
     expect(sections.css.print).toMatch(/\.tn-note-header\s*{[^}]*break-inside:\s*avoid/);
   });
 });
@@ -253,6 +269,10 @@ describe('renderTranslationNotesHtml book introduction', () => {
   test('labels the front chapter with the book name, not a bare "Introduction"', () => {
     expect(sections.body).toContain('data-toc-title="Titus Introduction"');
     expect(sections.toc[0].sections[0]).toEqual({ id: 'nav-tit-front', title: 'Titus Introduction' });
+  });
+
+  test('marks introduction notes so print CSS can let them flow', () => {
+    expect(sections.body).toContain('class="tn-note tn-note-intro"');
   });
 
   test('does not repeat the heading as "Introduction Introduction"', () => {

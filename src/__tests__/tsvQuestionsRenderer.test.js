@@ -138,6 +138,24 @@ describe('renderTsvQuestionsHtml — Bible-versed', () => {
     expect(sections.css.print).toBeTruthy();
     expect(sections.toc.length).toBeGreaterThan(0);
   });
+
+  test('starts each chapter on a new page', () => {
+    expect(sections.css.print).toMatch(
+      /\.tq-chapter-header\s*{[^}]*break-before:\s*page/
+    );
+  });
+
+  test('keeps the first chapter on the same page as the book heading', () => {
+    expect(sections.css.print).toMatch(
+      /\.tq-book-header \+ \.tq-chapter-header\s*{[^}]*break-before:\s*avoid/
+    );
+  });
+
+  test('never splits the ULT/UST verse block across pages', () => {
+    expect(sections.css.print).toMatch(
+      /table\.tq-scripture-cols,\s*\.tq-frame-text\s*{[^}]*break-inside:\s*avoid/
+    );
+  });
 });
 
 describe('renderTsvQuestionsHtml — OBS', () => {

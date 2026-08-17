@@ -198,6 +198,21 @@ const tqPrintCss = `
   break-after: avoid !important;
 }
 
+/* One chapter per page: a chapter's questions are worked through together, so
+   the next chapter starts on a fresh page. (Translation Notes break per verse
+   instead — a TN verse carries far more material than a TQ one.) */
+.tq-chapter-header {
+  break-before: page !important;
+}
+
+/* ...but the first chapter opens under the book heading and shares its page,
+   rather than leaving that heading behind on the previous one. */
+.tq-book-header + .tq-chapter-header {
+  break-before: avoid !important;
+}
+
+/* The ULT/UST verse block (and the OBS frame that stands in for it) is read as
+   one thing — never split it. */
 table.tq-scripture-cols,
 .tq-frame-text {
   break-inside: avoid;
