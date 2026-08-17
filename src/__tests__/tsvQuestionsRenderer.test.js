@@ -170,12 +170,19 @@ describe('renderTsvQuestionsHtml — Bible-versed', () => {
 
   test("keeps a chapter's first verse block on the same page as the chapter heading", () => {
     expect(sections.css.print).toMatch(
-      /\.tq-chapter-header \+ \.tq-verse-block\s*{[^}]*break-before:\s*avoid/
+      /\.tq-chapter-header \+ \.tq-verse-block,[\s\S]*?{[^}]*break-before:\s*avoid/
     );
   });
 
   test('lists chapters under the book for a single-book document', () => {
-    expect(sections.toc[0].sections.length).toBeGreaterThan(0);
+    expect(sections.toc[0].sections[0].sections.length).toBeGreaterThan(0);
+  });
+
+  test('gives the resource an H1, the book an H2, chapters H3 and verses H4', () => {
+    expect(body).toContain('<h1 class="tq-resource-header" id="nav-resource"');
+    expect(body).toContain('<h2 class="tq-book-header">');
+    expect(body).toContain('<h3 class="tq-chapter-header"');
+    expect(body).toContain('<h4 class="tq-verse-header"');
   });
 });
 
@@ -219,12 +226,13 @@ describe('renderTsvQuestionsHtml chapter listing in the TOC', () => {
 
   test('lists only book names once a document covers more than one book', () => {
     const { sections } = renderTsvQuestionsHtml(twoBooks());
-    expect(sections.toc).toHaveLength(2);
-    for (const entry of sections.toc) expect(entry.sections).toEqual([]);
+    const books = sections.toc[0].sections;
+    expect(books).toHaveLength(2);
+    for (const entry of books) expect(entry.sections).toEqual([]);
   });
 
   test('showChaptersInToc forces chapters back on', () => {
     const { sections } = renderTsvQuestionsHtml(twoBooks(), { showChaptersInToc: true });
-    expect(sections.toc[0].sections.length).toBeGreaterThan(0);
+    expect(sections.toc[0].sections[0].sections.length).toBeGreaterThan(0);
   });
 });

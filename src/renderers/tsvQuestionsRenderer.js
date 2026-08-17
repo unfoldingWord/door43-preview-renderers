@@ -209,7 +209,10 @@ const tqPrintCss = `
    rather than leaving that heading behind on the previous one, and a chapter's
    first verse block opens under the chapter heading for the same reason. */
 .tq-book-header + .tq-chapter-header,
-.tq-chapter-header + .tq-verse-block {
+.tq-chapter-header + .tq-verse-block,
+/* OBS-based resources have no book heading, so the first chapter opens the
+   section directly — it must not break away from the resource heading. */
+section > .tq-chapter-header:first-child {
   break-before: avoid !important;
 }
 
@@ -352,18 +355,43 @@ export function renderTsvQuestionsHtml(resourceData, options = {}) {
       ? options.showChaptersInToc
       : bookIds.length === 1;
 
+  // Heading levels: H1 the resource, H2 each book, H3 each chapter, H4 each
+  // verse. The resource title is the document's own heading, so it is emitted
+  // once, above the books, rather than repeated into every book heading.
+  const resourceAnchor = 'nav-resource';
+  const resourceToc = { id: resourceAnchor, title, sections: [] };
+  toc.push(resourceToc);
+  bodyParts.push(
+    `<h1 class="tq-resource-header" id="${resourceAnchor}" data-toc-title="${escapeHtml(title)}">` +
+    `<a href="#${resourceAnchor}" class="header-link">${escapeHtml(title)}</a></h1>\n`
+  );
+
   for (const bookId of bookIds) {
     const book = resourceData.books[bookId];
     const bookTitle = book.title || BibleBookData[bookId]?.title || bookId;
     const bookAnchor = `nav-${bookId}`;
+    // OBS-based resources carry a single pseudo-book whose title is the resource
+    // title itself, so a book heading there would just repeat the H1. Drop the
+    // book level for those and hang the chapters straight off the resource.
+    const hasBookHeading = bookTitle !== title;
+    // Without a book heading the chapter opens the section, so it moves up a
+    // level rather than leaving a gap in the document outline.
+    const chapterTag = hasBookHeading ? 'h3' : 'h2';
+    const verseTag = hasBookHeading ? 'h4' : 'h3';
 
-    // Book entry (level 1); chapter/story entries are nested under it (level 2).
-    const bookToc = { id: bookAnchor, title: `${title} - ${bookTitle}`, book: bookId, sections: [] };
-    toc.push(bookToc);
+    // Book entry (level 2, under the resource); chapters nest under it (level 3).
+    const bookToc = hasBookHeading
+      ? { id: bookAnchor, title: bookTitle, book: bookId, sections: [] }
+      : resourceToc;
+    if (hasBookHeading) resourceToc.sections.push(bookToc);
 
     bodyParts.push(
-      `<section id="${bookAnchor}" data-toc-title="${escapeHtml(title)} - ${escapeHtml(bookTitle)}">\n` +
-      `  <h1 class="tq-book-header"><a href="#${bookAnchor}" class="header-link">${escapeHtml(title)} - ${escapeHtml(bookTitle)}</a></h1>\n`
+      `<section id="${bookAnchor}"` +
+      (hasBookHeading ? ` data-toc-title="${escapeHtml(bookTitle)}"` : '') +
+      `>\n` +
+      (hasBookHeading
+        ? `  <h2 class="tq-book-header"><a href="#${bookAnchor}" class="header-link">${escapeHtml(bookTitle)}</a></h2>\n`
+        : '')
     );
 
     const chapterKeys = Object.keys(book.chapters || {}).sort((a, b) => {
@@ -392,10 +420,10 @@ export function renderTsvQuestionsHtml(resourceData, options = {}) {
       // `data-toc-title` marks an element for the TOC, so it is only emitted
       // when chapters belong there; the id anchor always remains.
       bodyParts.push(
-        `<h2 class="tq-chapter-header" id="${chapterAnchor}"` +
+        `<${chapterTag} class="tq-chapter-header" id="${chapterAnchor}"` +
         (showChaptersInTocResolved ? ` data-toc-title="${escapeHtml(chapterLabel)}"` : '') +
         `>` +
-        `<a href="#${chapterAnchor}" class="header-link">${escapeHtml(chapterLabel)}</a></h2>\n`
+        `<a href="#${chapterAnchor}" class="header-link">${escapeHtml(chapterLabel)}</a></${chapterTag}>\n`
       );
 
       const verseKeys = Object.keys(chapter.verses || {}).sort((a, b) => {
@@ -432,8 +460,8 @@ export function renderTsvQuestionsHtml(resourceData, options = {}) {
 
         if (!isBookIntro) {
           bodyParts.push(
-            `<h3 class="tq-verse-header" id="${verseAnchor}">` +
-            `<a href="#${verseAnchor}" class="header-link">${escapeHtml(verseLabel)}</a></h3>\n`
+            `<${verseTag} class="tq-verse-header" id="${verseAnchor}">` +
+            `<a href="#${verseAnchor}" class="header-link">${escapeHtml(verseLabel)}</a></${verseTag}>\n`
           );
         }
 

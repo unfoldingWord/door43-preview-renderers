@@ -186,11 +186,27 @@ describe('renderTranslationNotesHtml', () => {
     expect(sections.cover).toContain('<h3 class="cover-book-title">Titus</h3>');
   });
 
-  test('nests chapter entries (level 2) under the book entry (level 1) in the TOC', () => {
+  test('nests the TOC as resource (1) > book (2) > chapter (3)', () => {
     expect(sections.toc).toHaveLength(1);
-    const [book] = sections.toc;
-    expect(book.id).toBe('nav-tit');
+    const [resource] = sections.toc;
+    expect(resource).toMatchObject({
+      id: 'nav-resource',
+      title: 'unfoldingWord® Translation Notes',
+    });
+    const [book] = resource.sections;
+    expect(book).toMatchObject({ id: 'nav-tit', title: 'Titus' });
     expect(book.sections).toEqual([{ id: 'nav-tit-1', title: 'Titus 1' }]);
+  });
+
+  test('gives the resource an H1, the book an H2, chapters H3 and verses H4', () => {
+    expect(sections.body).toContain(
+      '<h1 class="tn-resource-header" id="nav-resource"'
+    );
+    expect(sections.body).toContain('<h2 class="tn-book-header">');
+    expect(sections.body).toContain('<h3 class="tn-chapter-header"');
+    expect(sections.body).toContain('<h4 class="tn-verse-header"');
+    // The book heading is the book name alone — the resource title is the H1.
+    expect(sections.body).not.toContain('Translation Notes - Titus');
   });
 
   test('records the anchor id on each appendix article so the TOC can link to it', () => {
@@ -227,8 +243,10 @@ describe('renderTranslationNotesHtml', () => {
     // The first chapter opens under the book heading and a chapter's first verse
     // opens under the chapter heading; neither pair may be split by the rule above.
     expect(sections.css.print).toMatch(
-      /\.tn-book-header \+ \.tn-chapter-header,\s*\.tn-chapter-header \+ \.tn-verse-header\s*{[^}]*break-before:\s*avoid/
+      /\.tn-book-header \+ \.tn-chapter-header,[\s\S]*?{[^}]*break-before:\s*avoid/
     );
+    // A chapter that opens its section (no book heading, e.g. OBS) counts too.
+    expect(sections.css.print).toMatch(/section > \.tn-chapter-header:first-child/);
   });
 
   test('never splits a note or the Translation Words list across pages', () => {
@@ -268,7 +286,10 @@ describe('renderTranslationNotesHtml book introduction', () => {
 
   test('labels the front chapter with the book name, not a bare "Introduction"', () => {
     expect(sections.body).toContain('data-toc-title="Titus Introduction"');
-    expect(sections.toc[0].sections[0]).toEqual({ id: 'nav-tit-front', title: 'Titus Introduction' });
+    expect(sections.toc[0].sections[0].sections[0]).toEqual({
+      id: 'nav-tit-front',
+      title: 'Titus Introduction',
+    });
   });
 
   test('marks introduction notes so print CSS can let them flow', () => {
@@ -294,14 +315,17 @@ describe('renderTranslationNotesHtml chapter listing in the TOC', () => {
 
   test('lists chapters under the book for a single-book document', () => {
     const { sections } = renderTranslationNotesHtml(buildResourceData());
-    expect(sections.toc[0].sections).toEqual([{ id: 'nav-tit-1', title: 'Titus 1' }]);
+    expect(sections.toc[0].sections[0].sections).toEqual([
+      { id: 'nav-tit-1', title: 'Titus 1' },
+    ]);
     expect(sections.body).toContain('data-toc-title="Titus 1"');
   });
 
   test('lists only book names once a document covers more than one book', () => {
     const { sections } = renderTranslationNotesHtml(twoBooks());
-    expect(sections.toc).toHaveLength(2);
-    for (const entry of sections.toc) expect(entry.sections).toEqual([]);
+    const books = sections.toc[0].sections;
+    expect(books).toHaveLength(2);
+    for (const entry of books) expect(entry.sections).toEqual([]);
     // The chapter anchor survives for deep links; only the TOC marker goes.
     expect(sections.body).toContain('id="nav-tit-1"');
     expect(sections.body).not.toContain('data-toc-title="Titus 1"');
@@ -309,6 +333,6 @@ describe('renderTranslationNotesHtml chapter listing in the TOC', () => {
 
   test('showChaptersInToc forces chapters back on', () => {
     const { sections } = renderTranslationNotesHtml(twoBooks(), { showChaptersInToc: true });
-    expect(sections.toc[0].sections.length).toBeGreaterThan(0);
+    expect(sections.toc[0].sections[0].sections.length).toBeGreaterThan(0);
   });
 });

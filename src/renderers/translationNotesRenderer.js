@@ -421,7 +421,10 @@ const tnPrintCss = `
    chapter opens under the book heading, and a chapter's first verse opens under
    the chapter heading — those pairs stay together and share the new page. */
 .tn-book-header + .tn-chapter-header,
-.tn-chapter-header + .tn-verse-header {
+.tn-chapter-header + .tn-verse-header,
+/* OBS-based resources have no book heading, so the first chapter opens the
+   section directly — it must not break away from the resource heading. */
+section > .tn-chapter-header:first-child {
   break-before: avoid !important;
 }
 
@@ -540,19 +543,44 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
       ? options.showChaptersInToc
       : bookIds.length === 1;
 
+  // Heading levels: H1 the resource, H2 each book, H3 each chapter, H4 each
+  // verse. The resource title is the document's own heading, so it is emitted
+  // once, above the books, rather than repeated into every book heading.
+  const resourceAnchor = 'nav-resource';
+  const resourceToc = { id: resourceAnchor, title, sections: [] };
+  toc.push(resourceToc);
+  bodyParts.push(
+    `<h1 class="tn-resource-header" id="${resourceAnchor}" data-toc-title="${escapeHtml(title)}">` +
+    `<a href="#${resourceAnchor}" class="header-link">${escapeHtml(title)}</a></h1>\n`
+  );
+
   for (const bookId of bookIds) {
     const book = resourceData.books[bookId];
     const bookTitle = book.title || BibleBookData[bookId]?.title || bookId;
     const bookAnchor = `nav-${bookId}`;
+    // OBS-based resources carry a single pseudo-book whose title is the resource
+    // title itself, so a book heading there would just repeat the H1. Drop the
+    // book level for those and hang the chapters straight off the resource.
+    const hasBookHeading = bookTitle !== title;
+    // Without a book heading the chapter opens the section, so it moves up a
+    // level rather than leaving a gap in the document outline.
+    const chapterTag = hasBookHeading ? 'h3' : 'h2';
+    const verseTag = hasBookHeading ? 'h4' : 'h3';
 
-    // Book entry (level 1); chapter entries are nested under it (level 2).
-    const bookToc = { id: bookAnchor, title: `${title} - ${bookTitle}`, book: bookId, sections: [] };
-    toc.push(bookToc);
+    // Book entry (level 2, under the resource); chapters nest under it (level 3).
+    const bookToc = hasBookHeading
+      ? { id: bookAnchor, title: bookTitle, book: bookId, sections: [] }
+      : resourceToc;
+    if (hasBookHeading) resourceToc.sections.push(bookToc);
 
     // Book header
     bodyParts.push(
-      `<section id="${bookAnchor}" data-toc-title="${escapeHtml(title)} - ${escapeHtml(bookTitle)}">\n` +
-      `  <h1 class="tn-book-header"><a href="#${bookAnchor}" class="header-link">${escapeHtml(title)} - ${escapeHtml(bookTitle)}</a></h1>\n`
+      `<section id="${bookAnchor}"` +
+      (hasBookHeading ? ` data-toc-title="${escapeHtml(bookTitle)}"` : '') +
+      `>\n` +
+      (hasBookHeading
+        ? `  <h2 class="tn-book-header"><a href="#${bookAnchor}" class="header-link">${escapeHtml(bookTitle)}</a></h2>\n`
+        : '')
     );
 
     // Sort chapters numerically (handle 'front' as 0)
@@ -575,10 +603,10 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
       // Chapter header. `data-toc-title` marks an element for the TOC, so it is
       // only emitted when chapters belong there; the id anchor always remains.
       bodyParts.push(
-        `<h2 class="tn-chapter-header" id="${chapterAnchor}"` +
+        `<${chapterTag} class="tn-chapter-header" id="${chapterAnchor}"` +
         (showChaptersInTocResolved ? ` data-toc-title="${escapeHtml(chapterLabel)}"` : '') +
         `>` +
-        `<a href="#${chapterAnchor}" class="header-link">${escapeHtml(chapterLabel)}</a></h2>\n`
+        `<a href="#${chapterAnchor}" class="header-link">${escapeHtml(chapterLabel)}</a></${chapterTag}>\n`
       );
 
       // Sort verses numerically (handle 'intro' as 0)
@@ -609,8 +637,8 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
         // Verse header
         if (!isBookIntro) {
           bodyParts.push(
-            `<h3 class="tn-verse-header" id="${verseAnchor}">` +
-            `<a href="#${verseAnchor}" class="header-link">${escapeHtml(verseLabel)}</a></h3>\n`
+            `<${verseTag} class="tn-verse-header" id="${verseAnchor}">` +
+            `<a href="#${verseAnchor}" class="header-link">${escapeHtml(verseLabel)}</a></${verseTag}>\n`
           );
         }
 
