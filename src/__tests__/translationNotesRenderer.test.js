@@ -407,6 +407,14 @@ describe('renderTranslationNotesHtml — OBS', () => {
     expect(sections.body).not.toContain('tn-scripture-cols');
   });
 
+  test("heads the running header with the story's title and the frame reference", () => {
+    const { sections } = renderTranslationNotesHtml(buildObsData());
+    // The story number is already the first half of the reference, so the
+    // numbered title "1. The Creation" is not printed twice.
+    expect(sections.body).toContain('<span class="running-ref">The Creation 1:1</span>');
+    expect(sections.body).not.toContain('running-ref">1. The Creation 1:1');
+  });
+
   test('flows frames and breaks on the story instead of on every frame', () => {
     const { sections } = renderTranslationNotesHtml(buildObsData());
     // A frame is a picture, a few lines and a note or two — nowhere near a page.

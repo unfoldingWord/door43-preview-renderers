@@ -19,6 +19,7 @@ import {
   findObsExtra,
   findObsStory,
   obsStoryLabel,
+  obsFrameHeaderRef,
   renderObsFrame,
 } from './obsFrames.js';
 
@@ -723,7 +724,13 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
         // reference, or for an introduction the book or chapter it introduces.
         bodyParts.push(
           `<span class="running-ref">${escapeHtml(
-            isBookIntro ? bookTitle : isIntro ? chapterLabel : verseLabel
+            isBookIntro
+              ? bookTitle
+              : isIntro
+              ? chapterLabel
+              : isObs
+              ? obsFrameHeaderRef(story, chapterKey, verseKey)
+              : verseLabel
           )}</span>\n`
         );
 
