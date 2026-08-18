@@ -79,6 +79,7 @@ renderHtmlData(resourceData, {
 |---|---|---|---|
 | Aligned Bible / Bible / Greek NT / Hebrew OT | `editorMode` | boolean | Keep implied-word brackets visible. |
 | | `includeRawUsfmView` | boolean | Also produce a raw-USFM-as-HTML view in `sections.webView`. |
+| OBS-based TSV subjects (`obs-tn`, `obs-tq`, `obs-sn`, `obs-sq`) | `resolution` | `'none'` \| `'360px'` \| `'2160px'` | Whether to include the story-frame **pictures**, and at what size. Default `'none'`. The frame **text** is always rendered — the notes and questions are about it — so only the pictures are optional. Set it when producing `HtmlData`; both the HTML and the PDF built from that package then include them. Note the pictures are remote CDN URLs, so rendering with them on needs network access. |
 | All book-scoped subjects (Aligned Bible, TSV Translation Notes, TSV Questions/Study Notes) | `showChaptersInToc` | boolean | Force chapter entries in the TOC on or off. **Default: on for a single-book document, off once it covers more than one book** — the TOC then lists book names only, each linking to the start of that book. Chapter `id` anchors are always emitted either way, so deep links keep working; only the `data-toc-title` marker is withheld. |
 
 **Returns** `HtmlData`:
@@ -105,7 +106,7 @@ for the screen or for print. Returns a string.
 | `show.toc` | boolean | screen `false` / print `true` | ✅ | Include a static Table of Contents page. (The TOC *data* is always on `htmlData.sections.toc` for an app's interactive selector.) |
 | `show.body` | boolean | `true` | ✅ | Include the main content. |
 | `show.appendices` | boolean \| `['ta','tw']` | `true` | ✅ (boolean) | Include the TA/TW appendices (a keyed `{ ta, tw }` section). The boolean is honored in screen and print; per-kind `['ta','tw']` selection is 🚧 planned. |
-| `columns` | number | `1` | print ✅ / screen 🚧 | Body column count. Print only, and only for **Aligned Bible** bodies — the rule targets `.section.bible-book`, which no other renderer emits. Use `supportsBodyColumns(subject)` to test whether it applies. |
+| `columns` | number | `1` | print ✅ / screen 🚧 | Body column count. Print only, and only for **continuous-flow bodies**: an Aligned Bible book, or the story frames of an OBS-based TSV resource (`obs-tn`, `obs-tq`, …) — the rule targets `.section.bible-book` and `.obs-frames-body`. Bible-versed Notes and Questions are laid out per verse or per chapter, not as running text, so it does nothing there. Use `supportsBodyColumns(subject)` to test whether it applies. |
 | `direction` | `'ltr'` \| `'rtl'` | from `htmlData.direction` | ✅ | Text direction. |
 | `engine` | `'weasyprint'` \| `'pagedjs'` | `'weasyprint'` | ✅ | Print engine. `pagedjs` injects the PagedJS polyfill `<script>` for in-browser preview. |
 | `print.pageSize` | string \| `{width,height}` | `'A4_PORTRAIT'` | ✅ | Page size (see [Page sizes](#page-sizes)). `media:'print'` only. |

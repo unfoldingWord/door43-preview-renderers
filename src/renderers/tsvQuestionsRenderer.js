@@ -8,15 +8,16 @@ import {
   renderScriptureColumns,
   renderQuoteHeader,
 } from './scriptureColumns.js';
+import {
+  isObsSubject,
+  findObsExtra,
+  findObsStory,
+  obsStoryLabel,
+  renderObsFrame,
+} from './obsFrames.js';
 
 // OBS question/note subjects are story-based (no Bible verses). For these the
 // story frame text takes the place of the scripture panel.
-const OBS_SUBJECTS = new Set([
-  'TSV OBS Translation Questions',
-  'TSV OBS Study Notes',
-  'TSV OBS Study Questions',
-]);
-
 const tqWebCss = `
 .license-text {
   font-size: 0.9em;
@@ -260,13 +261,6 @@ article.tq-question {
  * Find the OBS resource among the extras (keyed by short identifier, e.g. 'obs').
  * Returns the OBS resourceData ({ stories: {...} }) or null.
  */
-function findObsExtra(extras) {
-  for (const resource of Object.values(extras || {})) {
-    if (resource?.type === 'obs' && resource.stories) return resource;
-  }
-  return null;
-}
-
 /**
  * Render a single question/note row: optional quote header (Bible-versed only),
  * then either a question with a collapsible answer, or a study-note body.
@@ -311,6 +305,19 @@ function renderQuestionArticle(row, { anchor, bookId, chapterKey, bibles, isObs 
   return html;
 }
 
+const tqObsPrintCss = `
+/* ─── OBS overrides ──────────────────────────────────────── */
+/* The story title opens its page. It deliberately does NOT use "column-span: all"
+   to sit across both columns: WeasyPrint 68.1 drops content when a spanning
+   element sits inside a multi-column container — measured, en_obs-tn lost 198 of
+   its 582 story frames. The title still leads the page, in the first column. */
+
+/* The picture and the story text are one thing — never split them. */
+.tq-frame-text {
+  break-inside: avoid;
+}
+`;
+
 /**
  * Render TSV Translation Questions / Study Questions / Study Notes (and their OBS
  * variants) into HTML. Bible-versed resources get parallel scripture columns and a
@@ -318,7 +325,9 @@ function renderQuestionArticle(row, { anchor, bookId, chapterKey, bibles, isObs 
  *
  * @param {Object} resourceData - Output from getResourceData() with type 'tsv'
  * @param {Object} [options] - Rendering options
- * @param {string} [options.resolution='none'] - OBS image resolution: 'none', '360px', '2160px'
+ * @param {string} [options.resolution='none'] - OBS frame picture resolution:
+ *   'none' omits the pictures, '360px' / '2160px' include them. The frame *text*
+ *   is always rendered — the questions are about it.
  * @returns {Object} Rendered HTML package
  */
 export function renderTsvQuestionsHtml(resourceData, options = {}) {
@@ -328,7 +337,7 @@ export function renderTsvQuestionsHtml(resourceData, options = {}) {
 
   const title = resourceData.title || resourceData.subject || 'Questions';
   const extras = resourceData.extras || {};
-  const isObs = OBS_SUBJECTS.has(resourceData.subject);
+  const isObs = isObsSubject(resourceData.subject);
   const resolution = options.resolution || 'none';
 
   // Bible-versed: parse aligned-Bible USFM and pick the ordered GL Bibles.
@@ -387,6 +396,7 @@ export function renderTsvQuestionsHtml(resourceData, options = {}) {
 
     bodyParts.push(
       `<section id="${bookAnchor}"` +
+      (isObs ? ' class="obs-frames-body"' : '') +
       (hasBookHeading ? ` data-toc-title="${escapeHtml(bookTitle)}"` : '') +
       `>\n` +
       (hasBookHeading
@@ -403,13 +413,13 @@ export function renderTsvQuestionsHtml(resourceData, options = {}) {
     for (const chapterKey of chapterKeys) {
       const chapter = book.chapters[chapterKey];
       const isFront = chapterKey === 'front';
-      const story = isObs && !isFront ? obsData?.stories?.[parseInt(chapterKey, 10)] : null;
+      const story = isObs ? findObsStory(obsData, chapterKey) : null;
       const chapterLabel = isFront
         ? isObs
           ? 'Introduction'
           : `${bookTitle} Introduction`
         : isObs
-        ? story?.title || `Story ${chapterKey}`
+        ? obsStoryLabel(story, chapterKey)
         : `${bookTitle} ${chapterKey}`;
       const chapterAnchor = `nav-${bookId}-${isFront ? 'front' : chapterKey}`;
 
@@ -467,17 +477,14 @@ export function renderTsvQuestionsHtml(resourceData, options = {}) {
 
         if (!isIntro && !isFront) {
           if (isObs) {
-            // OBS story frame text (the OBS analog of scripture) + optional image.
-            const frame = story?.frames?.[parseInt(verseKey, 10)];
-            if (frame) {
-              let panel = `<div class="tq-frame-text">\n`;
-              if (resolution !== 'none' && frame.img) {
-                panel += `  <img class="tq-frame-image" src="${escapeHtml(frame.img)}" alt="Frame ${chapterKey}-${verseKey}">\n`;
-              }
-              if (frame.text) panel += `  <p>${escapeHtml(frame.text)}</p>\n`;
-              panel += `</div>\n`;
-              bodyParts.push(panel);
-            }
+            // The OBS story frame stands in for a Bible resource's scripture.
+            const frameHtml = renderObsFrame(story?.frames?.[parseInt(verseKey, 10)], {
+              chapterKey,
+              verseKey,
+              resolution,
+              classes: { panel: 'tq-frame-text', image: 'tq-frame-image' },
+            });
+            if (frameHtml) bodyParts.push(frameHtml);
           } else {
             // Bible-versed: parallel scripture columns (ULT | UST).
             const scriptureHtml = renderScriptureColumns(
@@ -528,7 +535,7 @@ export function renderTsvQuestionsHtml(resourceData, options = {}) {
     ? `<div class="license-text">${convertMarkdown(resourceData.license)}</div>`
     : '';
   const body = bodyParts.join('');
-  const css = { web: tqWebCss + coverCss, print: tqPrintCss };
+  const css = { web: tqWebCss + coverCss, print: isObs ? tqPrintCss + tqObsPrintCss : tqPrintCss };
   const fullHtml = buildFullHtmlDocument(
     title,
     tqWebCss + tqPrintCss + coverCss,
