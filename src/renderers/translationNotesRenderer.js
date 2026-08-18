@@ -525,6 +525,27 @@ hr.note-divider {
 }
 `;
 
+const tnObsPrintCss = `
+/* ─── OBS overrides ──────────────────────────────────────── */
+/* An OBS frame carries a picture, a few lines of story and one or two notes —
+   nowhere near a page. Frames flow instead, and the story takes the page break,
+   so a page break only ever lands between notes. */
+.tn-verse-header {
+  break-before: auto !important;
+}
+
+/* The story title opens its page. It deliberately does NOT use "column-span: all"
+   to sit across both columns: WeasyPrint 68.1 drops content when a spanning
+   element sits inside a multi-column container — measured, en_obs-tn lost 198 of
+   its 582 story frames. The title still leads the page, in the first column. */
+
+/* The picture and the story text are one thing — never split them, and never
+   split the picture from the text it illustrates. */
+.tn-frame-text {
+  break-inside: avoid;
+}
+`;
+
 /**
  * Render TSV Translation Notes resource data into HTML sections.
  *
@@ -614,6 +635,7 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
     // Book header
     bodyParts.push(
       `<section id="${bookAnchor}"` +
+      (isObs ? ' class="obs-frames-body"' : '') +
       (hasBookHeading ? ` data-toc-title="${escapeHtml(bookTitle)}"` : '') +
       `>\n` +
       (hasBookHeading
@@ -847,7 +869,7 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
   const copyright = resourceData.license
     ? `<div class="license-text">${convertMarkdown(resourceData.license)}</div>`
     : '';
-  const css = { web: tnWebCss + coverCss, print: tnPrintCss };
+  const css = { web: tnWebCss + coverCss, print: isObs ? tnPrintCss + tnObsPrintCss : tnPrintCss };
   const fullHtml = buildFullHtmlDocument(
     title,
     tnWebCss + tnPrintCss + coverCss,

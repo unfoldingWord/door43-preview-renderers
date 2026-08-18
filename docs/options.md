@@ -106,7 +106,7 @@ for the screen or for print. Returns a string.
 | `show.toc` | boolean | screen `false` / print `true` | ✅ | Include a static Table of Contents page. (The TOC *data* is always on `htmlData.sections.toc` for an app's interactive selector.) |
 | `show.body` | boolean | `true` | ✅ | Include the main content. |
 | `show.appendices` | boolean \| `['ta','tw']` | `true` | ✅ (boolean) | Include the TA/TW appendices (a keyed `{ ta, tw }` section). The boolean is honored in screen and print; per-kind `['ta','tw']` selection is 🚧 planned. |
-| `columns` | number | `1` | print ✅ / screen 🚧 | Body column count. Print only, and only for **Aligned Bible** bodies — the rule targets `.section.bible-book`, which no other renderer emits. Use `supportsBodyColumns(subject)` to test whether it applies. |
+| `columns` | number | `1` | print ✅ / screen 🚧 | Body column count. Print only, and only for **continuous-flow bodies**: an Aligned Bible book, or the story frames of an OBS-based TSV resource (`obs-tn`, `obs-tq`, …) — the rule targets `.section.bible-book` and `.obs-frames-body`. Bible-versed Notes and Questions are laid out per verse or per chapter, not as running text, so it does nothing there. Use `supportsBodyColumns(subject)` to test whether it applies. |
 | `direction` | `'ltr'` \| `'rtl'` | from `htmlData.direction` | ✅ | Text direction. |
 | `engine` | `'weasyprint'` \| `'pagedjs'` | `'weasyprint'` | ✅ | Print engine. `pagedjs` injects the PagedJS polyfill `<script>` for in-browser preview. |
 | `print.pageSize` | string \| `{width,height}` | `'A4_PORTRAIT'` | ✅ | Page size (see [Page sizes](#page-sizes)). `media:'print'` only. |

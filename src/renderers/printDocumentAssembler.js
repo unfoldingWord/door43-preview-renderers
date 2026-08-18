@@ -491,9 +491,11 @@ a.footnote {
 
 /* ─── Columns ────────────────────────────────────────────── */
 /* Target the section directly (no .pagedjs_pages wrapper) so columns apply
-   under WeasyPrint/Prince as well as in the PagedJS preview. */
+   under WeasyPrint/Prince as well as in the PagedJS preview. Continuous-flow
+   bodies only: a Bible book, or the story frames of an OBS-based resource. */
 
-.section.bible-book {
+.section.bible-book,
+.obs-frames-body {
   columns: ${columns};
 }
 

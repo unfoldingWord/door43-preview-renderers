@@ -305,6 +305,19 @@ function renderQuestionArticle(row, { anchor, bookId, chapterKey, bibles, isObs 
   return html;
 }
 
+const tqObsPrintCss = `
+/* ─── OBS overrides ──────────────────────────────────────── */
+/* The story title opens its page. It deliberately does NOT use "column-span: all"
+   to sit across both columns: WeasyPrint 68.1 drops content when a spanning
+   element sits inside a multi-column container — measured, en_obs-tn lost 198 of
+   its 582 story frames. The title still leads the page, in the first column. */
+
+/* The picture and the story text are one thing — never split them. */
+.tq-frame-text {
+  break-inside: avoid;
+}
+`;
+
 /**
  * Render TSV Translation Questions / Study Questions / Study Notes (and their OBS
  * variants) into HTML. Bible-versed resources get parallel scripture columns and a
@@ -383,6 +396,7 @@ export function renderTsvQuestionsHtml(resourceData, options = {}) {
 
     bodyParts.push(
       `<section id="${bookAnchor}"` +
+      (isObs ? ' class="obs-frames-body"' : '') +
       (hasBookHeading ? ` data-toc-title="${escapeHtml(bookTitle)}"` : '') +
       `>\n` +
       (hasBookHeading
@@ -521,7 +535,7 @@ export function renderTsvQuestionsHtml(resourceData, options = {}) {
     ? `<div class="license-text">${convertMarkdown(resourceData.license)}</div>`
     : '';
   const body = bodyParts.join('');
-  const css = { web: tqWebCss + coverCss, print: tqPrintCss };
+  const css = { web: tqWebCss + coverCss, print: isObs ? tqPrintCss + tqObsPrintCss : tqPrintCss };
   const fullHtml = buildFullHtmlDocument(
     title,
     tqWebCss + tqPrintCss + coverCss,

@@ -397,6 +397,32 @@ describe('renderTranslationNotesHtml — OBS', () => {
     expect(sections.body).not.toContain('tn-scripture-cols');
   });
 
+  test('flows frames and breaks on the story instead of on every frame', () => {
+    const { sections } = renderTranslationNotesHtml(buildObsData());
+    // A frame is a picture, a few lines and a note or two — nowhere near a page.
+    expect(sections.css.print).toMatch(/\.tn-verse-header\s*{[^}]*break-before:\s*auto/);
+    // The story still takes the page break.
+    expect(sections.css.print).toMatch(/\.tn-chapter-header\s*{[^}]*break-before:\s*page/);
+    // The picture and its story text are one unbreakable unit.
+    expect(sections.css.print).toMatch(/\.tn-frame-text\s*{[^}]*break-inside:\s*avoid/);
+  });
+
+  test('does not span the story title across columns (WeasyPrint drops content)', () => {
+    const { sections } = renderTranslationNotesHtml(buildObsData());
+    // A declaration, not the words — the rule's comment explains the omission.
+    expect(sections.css.print).not.toMatch(/column-span:\s*all\s*;/);
+  });
+
+  test('marks the frames body so the columns option can target it', () => {
+    const { sections } = renderTranslationNotesHtml(buildObsData());
+    expect(sections.body).toContain('class="obs-frames-body"');
+  });
+
+  test('keeps the per-verse page break for Bible-versed notes', () => {
+    const { sections } = renderTranslationNotesHtml(buildResourceData());
+    expect(sections.css.print).not.toMatch(/\.tn-verse-header\s*{[^}]*break-before:\s*auto/);
+  });
+
   test('omits the picture by default and includes it when a resolution is asked for', () => {
     const off = renderTranslationNotesHtml(buildObsData());
     expect(off.sections.body).not.toContain('tn-frame-image');
