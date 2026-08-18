@@ -9,6 +9,13 @@ import {
   renderScriptureColumns,
   renderQuoteHeader,
 } from './scriptureColumns.js';
+import {
+  isObsSubject,
+  findObsExtra,
+  findObsStory,
+  obsStoryLabel,
+  renderObsFrame,
+} from './obsFrames.js';
 
 /**
  * Normalize a Translation Words reference to a canonical "category/slug" key.
@@ -254,6 +261,26 @@ td.tn-scripture-text {
   font-style: italic;
 }
 
+/* OBS story frame — the picture and text the notes are about, standing in for
+   the scripture columns of a Bible resource. */
+.tn-frame-text {
+  background-color: #f9f9f9;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  padding: 8px 12px;
+  margin: 4px 0 8px 0;
+}
+
+.tn-frame-text p {
+  margin: 0;
+}
+
+.tn-frame-image {
+  display: block;
+  margin: 0 auto 8px auto;
+  max-width: 100%;
+}
+
 .tn-verse-twl-header {
   font-size: 0.85em;
   font-weight: bold;
@@ -421,14 +448,18 @@ const tnPrintCss = `
    chapter opens under the book heading, and a chapter's first verse opens under
    the chapter heading — those pairs stay together and share the new page. */
 .tn-book-header + .tn-chapter-header,
-.tn-chapter-header + .tn-verse-header {
+.tn-chapter-header + .tn-verse-header,
+/* OBS-based resources have no book heading, so the first chapter opens the
+   section directly — it must not break away from the resource heading. */
+section > .tn-chapter-header:first-child {
   break-before: avoid !important;
 }
 
 /* The ULT/UST verse block is read as one thing — never split it. (This used to
    name .tn-scripture-block, which the renderer never emits, so the rule matched
    nothing; the class is tn-scripture-cols.) */
-table.tn-scripture-cols {
+table.tn-scripture-cols,
+.tn-frame-text {
   break-inside: avoid;
 }
 
@@ -494,6 +525,27 @@ hr.note-divider {
 }
 `;
 
+const tnObsPrintCss = `
+/* ─── OBS overrides ──────────────────────────────────────── */
+/* An OBS frame carries a picture, a few lines of story and one or two notes —
+   nowhere near a page. Frames flow instead, and the story takes the page break,
+   so a page break only ever lands between notes. */
+.tn-verse-header {
+  break-before: auto !important;
+}
+
+/* The story title opens its page. It deliberately does NOT use "column-span: all"
+   to sit across both columns: WeasyPrint 68.1 drops content when a spanning
+   element sits inside a multi-column container — measured, en_obs-tn lost 198 of
+   its 582 story frames. The title still leads the page, in the first column. */
+
+/* The picture and the story text are one thing — never split them, and never
+   split the picture from the text it illustrates. */
+.tn-frame-text {
+  break-inside: avoid;
+}
+`;
+
 /**
  * Render TSV Translation Notes resource data into HTML sections.
  *
@@ -505,6 +557,10 @@ hr.note-divider {
  *
  * @param {Object} resourceData - Output from getResourceData() with type 'tsv'
  * @param {Object} [options] - Rendering options
+ * @param {boolean} [options.showChaptersInToc] - Force chapter entries in the TOC
+ * @param {string} [options.resolution='none'] - OBS frame picture resolution:
+ *   'none' omits the pictures, '360px' / '2160px' include them. The frame *text*
+ *   is always rendered — the notes are about it.
  * @returns {Object} Rendered HTML package
  */
 export function renderTranslationNotesHtml(resourceData, options = {}) {
@@ -514,10 +570,16 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
 
   const title = resourceData.title || 'Translation Notes';
   const extras = resourceData.extras || {};
+  // OBS notes are about story frames, not verses: the frame's picture and text
+  // stand in for the scripture columns, and there are no aligned Bibles to quote
+  // from — the TSV Quote is already in the Gateway Language.
+  const isObs = isObsSubject(resourceData.subject);
+  const resolution = options.resolution || 'none';
+  const obsData = isObs ? findObsExtra(extras) : null;
   // Parse aligned-Bible USFM once up front so per-verse scripture lookups are cheap.
-  const parsedScriptureExtras = parseScriptureExtras(extras);
+  const parsedScriptureExtras = isObs ? {} : parseScriptureExtras(extras);
   // Ordered GL Bibles (e.g. ULT, UST) rendered as parallel columns for scripture + TWL.
-  const bibles = getBibleColumns(extras);
+  const bibles = isObs ? [] : getBibleColumns(extras);
   const toc = [];
   const bodyParts = [];
 
@@ -540,19 +602,45 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
       ? options.showChaptersInToc
       : bookIds.length === 1;
 
+  // Heading levels: H1 the resource, H2 each book, H3 each chapter, H4 each
+  // verse. The resource title is the document's own heading, so it is emitted
+  // once, above the books, rather than repeated into every book heading.
+  const resourceAnchor = 'nav-resource';
+  const resourceToc = { id: resourceAnchor, title, sections: [] };
+  toc.push(resourceToc);
+  bodyParts.push(
+    `<h1 class="tn-resource-header" id="${resourceAnchor}" data-toc-title="${escapeHtml(title)}">` +
+    `<a href="#${resourceAnchor}" class="header-link">${escapeHtml(title)}</a></h1>\n`
+  );
+
   for (const bookId of bookIds) {
     const book = resourceData.books[bookId];
     const bookTitle = book.title || BibleBookData[bookId]?.title || bookId;
     const bookAnchor = `nav-${bookId}`;
+    // OBS-based resources carry a single pseudo-book whose title is the resource
+    // title itself, so a book heading there would just repeat the H1. Drop the
+    // book level for those and hang the chapters straight off the resource.
+    const hasBookHeading = bookTitle !== title;
+    // Without a book heading the chapter opens the section, so it moves up a
+    // level rather than leaving a gap in the document outline.
+    const chapterTag = hasBookHeading ? 'h3' : 'h2';
+    const verseTag = hasBookHeading ? 'h4' : 'h3';
 
-    // Book entry (level 1); chapter entries are nested under it (level 2).
-    const bookToc = { id: bookAnchor, title: `${title} - ${bookTitle}`, book: bookId, sections: [] };
-    toc.push(bookToc);
+    // Book entry (level 2, under the resource); chapters nest under it (level 3).
+    const bookToc = hasBookHeading
+      ? { id: bookAnchor, title: bookTitle, book: bookId, sections: [] }
+      : resourceToc;
+    if (hasBookHeading) resourceToc.sections.push(bookToc);
 
     // Book header
     bodyParts.push(
-      `<section id="${bookAnchor}" data-toc-title="${escapeHtml(title)} - ${escapeHtml(bookTitle)}">\n` +
-      `  <h1 class="tn-book-header"><a href="#${bookAnchor}" class="header-link">${escapeHtml(title)} - ${escapeHtml(bookTitle)}</a></h1>\n`
+      `<section id="${bookAnchor}"` +
+      (isObs ? ' class="obs-frames-body"' : '') +
+      (hasBookHeading ? ` data-toc-title="${escapeHtml(bookTitle)}"` : '') +
+      `>\n` +
+      (hasBookHeading
+        ? `  <h2 class="tn-book-header"><a href="#${bookAnchor}" class="header-link">${escapeHtml(bookTitle)}</a></h2>\n`
+        : '')
     );
 
     // Sort chapters numerically (handle 'front' as 0)
@@ -565,7 +653,14 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
     for (const chapterKey of chapterKeys) {
       const chapter = book.chapters[chapterKey];
       const isFront = chapterKey === 'front';
-      const chapterLabel = isFront ? `${bookTitle} Introduction` : `${bookTitle} ${chapterKey}`;
+      const story = isObs ? findObsStory(obsData, chapterKey) : null;
+      const chapterLabel = isFront
+        ? isObs
+          ? 'Introduction'
+          : `${bookTitle} Introduction`
+        : isObs
+        ? obsStoryLabel(story, chapterKey)
+        : `${bookTitle} ${chapterKey}`;
       const chapterAnchor = `nav-${bookId}-${isFront ? 'front' : chapterKey}`;
 
       if (showChaptersInTocResolved) {
@@ -575,10 +670,10 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
       // Chapter header. `data-toc-title` marks an element for the TOC, so it is
       // only emitted when chapters belong there; the id anchor always remains.
       bodyParts.push(
-        `<h2 class="tn-chapter-header" id="${chapterAnchor}"` +
+        `<${chapterTag} class="tn-chapter-header" id="${chapterAnchor}"` +
         (showChaptersInTocResolved ? ` data-toc-title="${escapeHtml(chapterLabel)}"` : '') +
         `>` +
-        `<a href="#${chapterAnchor}" class="header-link">${escapeHtml(chapterLabel)}</a></h2>\n`
+        `<a href="#${chapterAnchor}" class="header-link">${escapeHtml(chapterLabel)}</a></${chapterTag}>\n`
       );
 
       // Sort verses numerically (handle 'intro' as 0)
@@ -601,6 +696,8 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
           ? chapterLabel
           : isIntro
           ? `${chapterLabel} Introduction`
+          : isObs
+          ? `${chapterKey}:${verseKey}`
           : `${bookTitle} ${chapterKey}:${verseKey}`;
         const verseAnchor = isBookIntro
           ? chapterAnchor
@@ -609,22 +706,33 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
         // Verse header
         if (!isBookIntro) {
           bodyParts.push(
-            `<h3 class="tn-verse-header" id="${verseAnchor}">` +
-            `<a href="#${verseAnchor}" class="header-link">${escapeHtml(verseLabel)}</a></h3>\n`
+            `<${verseTag} class="tn-verse-header" id="${verseAnchor}">` +
+            `<a href="#${verseAnchor}" class="header-link">${escapeHtml(verseLabel)}</a></${verseTag}>\n`
           );
         }
 
-        // Scripture as parallel columns (one per aligned Bible, e.g. ULT | UST)
+        // What the notes are about: an OBS story frame, or the verse in parallel
+        // scripture columns (one per aligned Bible, e.g. ULT | UST).
         if (!isIntro && !isFront) {
-          const scriptureHtml = renderScriptureColumns(
-            bibles,
-            parsedScriptureExtras,
-            bookId,
-            chapterKey,
-            verseKey,
-            { table: 'tn-scripture-cols', label: 'tn-col-label', text: 'tn-scripture-text' }
-          );
-          if (scriptureHtml) bodyParts.push(scriptureHtml);
+          if (isObs) {
+            const frameHtml = renderObsFrame(story?.frames?.[parseInt(verseKey, 10)], {
+              chapterKey,
+              verseKey,
+              resolution,
+              classes: { panel: 'tn-frame-text', image: 'tn-frame-image' },
+            });
+            if (frameHtml) bodyParts.push(frameHtml);
+          } else {
+            const scriptureHtml = renderScriptureColumns(
+              bibles,
+              parsedScriptureExtras,
+              bookId,
+              chapterKey,
+              verseKey,
+              { table: 'tn-scripture-cols', label: 'tn-col-label', text: 'tn-scripture-text' }
+            );
+            if (scriptureHtml) bodyParts.push(scriptureHtml);
+          }
         }
 
         // Individual notes — flat articles, no nesting wrapper
@@ -761,7 +869,7 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
   const copyright = resourceData.license
     ? `<div class="license-text">${convertMarkdown(resourceData.license)}</div>`
     : '';
-  const css = { web: tnWebCss + coverCss, print: tnPrintCss };
+  const css = { web: tnWebCss + coverCss, print: isObs ? tnPrintCss + tnObsPrintCss : tnPrintCss };
   const fullHtml = buildFullHtmlDocument(
     title,
     tnWebCss + tnPrintCss + coverCss,

@@ -86,7 +86,15 @@ describe('supportsBodyColumns', () => {
     }
   });
 
-  test('is false for Notes, Questions and OBS, where `columns` does nothing', () => {
+  test('is true for OBS-based TSV subjects, whose frames flow as running text', () => {
+    for (const subject of ['TSV OBS Translation Notes', 'TSV OBS Translation Questions']) {
+      expect(supportsBodyColumns(subject)).toBe(true);
+    }
+  });
+
+  test('is false where `columns` does nothing', () => {
+    // Bible-versed Notes/Questions lay out per verse or per chapter, not as
+    // running text; the pure OBS renderer has its own layout.
     for (const subject of ['TSV Translation Notes', 'TSV Translation Questions', 'Open Bible Stories']) {
       expect(supportsBodyColumns(subject)).toBe(false);
     }

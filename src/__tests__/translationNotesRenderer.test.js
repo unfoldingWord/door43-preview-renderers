@@ -186,11 +186,27 @@ describe('renderTranslationNotesHtml', () => {
     expect(sections.cover).toContain('<h3 class="cover-book-title">Titus</h3>');
   });
 
-  test('nests chapter entries (level 2) under the book entry (level 1) in the TOC', () => {
+  test('nests the TOC as resource (1) > book (2) > chapter (3)', () => {
     expect(sections.toc).toHaveLength(1);
-    const [book] = sections.toc;
-    expect(book.id).toBe('nav-tit');
+    const [resource] = sections.toc;
+    expect(resource).toMatchObject({
+      id: 'nav-resource',
+      title: 'unfoldingWord® Translation Notes',
+    });
+    const [book] = resource.sections;
+    expect(book).toMatchObject({ id: 'nav-tit', title: 'Titus' });
     expect(book.sections).toEqual([{ id: 'nav-tit-1', title: 'Titus 1' }]);
+  });
+
+  test('gives the resource an H1, the book an H2, chapters H3 and verses H4', () => {
+    expect(sections.body).toContain(
+      '<h1 class="tn-resource-header" id="nav-resource"'
+    );
+    expect(sections.body).toContain('<h2 class="tn-book-header">');
+    expect(sections.body).toContain('<h3 class="tn-chapter-header"');
+    expect(sections.body).toContain('<h4 class="tn-verse-header"');
+    // The book heading is the book name alone — the resource title is the H1.
+    expect(sections.body).not.toContain('Translation Notes - Titus');
   });
 
   test('records the anchor id on each appendix article so the TOC can link to it', () => {
@@ -227,8 +243,10 @@ describe('renderTranslationNotesHtml', () => {
     // The first chapter opens under the book heading and a chapter's first verse
     // opens under the chapter heading; neither pair may be split by the rule above.
     expect(sections.css.print).toMatch(
-      /\.tn-book-header \+ \.tn-chapter-header,\s*\.tn-chapter-header \+ \.tn-verse-header\s*{[^}]*break-before:\s*avoid/
+      /\.tn-book-header \+ \.tn-chapter-header,[\s\S]*?{[^}]*break-before:\s*avoid/
     );
+    // A chapter that opens its section (no book heading, e.g. OBS) counts too.
+    expect(sections.css.print).toMatch(/section > \.tn-chapter-header:first-child/);
   });
 
   test('never splits a note or the Translation Words list across pages', () => {
@@ -240,7 +258,9 @@ describe('renderTranslationNotesHtml', () => {
   test('never splits the ULT/UST verse block across pages', () => {
     // The rule used to name .tn-scripture-block, which the renderer never emits,
     // so it styled nothing. It must target the class the body actually carries.
-    expect(sections.css.print).toMatch(/table\.tn-scripture-cols\s*{[^}]*break-inside:\s*avoid/);
+    expect(sections.css.print).toMatch(
+      /table\.tn-scripture-cols,[\s\S]*?{[^}]*break-inside:\s*avoid/
+    );
     expect(sections.css.print).not.toMatch(/\.tn-scripture-block\s*{/);
     expect(sections.body).toContain('tn-scripture-cols');
   });
@@ -268,7 +288,10 @@ describe('renderTranslationNotesHtml book introduction', () => {
 
   test('labels the front chapter with the book name, not a bare "Introduction"', () => {
     expect(sections.body).toContain('data-toc-title="Titus Introduction"');
-    expect(sections.toc[0].sections[0]).toEqual({ id: 'nav-tit-front', title: 'Titus Introduction' });
+    expect(sections.toc[0].sections[0].sections[0]).toEqual({
+      id: 'nav-tit-front',
+      title: 'Titus Introduction',
+    });
   });
 
   test('marks introduction notes so print CSS can let them flow', () => {
@@ -294,14 +317,17 @@ describe('renderTranslationNotesHtml chapter listing in the TOC', () => {
 
   test('lists chapters under the book for a single-book document', () => {
     const { sections } = renderTranslationNotesHtml(buildResourceData());
-    expect(sections.toc[0].sections).toEqual([{ id: 'nav-tit-1', title: 'Titus 1' }]);
+    expect(sections.toc[0].sections[0].sections).toEqual([
+      { id: 'nav-tit-1', title: 'Titus 1' },
+    ]);
     expect(sections.body).toContain('data-toc-title="Titus 1"');
   });
 
   test('lists only book names once a document covers more than one book', () => {
     const { sections } = renderTranslationNotesHtml(twoBooks());
-    expect(sections.toc).toHaveLength(2);
-    for (const entry of sections.toc) expect(entry.sections).toEqual([]);
+    const books = sections.toc[0].sections;
+    expect(books).toHaveLength(2);
+    for (const entry of books) expect(entry.sections).toEqual([]);
     // The chapter anchor survives for deep links; only the TOC marker goes.
     expect(sections.body).toContain('id="nav-tit-1"');
     expect(sections.body).not.toContain('data-toc-title="Titus 1"');
@@ -309,6 +335,102 @@ describe('renderTranslationNotesHtml chapter listing in the TOC', () => {
 
   test('showChaptersInToc forces chapters back on', () => {
     const { sections } = renderTranslationNotesHtml(twoBooks(), { showChaptersInToc: true });
-    expect(sections.toc[0].sections.length).toBeGreaterThan(0);
+    expect(sections.toc[0].sections[0].sections.length).toBeGreaterThan(0);
+  });
+});
+
+describe('renderTranslationNotesHtml — OBS', () => {
+  function buildObsData() {
+    return {
+      type: 'tsv',
+      subject: 'TSV OBS Translation Notes',
+      title: 'unfoldingWord® OBS Translation Notes',
+      books: {
+        obs: {
+          title: 'unfoldingWord® OBS Translation Notes',
+          chapters: {
+            '1': {
+              verses: {
+                '1': [{ ID: 'o1', Reference: '1:1', Quote: 'God made', Note: 'A note about it.' }],
+              },
+            },
+          },
+        },
+      },
+      extras: {
+        obs: {
+          type: 'obs',
+          subject: 'Open Bible Stories',
+          stories: {
+            1: {
+              title: '1. The Creation',
+              frames: {
+                1: {
+                  text: 'This is how God made everything in the beginning.',
+                  img: 'https://cdn.door43.org/obs/jpg/360px/obs-en-01-01.jpg',
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+  }
+
+  test('shows the frame text the notes are about', () => {
+    const { sections } = renderTranslationNotesHtml(buildObsData());
+    expect(sections.body).toContain('tn-frame-text');
+    expect(sections.body).toContain('This is how God made everything in the beginning.');
+  });
+
+  test('labels stories and frames instead of repeating the resource title', () => {
+    const { sections } = renderTranslationNotesHtml(buildObsData());
+    expect(sections.body).toContain('>1. The Creation<');
+    expect(sections.body).toContain('>1:1<');
+    expect(sections.body).not.toContain('OBS Translation Notes 1:1');
+  });
+
+  test('uses the TSV quote directly — no Bible tag, no scripture columns', () => {
+    const { sections } = renderTranslationNotesHtml(buildObsData());
+    expect(sections.body).toContain('<strong>God made</strong>');
+    expect(sections.body).not.toContain('tn-bible-tag');
+    expect(sections.body).not.toContain('tn-scripture-cols');
+  });
+
+  test('flows frames and breaks on the story instead of on every frame', () => {
+    const { sections } = renderTranslationNotesHtml(buildObsData());
+    // A frame is a picture, a few lines and a note or two — nowhere near a page.
+    expect(sections.css.print).toMatch(/\.tn-verse-header\s*{[^}]*break-before:\s*auto/);
+    // The story still takes the page break.
+    expect(sections.css.print).toMatch(/\.tn-chapter-header\s*{[^}]*break-before:\s*page/);
+    // The picture and its story text are one unbreakable unit.
+    expect(sections.css.print).toMatch(/\.tn-frame-text\s*{[^}]*break-inside:\s*avoid/);
+  });
+
+  test('does not span the story title across columns (WeasyPrint drops content)', () => {
+    const { sections } = renderTranslationNotesHtml(buildObsData());
+    // A declaration, not the words — the rule's comment explains the omission.
+    expect(sections.css.print).not.toMatch(/column-span:\s*all\s*;/);
+  });
+
+  test('marks the frames body so the columns option can target it', () => {
+    const { sections } = renderTranslationNotesHtml(buildObsData());
+    expect(sections.body).toContain('class="obs-frames-body"');
+  });
+
+  test('keeps the per-verse page break for Bible-versed notes', () => {
+    const { sections } = renderTranslationNotesHtml(buildResourceData());
+    expect(sections.css.print).not.toMatch(/\.tn-verse-header\s*{[^}]*break-before:\s*auto/);
+  });
+
+  test('omits the picture by default and includes it when a resolution is asked for', () => {
+    const off = renderTranslationNotesHtml(buildObsData());
+    expect(off.sections.body).not.toContain('tn-frame-image');
+    // ...but the text is there either way — the notes are about it.
+    expect(off.sections.body).toContain('This is how God made everything');
+
+    const on = renderTranslationNotesHtml(buildObsData(), { resolution: '360px' });
+    expect(on.sections.body).toContain('tn-frame-image');
+    expect(on.sections.body).toContain('obs-en-01-01.jpg');
   });
 });
