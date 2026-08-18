@@ -112,7 +112,7 @@ for the screen or for print. Returns a string.
 | `print.pageSize` | string \| `{width,height}` | `'A4_PORTRAIT'` | ✅ | Page size (see [Page sizes](#page-sizes)). `media:'print'` only. |
 | `print.footerHtml` | string | `''` | ✅ | Extra footer HTML on the copyright page (e.g. app version). |
 | `print.margins` | `{top,right,bottom,left}` | theme default | 🚧 | Page margins. |
-| `print.runningHeader` | boolean | `true` | ✅ | Show the running header (book/chapter title, from the renderer). |
+| `print.runningHeader` | boolean | `true` | ✅ | Running header in the page margin. `false` turns it off; otherwise the layout is chosen by subject — scripture shows the **first and last reference on each page** ("Ruth 1:1 … Ruth 1:18") and no resource name, Open Bible Stories shows **none**, and everything else pairs the **resource or manual name on the verso** with the **reference or article title on the recto**. Renderers mark the tracked points with hidden `.running-title` / `.running-ref` spans. **WeasyPrint only** — PagedJS resolves `string()` to empty, so the browser preview shows no running header. |
 | `print.pageNumber.position` | `'top'` \| `'bottom'` | `'bottom'` | ✅ | Where the page number prints (the counter moves to `@top-center`/`@bottom-center`). |
 | `print.pageNumber.show` | per-section booleans | toc/body/appendices `true` | 🚧 | Which sections get a page number (needs named pages per section). |
 

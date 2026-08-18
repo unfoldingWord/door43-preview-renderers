@@ -92,9 +92,14 @@ function decorateBibleBookHtml(html, bookId, showChapters = true) {
 
   let content = normalizedHtml;
   content = content.replace(/<p /i, `<p id="nav-${bookId}" `);
+  // Each verse drops a hidden reference marker, so a page's running header can
+  // read the first and last verse it contains ("Genesis 4:2 … Genesis 5:18").
   content = content.replaceAll(
     /<span id="chapter-(\d+)-verse-(\d+)"([^>]*)>(\d+)<\/span>/g,
-    `<span id="nav-${bookId}-$1-$2"$3><a href="#nav-${bookId}-$1-$2" class="header-link">$4</a></span>`
+    (match, ch, v, attrs, label) =>
+      `<span class="running-ref">${escapeHtml(titleText)} ${ch}:${v}</span>` +
+      `<span id="nav-${bookId}-${ch}-${v}"${attrs}>` +
+      `<a href="#nav-${bookId}-${ch}-${v}" class="header-link">${label}</a></span>`
   );
 
   const chapters = [];

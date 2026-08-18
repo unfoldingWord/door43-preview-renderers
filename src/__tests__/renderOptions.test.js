@@ -2,6 +2,7 @@ import {
   parseBooksOption,
   resolveComposeOptions,
   supportsBodyColumns,
+  runningHeaderModeFor,
 } from '../renderOptions.js';
 
 describe('parseBooksOption', () => {
@@ -104,5 +105,33 @@ describe('supportsBodyColumns', () => {
     expect(supportsBodyColumns({ subject: 'Aligned Bible' })).toBe(true);
     expect(supportsBodyColumns(undefined)).toBe(false);
     expect(supportsBodyColumns({})).toBe(false);
+  });
+});
+
+describe('runningHeaderModeFor', () => {
+  test('scripture shows a reference range instead of the resource name', () => {
+    for (const subject of ['Aligned Bible', 'Bible', 'Greek New Testament', 'Hebrew Old Testament']) {
+      expect(runningHeaderModeFor(subject)).toBe('range');
+    }
+  });
+
+  test('Open Bible Stories has no running header — it is a picture book', () => {
+    expect(runningHeaderModeFor('Open Bible Stories')).toBe(false);
+  });
+
+  test('everything else pairs a title with a reference', () => {
+    for (const subject of [
+      'TSV Translation Notes',
+      'TSV Translation Questions',
+      'Translation Academy',
+      'Translation Words',
+      'TSV OBS Translation Notes',
+    ]) {
+      expect(runningHeaderModeFor(subject)).toBe('title-ref');
+    }
+  });
+
+  test('accepts anything carrying a subject', () => {
+    expect(runningHeaderModeFor({ subject: 'Aligned Bible' })).toBe('range');
   });
 });

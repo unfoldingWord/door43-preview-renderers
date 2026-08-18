@@ -14,7 +14,7 @@ export {
   subjectIdentifierMap,
   alignedBibleSubjects,
 } from './constants.js';
-export { supportsBodyColumns } from './renderOptions.js';
+export { supportsBodyColumns, runningHeaderModeFor } from './renderOptions.js';
 export { fetchResource } from './api/client.js';
 export { renderAlignedBibleHtml } from './renderers/alignedBibleRenderer.js';
 export { renderTranslationAcademyHtml } from './renderers/translationAcademyRenderer.js';

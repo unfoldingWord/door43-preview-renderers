@@ -1,4 +1,5 @@
 import {
+  shortenForHeader,
   generateTocHtml,
   generateTocFromHtml,
   buildCoverPage,
@@ -15,8 +16,8 @@ describe('printDocumentAssembler', () => {
     test('defaults: page number at @bottom-center and running header on', () => {
       const css = getPrintCss();
       expect(css).toContain('@bottom-center {\n    content: counter(page);');
-      expect(css).toContain('content: string(doctitle)');
-      expect(css).toContain('string-set: doctitle content(text)');
+      expect(css).toContain('content: string(runningtitle)');
+      expect(css).toContain('string-set: runningtitle content(text)');
     });
 
     test("pageNumberPosition 'top' moves the counter to @top-center", () => {
@@ -27,8 +28,8 @@ describe('printDocumentAssembler', () => {
 
     test('runningHeader false drops the doctitle header rules', () => {
       const css = getPrintCss({ runningHeader: false });
-      expect(css).not.toContain('content: string(doctitle)');
-      expect(css).not.toContain('string-set: doctitle content(text)');
+      expect(css).not.toContain('content: string(runningtitle)');
+      expect(css).not.toContain('string-set: runningtitle content(text)');
     });
 
     test('restarts footnote numbering on every page', () => {
@@ -57,6 +58,59 @@ describe('printDocumentAssembler', () => {
       for (const pageWidth of ['148.5mm', '6in']) {
         expect(getPrintCss({ pageWidth })).toMatch(/\.appendix\s*{[^}]*columns:\s*1/);
       }
+    });
+  });
+
+  describe('running header modes', () => {
+    test("'title-ref' puts the resource on the verso and the reference on the recto", () => {
+      const css = getPrintCss({ runningHeader: 'title-ref' });
+      expect(css).toMatch(/@page :left \{[\s\S]*?content: string\(runningtitle\)/);
+      expect(css).toMatch(/@page :right \{[\s\S]*?content: string\(runningref, first\)/);
+    });
+
+    test("'range' puts the first and last reference on the same page", () => {
+      // Scripture reads "Ruth 1:1 … Ruth 1:18" across one page, so both boxes
+      // are set on the base @page rule rather than alternating.
+      const css = getPrintCss({ runningHeader: 'range' });
+      expect(css).toMatch(/content: string\(runningref, first\)/);
+      expect(css).toMatch(/content: string\(runningref, last\)/);
+      expect(css).not.toContain('string(runningtitle)');
+    });
+
+    test('false emits no running header at all', () => {
+      const css = getPrintCss({ runningHeader: false });
+      expect(css).not.toContain('string(runningref');
+      expect(css).not.toContain('string(runningtitle)');
+    });
+
+    test('markers are hidden with visibility, not display:none', () => {
+      // display:none generates no box, so string-set never sees the marker and
+      // every header silently comes out empty.
+      const css = getPrintCss();
+      expect(css).toMatch(/\.running-title,\s*\.running-ref \{[^}]*visibility: hidden/);
+      expect(css).not.toMatch(/\.running-title,\s*\.running-ref \{[^}]*display: none/);
+    });
+  });
+
+  describe('shortenForHeader', () => {
+    test('keeps short titles whole', () => {
+      expect(shortenForHeader('elder', 4)).toBe('elder');
+      expect(shortenForHeader('born again, born of', 4)).toBe('born again, born of');
+    });
+
+    test('cuts to whole words and adds an ellipsis', () => {
+      expect(shortenForHeader('good, right, pleasant, better, best, goodness', 4)).toBe(
+        'good, right, pleasant, better…'
+      );
+    });
+
+    test('drops trailing punctuation before the ellipsis', () => {
+      expect(shortenForHeader('a, b, c, d, e', 4)).toBe('a, b, c, d…');
+    });
+
+    test('tolerates empty input', () => {
+      expect(shortenForHeader('')).toBe('');
+      expect(shortenForHeader(undefined)).toBe('');
     });
   });
 
@@ -420,8 +474,8 @@ describe('printDocumentAssembler', () => {
     test('emits WeasyPrint-native paged-media CSS (target-counter + string headers)', () => {
       const result = assemblePrintDocument(minimalSections);
       expect(result.css).toContain('target-counter(attr(href), page)');
-      expect(result.css).toContain('string(doctitle)');
-      expect(result.css).toContain('string-set: doctitle');
+      expect(result.css).toContain('string(runningtitle)');
+      expect(result.css).toContain('string-set: runningtitle');
       // No positioned running element or PagedJS-scoped selectors
       expect(result.css).not.toContain('position: running(');
       expect(result.css).not.toContain('.pagedjs_pages .section');

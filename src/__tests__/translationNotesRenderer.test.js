@@ -182,6 +182,11 @@ describe('renderTranslationNotesHtml', () => {
     expect(sections.toc.length).toBeGreaterThan(0);
   });
 
+  test('marks the resource title and each reference for the running header', () => {
+    expect(sections.body).toContain('<span class="running-title">unfoldingWord® Translation Notes</span>');
+    expect(sections.body).toContain('<span class="running-ref">Titus 1:1</span>');
+  });
+
   test('names the single book on the cover, after the resource title and version', () => {
     expect(sections.cover).toContain('<h3 class="cover-book-title">Titus</h3>');
   });
@@ -216,10 +221,10 @@ describe('renderTranslationNotesHtml', () => {
     expect(sections.appendices.tw['names/paul'].id).toBe('nav-tit--tw-names-paul');
   });
 
-  test('appendix articles run on instead of taking a page each', () => {
-    // Only the TA/TW appendix sections break to a new page (see getPrintCss);
-    // the articles inside them flow down the appendix columns.
-    expect(sections.css.print).not.toMatch(/\.appendix-article\s*{[^}]*break-after:\s*page/);
+  test('each appendix article starts a new page', () => {
+    // So an article is always found at the top of a page. The article itself
+    // still flows, so a long one is not pushed whole and left short.
+    expect(sections.css.print).toMatch(/\.appendix-article\s*{[^}]*break-after:\s*page/);
     expect(sections.css.print).toMatch(/\.appendix-article\s*{[^}]*break-inside:\s*auto/);
   });
 
@@ -292,6 +297,11 @@ describe('renderTranslationNotesHtml book introduction', () => {
       id: 'nav-tit-front',
       title: 'Titus Introduction',
     });
+  });
+
+  test('the book intro heads with the book, the chapter intro with the chapter', () => {
+    // A running header reading "Titus Introduction Introduction" helps nobody.
+    expect(sections.body).toContain('<span class="running-ref">Titus</span>');
   });
 
   test('marks introduction notes so print CSS can let them flow', () => {

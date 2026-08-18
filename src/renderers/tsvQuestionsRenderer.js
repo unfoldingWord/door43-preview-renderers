@@ -372,7 +372,9 @@ export function renderTsvQuestionsHtml(resourceData, options = {}) {
   toc.push(resourceToc);
   bodyParts.push(
     `<h1 class="tq-resource-header" id="${resourceAnchor}" data-toc-title="${escapeHtml(title)}">` +
-    `<a href="#${resourceAnchor}" class="header-link">${escapeHtml(title)}</a></h1>\n`
+    `<a href="#${resourceAnchor}" class="header-link">${escapeHtml(title)}</a></h1>\n` +
+    // Names the resource in every running header from here on.
+    `<span class="running-title">${escapeHtml(title)}</span>\n`
   );
 
   for (const bookId of bookIds) {
@@ -467,6 +469,14 @@ export function renderTsvQuestionsHtml(resourceData, options = {}) {
         // Flat sibling selectors cannot group them, so this is the one place the
         // markup needs a container (see .tq-verse-block in the print CSS).
         bodyParts.push(`<div class="tq-verse-block">\n`);
+
+        // The running header tracks the first item on the page: the verse
+        // reference, or for an introduction the book or chapter it introduces.
+        bodyParts.push(
+          `<span class="running-ref">${escapeHtml(
+            isBookIntro ? bookTitle : isIntro ? chapterLabel : verseLabel
+          )}</span>\n`
+        );
 
         if (!isBookIntro) {
           bodyParts.push(
