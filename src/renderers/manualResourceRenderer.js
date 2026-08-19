@@ -135,6 +135,7 @@ function flattenSectionToHtml(manual, section, index, total, depth = 1, subtitle
       : ''
   }
   <span class="header-title">${mySubtitles.map(escapeHtml).join(' :: ')}</span>
+  <span class="running-ref">${safeTitle}</span>
   <div class="article-body">
     ${sectionBody}
   </div>
@@ -165,6 +166,7 @@ function flattenSectionToHtml(manual, section, index, total, depth = 1, subtitle
     <a href="#nav-${sectionLink}" class="header-link">${safeTitle}</a>
   </h${normalizedDepth}>
   <span class="header-title">${mySubtitles.map(escapeHtml).join(' :: ')}</span>
+  ${normalizedDepth === 1 ? `<span class="running-title">${safeTitle}</span>` : ''}
   ${childrenHtml}
 </div>
 `;

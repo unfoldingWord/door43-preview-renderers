@@ -71,6 +71,26 @@ export function obsStoryLabel(story, chapterKey) {
 }
 
 /**
+ * The running-header reference for a frame: the story's title followed by the
+ * frame reference, e.g. "The Creation 1:1".
+ *
+ * Story titles are numbered ("1. The Creation") and that number is already the
+ * first half of the reference, so it is dropped rather than printed twice.
+ *
+ * @param {Object|null} story
+ * @param {string} chapterKey - Story number
+ * @param {string} verseKey - Frame number
+ * @returns {string}
+ */
+export function obsFrameHeaderRef(story, chapterKey, verseKey) {
+  const title = String(story?.title || '')
+    .replace(/^\s*\d+\s*[.:)\u2014\u2013-]?\s*/, '')
+    .trim();
+  const ref = `${chapterKey}:${verseKey}`;
+  return title ? `${title} ${ref}` : ref;
+}
+
+/**
  * Render the frame panel that stands in for a Bible resource's scripture columns:
  * the picture (only when a resolution is requested) above the frame text.
  *

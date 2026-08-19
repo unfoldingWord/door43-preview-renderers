@@ -68,6 +68,28 @@ export function supportsBodyColumns(subjectOrHtmlData) {
   return alignedBibleSubjects.has(subject) || OBS_TSV_SUBJECTS.has(subject);
 }
 
+/**
+ * Which running-header layout suits a subject.
+ *
+ *  'range'     Scripture. A spread reads "Genesis 4:2 … Genesis 5:18" — the
+ *              reader wants to know where they are, not which resource they are
+ *              holding, which the cover and spine already say.
+ *  'none'      Open Bible Stories itself: a picture book. A running header on a
+ *              full-bleed illustration is noise.
+ *  'title-ref' Everything else — the resource or manual name on the verso, the
+ *              reference or article title on the recto.
+ *
+ * @param {string|{subject?: string}} subjectOrHtmlData
+ * @returns {'title-ref'|'range'|false}
+ */
+export function runningHeaderModeFor(subjectOrHtmlData) {
+  const subject =
+    typeof subjectOrHtmlData === 'string' ? subjectOrHtmlData : subjectOrHtmlData?.subject;
+  if (alignedBibleSubjects.has(subject)) return 'range';
+  if (subject === 'Open Bible Stories') return false;
+  return 'title-ref';
+}
+
 const SCREEN_SHOW_DEFAULTS = {
   cover: false,
   copyright: false,

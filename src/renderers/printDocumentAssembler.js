@@ -213,8 +213,9 @@ function appendixLabel(kind) {
  * @param {Object} appendices - sections.appendices from a renderer
  * @returns {string}
  */
-export function renderAppendicesHtml(appendices) {
+export function renderAppendicesHtml(appendices, options = {}) {
   if (!appendices || typeof appendices !== 'object') return '';
+  const { titles = {} } = options;
 
   let html = '';
   for (const kind of Object.keys(appendices)) {
@@ -223,14 +224,35 @@ export function renderAppendicesHtml(appendices) {
     if (!ids.length) continue;
 
     const label = appendixLabel(kind);
+    // The running header names the resource the articles come from, e.g.
+    // "unfoldingWord® Translation Academy", falling back to the appendix label.
+    const runningTitle = titles[kind] || label;
     html += `<section class="appendix ${kind}" id="appendix-${kind}" data-toc-title="${escapeHtml(label)}">\n`;
     html += `  <h2 class="appendix-header">${escapeHtml(label)}</h2>\n`;
+    html += `  <span class="running-title">${escapeHtml(runningTitle)}</span>\n`;
     for (const id of ids) {
       html += articles[id]?.html || '';
     }
     html += `</section>\n`;
   }
   return html;
+}
+
+/**
+ * Shorten a title for a running header: whole words up to `maxWords`, then an
+ * ellipsis. Translation Words articles are titled with every sense of the term
+ * ("good, right, pleasant, better, best, goodness"), which will not fit a margin.
+ *
+ * @param {string} title
+ * @param {number} [maxWords=4]
+ * @returns {string}
+ */
+export function shortenForHeader(title, maxWords = 4) {
+  const words = String(title || '').trim().split(/\s+/).filter(Boolean);
+  if (words.length <= maxWords) return words.join(' ');
+  // Trailing punctuation before the ellipsis reads badly ("better,…").
+  const kept = words.slice(0, maxWords).join(' ').replace(/[,;:—–-]+$/, '');
+  return `${kept}…`;
 }
 
 /**
@@ -352,6 +374,8 @@ export const coverCss = `
  * @param {number} [options.columns] - Number of text columns for body content
  * @param {string} [options.direction] - Text direction: 'ltr' or 'rtl'
  * @param {string} [options.extraCss] - Additional CSS to append
+ * @param {'title-ref'|'range'|false} [options.runningHeader='title-ref'] - Running
+ *   header layout; false disables the headers entirely
  * @returns {string} Complete print CSS string
  */
 export function getPrintCss(options = {}) {
@@ -366,6 +390,21 @@ export function getPrintCss(options = {}) {
   } = options;
 
   const isRtl = direction === 'rtl';
+  // Running-header layout. Each mode fills the two top margin boxes from named
+  // strings that the renderers set on hidden marker spans (.running-*):
+  //   'title-ref' — verso carries the resource/manual title, recto the reference
+  //                 of the first item on that page. The standard book pattern.
+  //   'range'     — verso the first reference on the page, recto the last, so a
+  //                 spread reads "Genesis 4:2 … Genesis 5:18". Scripture wants
+  //                 the range, not the resource name it already knows it is in.
+  //   'none'      — no running headers at all (Open Bible Stories itself: a
+  //                 picture book, where a header is just noise).
+  const headerMode = runningHeader === false ? 'none' : runningHeader || 'title-ref';
+  const showHeader = headerMode !== 'none';
+  // 'range' puts both ends of the page on the *same* page, dictionary style, so a
+  // reader can see at a glance what a page covers. 'title-ref' alternates: the
+  // resource name on the verso, the reference on the recto.
+  const rangeHeader = headerMode === 'range';
   // Appendices are reference material — short entries that read well in two
   // columns and waste most of a wide page in one. Two columns need the width to
   // stay readable, so A5/Trade and narrower keep a single column. (The CSS
@@ -397,6 +436,18 @@ export function getPrintCss(options = {}) {
   ${pnBox} {
     content: counter(page);
   }
+${showHeader && rangeHeader ? `
+  @top-left {
+    font-size: 10px;
+    content: string(runningref, first);
+    text-align: left;
+  }
+
+  @top-right {
+    font-size: 10px;
+    content: string(runningref, last);
+    text-align: right;
+  }` : ''}
 }
 
 @page :first {
@@ -423,10 +474,10 @@ export function getPrintCss(options = {}) {
 @page :left {
   margin-right: 30mm;
   margin-left: 20mm;
-${runningHeader ? `
+${showHeader && !rangeHeader ? `
   @top-left {
     font-size: 10px;
-    content: string(doctitle);
+    content: string(runningtitle);
     text-align: left;
   }` : ''}
 }
@@ -434,23 +485,40 @@ ${runningHeader ? `
 @page :right {
   margin-left: 30mm;
   margin-right: 20mm;
-${runningHeader ? `
+${showHeader && !rangeHeader ? `
   @top-right {
     font-size: 10px;
-    content: string(doctitle);
+    content: string(runningref, first);
     text-align: right;
   }` : ''}
 }
 
 /* ─── Running Header ─────────────────────────────────────── */
-/* The running title is captured from the cover header via string-set and
-   echoed into the page margin boxes with string(). This works natively in
-   WeasyPrint/Prince and in the PagedJS browser preview — no JS reflow needed
-   for the header, and no positioned running element. Omitted when the running
-   header is disabled. */
-${runningHeader ? `
-.cover-header {
-  string-set: doctitle content(text);
+/* The margin boxes above read two named strings. Renderers set them on hidden
+   marker spans placed at the points the header should track:
+     .running-title — the resource, book or manual name (usually emitted once)
+     .running-ref   — a reference: chapter and verse, or an article title
+   A marker must generate a box for string-set to see it, so these are hidden
+   with visibility rather than "display: none", which produces no box at all and
+   silently leaves every header empty.
+   Note this is a WeasyPrint/Prince feature: PagedJS resolves string() to an
+   empty value, so the browser preview shows no running header. */
+${showHeader ? `
+.running-title {
+  string-set: runningtitle content(text);
+}
+
+.running-ref {
+  string-set: runningref content(text);
+}
+
+.running-title,
+.running-ref {
+  visibility: hidden;
+  font-size: 0;
+  line-height: 0;
+  height: 0;
+  display: inline;
 }` : ''}
 
 /* ─── Footnotes (USFM) ──────────────────────────────────── */
@@ -730,7 +798,7 @@ export function assemblePrintDocument(sections, options = {}) {
   const tocHtmlBlock = showToc
     ? `  <div class="section toc-page" id="toc">\n    ${tocHtml}\n  </div>\n`
     : '';
-  const appendicesHtml = showAppendices ? renderAppendicesHtml(appendices) : '';
+  const appendicesHtml = showAppendices ? renderAppendicesHtml(appendices, { titles: sections.appendixTitles }) : '';
 
   const htmlStr = `<div id="pagedjs-print" style="direction: ${direction}" data-direction="${direction}">
 ${coverHtml}${copyrightHtml}${tocHtmlBlock}  ${body}

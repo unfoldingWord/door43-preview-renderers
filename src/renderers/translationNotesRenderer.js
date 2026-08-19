@@ -1,5 +1,10 @@
 import { convertNoteFromMD2HTML, convertMarkdown } from '../converters/markdownConverter.js';
-import { buildCoverPage, coverCss, renderAppendicesHtml } from './printDocumentAssembler.js';
+import {
+  buildCoverPage,
+  coverCss,
+  renderAppendicesHtml,
+  shortenForHeader,
+} from './printDocumentAssembler.js';
 import { BibleBookData } from '../constants.js';
 import {
   escapeHtml,
@@ -14,6 +19,7 @@ import {
   findObsExtra,
   findObsStory,
   obsStoryLabel,
+  obsFrameHeaderRef,
   renderObsFrame,
 } from './obsFrames.js';
 
@@ -50,9 +56,14 @@ function extractRcLinks(html) {
 /**
  * Render a single appendix article block (markdown body -> HTML).
  */
-function renderAppendixArticle(anchorId, article, backRefList, bookId) {
+function renderAppendixArticle(anchorId, article, backRefList, bookId, headerWords) {
   const bodyHtml = convertMarkdown(article.text || article.body || '');
   let html = `<article class="appendix-article" id="${anchorId}" data-toc-title="${escapeHtml(article.title)}">\n`;
+  // The running header follows the article. Translation Words titles list every
+  // sense of a term, so they are shortened to fit the margin.
+  html += `  <span class="running-ref">${escapeHtml(
+    headerWords ? shortenForHeader(article.title, headerWords) : article.title
+  )}</span>\n`;
   html += `  <h3 class="appendix-article-header"><a href="#${anchorId}" class="header-link">${escapeHtml(article.title)}</a></h3>\n`;
   html += `  <div class="appendix-article-body">${bodyHtml}</div>\n`;
   if (backRefList && backRefList.length > 0) {
@@ -104,7 +115,7 @@ function collectAppendices(rcLinks, extras, bookId, backRefs) {
       tw[articlePath] = {
         id: anchorId,
         title: article.title,
-        html: renderAppendixArticle(anchorId, article, backRefs.tw[articlePath], bookId),
+        html: renderAppendixArticle(anchorId, article, backRefs.tw[articlePath], bookId, 4),
       };
     }
     if (Object.keys(tw).length) appendices.tw = tw;
@@ -496,7 +507,10 @@ hr.note-divider {
    .appendix rules in getPrintCss) — one article per page left most pages
    three-quarters empty. They are separated by a rule, not a page break, and only
    the TA/TW appendix sections themselves start a new page. */
+/* Each appendix article starts a new page, so an article is always found at the
+   top of a page rather than part-way down another one. */
 .appendix-article {
+  break-after: page !important;
   break-inside: auto;
   orphans: 2;
   widows: 2;
@@ -610,7 +624,9 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
   toc.push(resourceToc);
   bodyParts.push(
     `<h1 class="tn-resource-header" id="${resourceAnchor}" data-toc-title="${escapeHtml(title)}">` +
-    `<a href="#${resourceAnchor}" class="header-link">${escapeHtml(title)}</a></h1>\n`
+    `<a href="#${resourceAnchor}" class="header-link">${escapeHtml(title)}</a></h1>\n` +
+    // Names the resource in every running header from here on.
+    `<span class="running-title">${escapeHtml(title)}</span>\n`
   );
 
   for (const bookId of bookIds) {
@@ -704,6 +720,20 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
           : `nav-${bookId}-${chapterKey}-${verseKey}`;
 
         // Verse header
+        // The running header tracks the first item on the page: the verse
+        // reference, or for an introduction the book or chapter it introduces.
+        bodyParts.push(
+          `<span class="running-ref">${escapeHtml(
+            isBookIntro
+              ? bookTitle
+              : isIntro
+              ? chapterLabel
+              : isObs
+              ? obsFrameHeaderRef(story, chapterKey, verseKey)
+              : verseLabel
+          )}</span>\n`
+        );
+
         if (!isBookIntro) {
           bodyParts.push(
             `<${verseTag} class="tn-verse-header" id="${verseAnchor}">` +
@@ -840,6 +870,9 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
   const firstBook = bookIds[0] || '';
   const bookIdSet = new Set(bookIds);
   const appendices = collectAppendices(allRcLinks, extras, firstBook, backRefs);
+  // The names of the resources the appendix articles came from, for their
+  // running headers (e.g. "unfoldingWord® Translation Academy").
+  const appendixTitles = { ta: extras?.ta?.title, tw: extras?.tw?.title };
 
   // Resolve rc:// links to internal anchors — across the body and across each
   // appendix article (so their cross-links resolve to the same anchors).
@@ -873,7 +906,7 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
   const fullHtml = buildFullHtmlDocument(
     title,
     tnWebCss + tnPrintCss + coverCss,
-    `<div class="section cover-page">${cover}</div>\n${body}${renderAppendicesHtml(appendices)}`
+    `<div class="section cover-page">${cover}</div>\n${body}${renderAppendicesHtml(appendices, { titles: appendixTitles })}`
   );
 
   return {
@@ -887,6 +920,7 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
       css,
       webView: null,
       appendices,
+      appendixTitles,
     },
     renderedBooks: {},
     fullHtml,

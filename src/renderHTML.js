@@ -5,7 +5,7 @@ import {
   buildAppendicesToc,
   renderAppendicesHtml,
 } from './renderers/printDocumentAssembler.js';
-import { resolveComposeOptions } from './renderOptions.js';
+import { resolveComposeOptions, runningHeaderModeFor } from './renderOptions.js';
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -50,7 +50,9 @@ export function renderHTML(htmlData, options = {}) {
       footerHtml: opts.print.footerHtml,
       show: opts.show,
       pageNumberPosition: opts.print.pageNumber.position,
-      runningHeader: opts.print.runningHeader,
+      // `print.runningHeader: false` turns headers off; otherwise the layout is
+      // chosen by subject (scripture gets a reference range, OBS gets none).
+      runningHeader: opts.print.runningHeader === false ? false : runningHeaderModeFor(htmlData),
     });
     return assembled.html;
   }
@@ -90,7 +92,7 @@ function buildScreenDocument(htmlData, opts) {
   }
   // Appendices keyed by kind (e.g. TN's TA + TW), rendered with section headings.
   if (opts.show.appendices && sections.appendices) {
-    const appendicesHtml = renderAppendicesHtml(sections.appendices);
+    const appendicesHtml = renderAppendicesHtml(sections.appendices, { titles: sections.appendixTitles });
     if (appendicesHtml) parts.push(appendicesHtml);
   }
 
