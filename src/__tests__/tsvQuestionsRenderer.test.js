@@ -118,12 +118,12 @@ describe('renderTsvQuestionsHtml — Bible-versed', () => {
     expect(body).not.toContain('source-only');
   });
 
-  test('renders a Bible-tag quote header with both GL quotes and the original', () => {
+  test('renders a Bible-tag quote header with the GL quotes only, not the original', () => {
     expect(body).toContain('<strong>Paul</strong>');
     expect(body).toContain('I, Paul');
     expect(body).toContain('class="tq-bible-tag">ULT<');
     expect(body).toContain('class="tq-bible-tag">UST<');
-    expect(body).toContain('(Παῦλος)');
+    expect(body).not.toContain('Παῦλος');
   });
 
   test('renders the question with a collapsible answer', () => {

@@ -1,5 +1,6 @@
 import { fetchContent, fetchLicense } from './dcsApi.js';
 import { addGLQuoteCols } from 'tsv-quote-converters';
+import { applyTwlQuoteTrimming } from './twlQuoteTrimming.js';
 
 /**
  * Parse TSV content into array of objects
@@ -290,6 +291,11 @@ export async function extractRcTsvData(catalogEntry, books, options = {}, catalo
         }
       }
     }
+
+    // Now that the TW articles and aligned Bibles are in, narrow each TWL row's GL
+    // quote to the word naming its article. Needs the whole tree, so it cannot run
+    // during normalization.
+    applyTwlQuoteTrimming(result, { lang: catalogEntry.language || 'en' });
   }
 
   return result;

@@ -111,13 +111,14 @@ describe('renderTranslationNotesHtml', () => {
   const { sections } = renderTranslationNotesHtml(buildResourceData());
   const body = sections.body;
 
-  test('renders BOTH ULT and UST GL quotes per note, tagged, with the original in parentheses', () => {
-    // ULT quote bold, UST quote present, both tagged, Greek original once
+  test('renders BOTH ULT and UST GL quotes per note, tagged, without the original', () => {
+    // ULT quote bold, UST quote present, both tagged
     expect(body).toContain('<strong>Paul</strong>');
     expect(body).toContain('I, Paul');
     expect(body).toContain('class="tn-bible-tag">ULT<');
     expect(body).toContain('class="tn-bible-tag">UST<');
-    expect(body).toContain('(Παῦλος)');
+    // The Greek original is a conversion source, not something a translator reads.
+    expect(body).not.toContain('Παῦλος');
   });
 
   test('renders ULT and UST scripture as parallel columns from aligned-Bible USFM extras', () => {

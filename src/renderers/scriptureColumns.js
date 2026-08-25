@@ -1,4 +1,5 @@
 import usfm from 'usfm-js';
+import { extractVerseObjectsText } from '../bibleHelpers.js';
 
 /**
  * Shared scripture-column + GL-quote helpers used by the Translation Notes and
@@ -20,28 +21,9 @@ export function escapeHtml(value) {
     .replaceAll("'", '&#39;');
 }
 
-/**
- * Recursively pull plain text out of usfm-js verseObjects, skipping footnotes,
- * cross references and any residual milestone/alignment wrappers.
- */
-export function extractVerseObjectsText(verseObjects) {
-  if (!Array.isArray(verseObjects)) return '';
-  let text = '';
-  for (const obj of verseObjects) {
-    if (!obj) continue;
-    if (obj.type === 'text' || obj.type === 'word') {
-      text += obj.text || '';
-    } else if (obj.type === 'footnote' || obj.tag === 'f' || obj.tag === 'x') {
-      // Skip note/cross-reference content
-      continue;
-    } else if (Array.isArray(obj.children)) {
-      text += extractVerseObjectsText(obj.children);
-    } else if (typeof obj.text === 'string') {
-      text += obj.text;
-    }
-  }
-  return text;
-}
+// Verse-text extraction is shared with the data layer (which recomputes TWL GL
+// occurrences against the verse), so it lives in bibleHelpers.
+export { extractVerseObjectsText };
 
 /**
  * Parse the aligned-Bible extras once into { identifier: { abbr, chapters } } where
@@ -103,6 +85,20 @@ export function getBibleColumns(extras) {
 }
 
 /**
+ * Display form of a TSV quote. A discontiguous quote is stored with its spans
+ * joined by `&` — the form tsv-quote-converters emits and the form
+ * twQuoteTrim.js splits on — but it reads as an ellipsis:
+ * "God & the people whom he has chosen" → "God … the people whom he has chosen".
+ *
+ * Only a `&` that stands between the spans is converted (whitespace on at least
+ * one side), so an ampersand inside a word is left alone.
+ */
+export function quoteForDisplay(quote) {
+  if (!quote) return '';
+  return String(quote).replace(/\s+&\s*|\s*&\s+/g, ' … ');
+}
+
+/**
  * Look up the GL quote for a specific Bible from a row's GLQuotes object.
  * GLQuotes is keyed by Bible repo identifier (e.g. "en_ult"); `id` is the short
  * extras key (e.g. "ult"). Matches a direct key or a repo whose final
@@ -146,36 +142,30 @@ export function renderScriptureColumns(bibles, parsedExtras, bookId, ch, v, clas
 
 /**
  * Render a row's quote header: one line per Bible (literal Bible bold) tagged
- * with the Bible abbreviation, plus the original-language quote once. Falls back
- * to the original quote alone when no GL quotes converted. Returns '' when the
- * row has no quote at all.
+ * with the Bible abbreviation. The original-language quote is NOT shown — the
+ * GL quotes are what a translator reads — except as the fallback when no GL
+ * quote converted (and for OBS notes, whose `Quote` is already the GL text).
+ * Returns '' when the row has no quote at all.
  *
  * @param {Object} row - Note/question row carrying `Quote` and `GLQuotes`
  * @param {Array} bibles - From getBibleColumns()
- * @param {Object} classes - { header, quote, tag, orig } CSS class names
+ * @param {Object} classes - { header, quote, tag } CSS class names
  */
 export function renderQuoteHeader(row, bibles, classes = {}) {
-  const { header = 'note-header', quote = 'note-quote', tag = 'bible-tag', orig = 'note-orig' } = classes;
-  const origQuote = row.Quote || '';
+  const { header = 'note-header', quote = 'note-quote', tag = 'bible-tag' } = classes;
   const lines = [];
-  let anyGl = false;
   bibles.forEach((b, i) => {
-    const q = glQuoteForBibleId(row.GLQuotes, b.id);
+    const q = quoteForDisplay(glQuoteForBibleId(row.GLQuotes, b.id));
     if (!q) return;
-    anyGl = true;
     const quoteHtml = i === 0 ? `<strong>${escapeHtml(q)}</strong>` : escapeHtml(q);
     lines.push(
       `  <div class="${quote}"><span class="${tag}">${escapeHtml(b.abbr)}</span> ${quoteHtml}</div>`
     );
   });
-  if (!anyGl && origQuote) {
+  if (lines.length === 0) {
+    const origQuote = quoteForDisplay(row.Quote);
+    if (!origQuote) return '';
     lines.push(`  <div class="${quote}"><strong>${escapeHtml(origQuote)}</strong></div>`);
   }
-  if (lines.length === 0) return '';
-  let html = `<div class="${header}">\n${lines.join('\n')}\n`;
-  if (anyGl && origQuote) {
-    html += `  <div class="${orig}">(${escapeHtml(origQuote)})</div>\n`;
-  }
-  html += `</div>\n`;
-  return html;
+  return `<div class="${header}">\n${lines.join('\n')}\n</div>\n`;
 }

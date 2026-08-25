@@ -123,11 +123,6 @@ td.tq-scripture-text {
   vertical-align: middle;
 }
 
-.tq-quote-orig {
-  font-size: 0.85em;
-  color: #666;
-}
-
 /* Questions + collapsible answers (click the chevron to reveal). */
 .tq-question {
   margin: 6px 0;
@@ -275,7 +270,6 @@ function renderQuestionArticle(row, { anchor, bookId, chapterKey, bibles, isObs 
       header: 'tq-quote-header',
       quote: 'tq-quote',
       tag: 'tq-bible-tag',
-      orig: 'tq-quote-orig',
     });
   }
 

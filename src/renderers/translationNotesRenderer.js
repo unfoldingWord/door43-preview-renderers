@@ -11,6 +11,7 @@ import {
   parseScriptureExtras,
   getBibleColumns,
   glQuoteForBibleId,
+  quoteForDisplay,
   renderScriptureColumns,
   renderQuoteHeader,
 } from './scriptureColumns.js';
@@ -330,19 +331,32 @@ td.tn-scripture-text {
   vertical-align: middle;
 }
 
-.tn-note-orig {
-  font-size: 0.85em;
-  color: #666;
-}
-
 .tn-note-body {
   padding: 2px 0;
+}
+
+/* The note reads as one block: it sits directly under its quote box, and the
+   support reference directly under it. Markdown paragraphs carry the browser's
+   default 1em margins, which would open a blank line on each of those seams —
+   only the margins *between* paragraphs of a multi-paragraph note are kept. */
+.tn-note-body > :first-child {
+  margin-top: 0;
+}
+
+.tn-note-body > :last-child {
+  margin-bottom: 0;
 }
 
 .tn-note-support-reference {
   font-size: 0.8em;
   color: #555;
   margin: 1px 0 0 0;
+}
+
+/* One blank line closes every note — before the next note, and before whatever
+   follows the last one (the Translation Words list, or the next verse). */
+article.tn-note {
+  margin-bottom: 1em;
 }
 
 .tn-note-label {
@@ -795,7 +809,6 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
             header: 'tn-note-header',
             quote: 'tn-note-quote',
             tag: 'tn-bible-tag',
-            orig: 'tn-note-orig',
           });
 
           // Introduction notes are marked so print CSS can let them flow; every
@@ -845,7 +858,9 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
 
               const cells = twlCols
                 .map((b) => {
-                  const q = (b.id && glQuoteForBibleId(twlNote.GLQuotes, b.id)) || twlNote.Quote || '';
+                  const q = quoteForDisplay(
+                    (b.id && glQuoteForBibleId(twlNote.GLQuotes, b.id)) || twlNote.Quote || ''
+                  );
                   const inner = twAnchor
                     ? `<a href="#${twAnchor}" class="internal-link">${escapeHtml(q)}</a>`
                     : escapeHtml(q);
