@@ -325,6 +325,18 @@ ${extraCoverHtml || ''}`;
 }
 
 /**
+ * Hides the running-header marker spans (.running-title / .running-ref) that
+ * the renderers leave in the body. Every renderer appends this to its web CSS,
+ * so `sections.css.web` is self-sufficient for the body it accompanies — on
+ * screen the markers would otherwise read "Titus 1:1 1 Paul, …" before every
+ * verse. getPrintCss() re-enables the box after the renderer CSS (hidden with
+ * visibility instead), because string-set needs a box to read.
+ */
+export const runningMarkerWebCss = `
+.running-title, .running-ref { display: none; }
+`;
+
+/**
  * Centering CSS for the cover when rendered as a standalone web document
  * (the renderers' `fullHtml`). Print uses its own cover-page rules in
  * getPrintCss(); these rules are scoped to `.cover-page` so they only affect
@@ -498,9 +510,8 @@ ${showHeader && !rangeHeader ? `
    marker spans placed at the points the header should track:
      .running-title — the resource, book or manual name (usually emitted once)
      .running-ref   — a reference: chapter and verse, or an article title
-   A marker must generate a box for string-set to see it, so these are hidden
-   with visibility rather than "display: none", which produces no box at all and
-   silently leaves every header empty.
+   The markers themselves are hidden by the "Running Header Markers" block at
+   the very end of this stylesheet — see there for why it must come last.
    Note this is a WeasyPrint/Prince feature: PagedJS resolves string() to an
    empty value, so the browser preview shows no running header. */
 ${showHeader ? `
@@ -510,15 +521,6 @@ ${showHeader ? `
 
 .running-ref {
   string-set: runningref content(text);
-}
-
-.running-title,
-.running-ref {
-  visibility: hidden;
-  font-size: 0;
-  line-height: 0;
-  height: 0;
-  display: inline;
 }` : ''}
 
 /* ─── Footnotes (USFM) ──────────────────────────────────── */
@@ -691,6 +693,22 @@ h1 {
 }
 
 ${extraCss}
+
+/* ─── Running Header Markers ─────────────────────────────── */
+/* Last on purpose. The renderers' web CSS (folded in above via extraCss) hides
+   the .running-* markers with "display: none" — right on screen, but a marker
+   must generate a box for string-set to see it, and "display: none" produces no
+   box at all and silently leaves every header empty. So re-enable the box here
+   and hide it with visibility instead. It stays hidden whether or not a header
+   reads it, so turning the header off never leaks "Titus 1:1" into the text. */
+.running-title,
+.running-ref {
+  display: inline;
+  visibility: hidden;
+  font-size: 0;
+  line-height: 0;
+  height: 0;
+}
 `;
 }
 

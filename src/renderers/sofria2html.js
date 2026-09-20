@@ -43,7 +43,12 @@ export const renderers = {
       )
       .join('')}</span>`;
   },
-  mergeParas: (paras) => paras.join('\n'),
+  // proskomma-json-tools >= 0.9 calls these; we lay out columns ourselves, so
+  // they emit nothing (mergeParas drops the empty strings they leave behind).
+  milestone: () => '',
+  startChapters: () => '',
+  endChapters: () => '',
+  mergeParas: (paras) => paras.filter(Boolean).join('\n'),
   row: (content) => `<tr>${content.join('')}</tr>`,
   table: (content) => `<table border>${content.join(' ')}</table>`,
 };

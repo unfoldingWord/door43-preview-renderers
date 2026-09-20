@@ -8,6 +8,9 @@ from `renderHtmlData()` into one self-contained HTML document. Pure and synchron
 - `media: 'print'` → a paged, PagedJS/WeasyPrint-ready document (cover/copyright/toc
   on by default), honoring `print.pageSize`, page-number position, and the running header.
 - `show` toggles which sections appear; `columns`/`direction` control layout.
+- The renderers' web CSS hides the `.running-title` / `.running-ref` marker spans
+  they leave in the body; the print CSS keeps them as invisible boxes so only the
+  page margins ever read them.
 
 The demo below composes either a **cached `HtmlData` fixture** or a resource fetched
 **live from DCS** (any owner/repo/ref/book) — the same source picker as the

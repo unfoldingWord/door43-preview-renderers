@@ -179,6 +179,7 @@ describe('renderTranslationNotesHtml', () => {
 
   test('exposes web and print CSS and a TOC entry', () => {
     expect(sections.css.web).toBeTruthy();
+    expect(sections.css.web).toContain('.running-title, .running-ref { display: none; }');
     expect(sections.css.print).toBeTruthy();
     expect(sections.toc.length).toBeGreaterThan(0);
   });

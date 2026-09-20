@@ -64,7 +64,7 @@ describe('renderHTML', () => {
     // The cover *div* is gone (note: ".cover-page"/"@page cover-page" still appear in CSS).
     expect(html).not.toContain('<div class="section cover-page">');
     expect(html).toContain('@top-center {\n    content: counter(page);');
-    expect(html).not.toContain('content: string(doctitle)');
+    expect(html).not.toContain('content: string(runningtitle)');
     // body still renders
     expect(html).toContain('SENTINEL_BODY');
   });

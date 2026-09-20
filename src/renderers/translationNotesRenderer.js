@@ -2,6 +2,7 @@ import { convertNoteFromMD2HTML, convertMarkdown } from '../converters/markdownC
 import {
   buildCoverPage,
   coverCss,
+  runningMarkerWebCss,
   renderAppendicesHtml,
   shortenForHeader,
 } from './printDocumentAssembler.js';
@@ -917,10 +918,10 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
   const copyright = resourceData.license
     ? `<div class="license-text">${convertMarkdown(resourceData.license)}</div>`
     : '';
-  const css = { web: tnWebCss + coverCss, print: isObs ? tnPrintCss + tnObsPrintCss : tnPrintCss };
+  const css = { web: tnWebCss + coverCss + runningMarkerWebCss, print: isObs ? tnPrintCss + tnObsPrintCss : tnPrintCss };
   const fullHtml = buildFullHtmlDocument(
     title,
-    tnWebCss + tnPrintCss + coverCss,
+    tnWebCss + tnPrintCss + coverCss + runningMarkerWebCss,
     `<div class="section cover-page">${cover}</div>\n${body}${renderAppendicesHtml(appendices, { titles: appendixTitles })}`
   );
 

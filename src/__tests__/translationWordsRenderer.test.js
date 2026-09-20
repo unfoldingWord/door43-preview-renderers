@@ -38,6 +38,9 @@ describe('renderTranslationWordsHtml', () => {
     );
     expect(result.fullHtml).toContain('<style>');
     expect(result.fullHtml).toContain('Translation Words Demo');
+    // Running-header markers ride hidden in both the sections CSS and the legacy fullHtml.
+    expect(result.sections.css.web).toContain('.running-title, .running-ref { display: none; }');
+    expect(result.fullHtml).toContain('.running-title, .running-ref { display: none; }');
   });
 
   test('throws when no renderable categories are available', () => {

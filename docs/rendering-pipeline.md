@@ -129,7 +129,7 @@ cover/identity fields and `requestedBooks` to **required**:
     copyright:  string,        // HTML snippet (license page)
     toc:        Array<{ id, title, sections? }>,   // TOC *data* — always produced
                                // level 1 = book/manual (h1), level 2 = chapter/article (h2)
-    body:       string,        // main content HTML (carries hidden .header-title spans for running headers)
+    body:       string,        // main content HTML (carries hidden .running-title / .running-ref spans for running headers)
     appendices: {              // keyed by kind; built by scanning body for referenced articles
       ta?: { [articleId]: { id, title, html } },   // Translation Academy articles cited by TN
       tw?: { [articleId]: { id, title, html } },   // Translation Words articles cited by TN
@@ -359,16 +359,22 @@ An explicit boolean in `options.show` always wins over the media default.
 ### 6.3 Running headers are render-time + CSS Paged Media (print only)
 
 There is **no token-template option**. The running-header *content* is produced by
-the renderer (stage 3), which emits hidden `<span class="header-title">Titus 1:1</span>`
-markers in the body. Print CSS captures the nearest marker per page via
-`string-set: doctitle content(text)` and echoes it into a `@page` margin box with
-`content: string(doctitle)` (this is how `getPrintCss()` already works —
-`printDocumentAssembler.js:295-303`).
+the renderer (stage 3), which emits hidden marker spans in the body:
+`<span class="running-title">Titus</span>` for the resource, book or manual name and
+`<span class="running-ref">Titus 1:1</span>` for a reference or article title. Print
+CSS captures the nearest marker per page via `string-set: runningref content(text)`
+and echoes it into a `@page` margin box with `content: string(runningref)` (this is
+how `getPrintCss()` works in `printDocumentAssembler.js`).
 
 Consequences:
-- **Screen view:** `@page` margin boxes don't render and `.header-title` is
-  `display:none` — so running headers never appear in the continuous web view.
-  They surface only under WeasyPrint (PDF) or the PagedJS print-preview.
+- **The markers travel hidden with the body.** Every renderer appends the shared
+  `runningMarkerWebCss` rule (`display: none`) to `sections.css.web`, so the body
+  plus its web CSS is self-sufficient for a screen view — `@page` margin boxes don't
+  render there, so running headers never appear in the continuous web view. The
+  print CSS from `getPrintCss()` re-enables the marker box *after* the renderer CSS
+  and hides it with `visibility: hidden` instead (a marker must generate a box for
+  `string-set` to read it), whether or not the header is on. Running headers
+  surface only under WeasyPrint (PDF) or the PagedJS print-preview.
 - **Options are toggles only:** `print.runningHeader` (on/off) and
   `print.pageNumber.position` (`top`/`bottom`, default `bottom`) +
   `print.pageNumber.show` (per-section). What the header *says*

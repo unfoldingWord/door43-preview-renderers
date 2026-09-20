@@ -1,5 +1,5 @@
 import { convertNoteFromMD2HTML, convertMarkdown } from '../converters/markdownConverter.js';
-import { buildCoverPage, coverCss } from './printDocumentAssembler.js';
+import { buildCoverPage, coverCss, runningMarkerWebCss } from './printDocumentAssembler.js';
 import { BibleBookData } from '../constants.js';
 import {
   escapeHtml,
@@ -546,10 +546,10 @@ export function renderTsvQuestionsHtml(resourceData, options = {}) {
     ? `<div class="license-text">${convertMarkdown(resourceData.license)}</div>`
     : '';
   const body = bodyParts.join('');
-  const css = { web: tqWebCss + coverCss, print: isObs ? tqPrintCss + tqObsPrintCss : tqPrintCss };
+  const css = { web: tqWebCss + coverCss + runningMarkerWebCss, print: isObs ? tqPrintCss + tqObsPrintCss : tqPrintCss };
   const fullHtml = buildFullHtmlDocument(
     title,
-    tqWebCss + tqPrintCss + coverCss,
+    tqWebCss + tqPrintCss + coverCss + runningMarkerWebCss,
     `<div class="section cover-page">${cover}</div>\n${body}`
   );
 

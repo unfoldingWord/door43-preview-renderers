@@ -1,5 +1,5 @@
 import { convertMarkdown } from '../converters/markdownConverter.js';
-import { buildCoverPage, coverCss } from './printDocumentAssembler.js';
+import { buildCoverPage, coverCss, runningMarkerWebCss } from './printDocumentAssembler.js';
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -179,13 +179,13 @@ export function renderObsHtml(resourceData, options = {}) {
   });
   const body = `<div class="section" id="obs" data-toc-title="${escapeHtml(title)}">\n${bodyParts.join('\n')}\n</div>`;
   const css = {
-    web: obsWebCss + coverCss,
+    web: obsWebCss + coverCss + runningMarkerWebCss,
     print: obsPrintCss,
   };
 
   const fullHtml = buildFullHtmlDocument(
     title,
-    obsWebCss + obsPrintCss + coverCss,
+    obsWebCss + obsPrintCss + coverCss + runningMarkerWebCss,
     `<div class="section cover-page">${cover}</div>\n${body}`
   );
 

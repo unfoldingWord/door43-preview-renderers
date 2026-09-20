@@ -49,6 +49,8 @@ describe('renderAlignedBibleHtml', () => {
       type: 'usfm', subject: 'Aligned Bible', title: 'Test Bible', books: { tit: titUsfm },
     });
     expect(result.sections.body).toMatch(/<span class="running-ref">[^<]*1:1<\/span>/);
+    // The markers are for the print margins; the web CSS keeps them off the screen.
+    expect(result.sections.css.web).toContain('.running-title, .running-ref { display: none; }');
   });
 
   test('lists chapters in the TOC for one book, but not for several', () => {

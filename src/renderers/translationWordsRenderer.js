@@ -1,5 +1,5 @@
 import { convertMarkdown } from '../converters/markdownConverter.js';
-import { buildCoverPage, coverCss } from './printDocumentAssembler.js';
+import { buildCoverPage, coverCss, runningMarkerWebCss } from './printDocumentAssembler.js';
 import {
   buildFullHtmlDocument,
   buildManualToc,
@@ -110,7 +110,7 @@ export function renderTranslationWordsHtml(resourceData, options = {}) {
   const copyright = resourceData.license
     ? `<div class="license-text">${convertMarkdown(resourceData.license)}</div>`
     : '';
-  const cssWeb = `${manualWebCss}\n.license-text { font-size: 0.9em; }\n${coverCss}\n`;
+  const cssWeb = `${manualWebCss}\n.license-text { font-size: 0.9em; }\n${coverCss}\n${runningMarkerWebCss}\n`;
   const pageBody = [`<div class="section cover-page">${cover}</div>`, copyright, body]
     .filter(Boolean)
     .join('\n');

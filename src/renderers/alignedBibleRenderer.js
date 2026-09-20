@@ -2,7 +2,7 @@ import { Proskomma } from 'proskomma-core';
 import { SofriaRenderFromProskomma, render } from 'proskomma-json-tools';
 import { renderers as sofriaRenderers } from './sofria2html.js';
 import { convertMarkdown } from '../converters/markdownConverter.js';
-import { buildCoverPage, coverCss } from './printDocumentAssembler.js';
+import { buildCoverPage, coverCss, runningMarkerWebCss } from './printDocumentAssembler.js';
 
 const defaultFlags = {
   showWordAtts: false,
@@ -15,6 +15,9 @@ const defaultFlags = {
   showCharacterMarkup: true,
   showChapterLabels: true,
   showVersesLabels: true,
+  // proskomma-json-tools >= 0.9 hides the "1" on verse 1 by default; our verse
+  // anchors and running-header markers need every verse labelled.
+  showFirstVerseLabel: true,
 };
 
 const renderFlags = {
@@ -25,6 +28,9 @@ const renderFlags = {
   showXrefs: true,
   showChapterLabels: true,
   showVersesLabels: true,
+  // proskomma-json-tools >= 0.9 hides the "1" on verse 1 by default; our verse
+  // anchors and running-header markers need every verse labelled.
+  showFirstVerseLabel: true,
   showCharacterMarkup: true,
   showParaStyles: true,
   selectedBcvNotes: [],
@@ -285,7 +291,7 @@ export function renderAlignedBibleHtml(resourceData, options = {}) {
   const coverTitle = resourceData.title || 'Bible';
   const webCss = `${render.sofria2web.renderStyles.styleAsCSS(
     render.sofria2web.renderStyles.styles
-  )}\n${extraWebCss}\n${coverCss}\n${editorMode ? '' : '.implied-word-start, .implied-word-end { display: none; }'}`;
+  )}\n${extraWebCss}\n${coverCss}\n${runningMarkerWebCss}\n${editorMode ? '' : '.implied-word-start, .implied-word-end { display: none; }'}`;
 
   const cover = buildCoverPage({
     title: coverTitle,

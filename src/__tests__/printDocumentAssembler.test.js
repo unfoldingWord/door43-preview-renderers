@@ -7,6 +7,7 @@ import {
   getPrintCss,
   assemblePrintDocument,
   PAGE_SIZES,
+  runningMarkerWebCss,
 } from '../renderers/printDocumentAssembler.js';
 
 describe('printDocumentAssembler', () => {
@@ -20,16 +21,27 @@ describe('printDocumentAssembler', () => {
       expect(css).toContain('string-set: runningtitle content(text)');
     });
 
+    test('re-enables the marker box after the renderer web CSS so string-set can read it', () => {
+      // Renderer web CSS (folded in via extraCss) hides the markers with display:none.
+      const css = getPrintCss({ extraCss: runningMarkerWebCss });
+      const hidden = css.indexOf('.running-title, .running-ref { display: none; }');
+      const reenabled = css.search(/\.running-ref\s*{[^}]*display:\s*inline/);
+      expect(hidden).toBeGreaterThan(-1);
+      expect(reenabled).toBeGreaterThan(hidden);
+    });
+
     test("pageNumberPosition 'top' moves the counter to @top-center", () => {
       const css = getPrintCss({ pageNumberPosition: 'top' });
       expect(css).toContain('@top-center {\n    content: counter(page);');
       expect(css).not.toContain('@bottom-center {\n    content: counter(page);');
     });
 
-    test('runningHeader false drops the doctitle header rules', () => {
+    test('runningHeader false drops the header rules but still hides the markers', () => {
       const css = getPrintCss({ runningHeader: false });
       expect(css).not.toContain('content: string(runningtitle)');
       expect(css).not.toContain('string-set: runningtitle content(text)');
+      // The renderers' marker spans must never surface as body text.
+      expect(css).toMatch(/\.running-ref\s*{[^}]*visibility:\s*hidden/);
     });
 
     test('restarts footnote numbering on every page', () => {
