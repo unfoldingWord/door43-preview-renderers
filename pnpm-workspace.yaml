@@ -7,4 +7,4 @@ allowBuilds:
   sharp: true
   unix-dgram: true
 minimumReleaseAgeExclude:
-  - tsv-quote-converters@1.1.22
+  - tsv-quote-converters@1.1.22 || 1.1.24
