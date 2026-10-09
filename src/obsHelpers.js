@@ -19,6 +19,24 @@ function stripMarkdownEmphasis(text) {
 }
 
 /**
+ * Get the folder that holds an OBS catalog entry's stories. DCS lists it as an `obs`
+ * ingredient, but a burrito may list only its story and front/back files, so then it is the
+ * folder of the first of those, or else where the format keeps its stories.
+ */
+export function getObsContentPath(catalogEntry) {
+  const ingredients = catalogEntry.ingredients || [];
+  const folder = ingredients.find((ingredient) => ingredient.identifier === 'obs');
+  if (folder) {
+    return folder.path;
+  }
+  const unit = ingredients.find((ingredient) => /^(\d{2}|front|back)$/.test(ingredient.identifier));
+  if (unit) {
+    return unit.path.replace(/\/[^/]*$/, '') || '.';
+  }
+  return { sb: './ingredients', ts: '.' }[catalogEntry.metadata_type] || './content';
+}
+
+/**
  * Extract OBS data from RC or SB format (markdown files)
  */
 export async function extractRcSbObsData(catalogEntry, ingredient) {

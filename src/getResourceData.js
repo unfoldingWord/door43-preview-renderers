@@ -1,4 +1,9 @@
-import { extractRcSbObsData, extractTsObsData, formatObsData } from './obsHelpers.js';
+import {
+  extractRcSbObsData,
+  extractTsObsData,
+  formatObsData,
+  getObsContentPath,
+} from './obsHelpers.js';
 import { extractRcTsvData } from './tsvHelpers.js';
 import { extractRcTwData } from './twHelpers.js';
 import { extractRcTaData } from './taHelpers.js';
@@ -252,12 +257,11 @@ async function getRcAlignedBibleData(catalogEntry, books, options) {
  * Get resource data for RC OBS
  */
 async function getRcObsData(catalogEntry, _options) {
-  const ingredient = catalogEntry.ingredients && catalogEntry.ingredients[0];
-  if (!ingredient) {
+  if (!catalogEntry.ingredients?.length) {
     throw new Error('No ingredients found in catalog entry');
   }
 
-  const data = await extractRcSbObsData(catalogEntry, ingredient);
+  const data = await extractRcSbObsData(catalogEntry, { path: getObsContentPath(catalogEntry) });
   return formatObsData(data, catalogEntry);
 }
 
@@ -467,24 +471,22 @@ async function getSbBibleData(catalogEntry, books, options) {
  * Get resource data for SB OBS
  */
 async function getSbObsData(catalogEntry, _options) {
-  const ingredient = catalogEntry.ingredients && catalogEntry.ingredients[0];
-  if (!ingredient) {
+  if (!catalogEntry.ingredients?.length) {
     throw new Error('No ingredients found in catalog entry');
   }
 
-  const data = await extractRcSbObsData(catalogEntry, ingredient);
+  const data = await extractRcSbObsData(catalogEntry, { path: getObsContentPath(catalogEntry) });
   return formatObsData(data, catalogEntry);
 }
 /**
  * Get resource data for TS OBS
  */
 async function getTsObsData(catalogEntry, _options) {
-  const ingredient = catalogEntry.ingredients && catalogEntry.ingredients[0];
-  if (!ingredient) {
+  if (!catalogEntry.ingredients?.length) {
     throw new Error('No ingredients found in catalog entry');
   }
 
-  const data = await extractTsObsData(catalogEntry, ingredient);
+  const data = await extractTsObsData(catalogEntry, { path: getObsContentPath(catalogEntry) });
   return formatObsData(data, catalogEntry);
 }
 /**
