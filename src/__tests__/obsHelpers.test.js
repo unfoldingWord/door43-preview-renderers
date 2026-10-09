@@ -8,8 +8,22 @@ const entry = (type, ingredients) => ({
 describe('getObsContentPath', () => {
   test.each([
     ['rc', [['obs', './content']], './content'],
-    ['rc', [['obs', './content'], ['01', './content/01.md']], './content'],
-    ['sb', [['obs', './ingredients'], ['01', './ingredients/content/01.md']], './ingredients'],
+    [
+      'rc',
+      [
+        ['obs', './content'],
+        ['01', './content/01.md'],
+      ],
+      './content',
+    ],
+    [
+      'sb',
+      [
+        ['obs', './ingredients'],
+        ['01', './ingredients/content/01.md'],
+      ],
+      './ingredients',
+    ],
     ['ts', [['obs', '.']], '.'],
   ])('uses the obs folder DCS lists (%s %j)', (type, ingredients, path) => {
     expect(getObsContentPath(entry(type, ingredients))).toBe(path);
@@ -19,8 +33,22 @@ describe('getObsContentPath', () => {
   test.each([
     ['sb', [['front', './ingredients/content/front']], './ingredients/content'],
     ['sb', [['01', './ingredients/content/01.md']], './ingredients/content'],
-    ['sb', [['front', './ingredients/front.md'], ['01', './ingredients/01.md']], './ingredients'],
-    ['ts', [['front', './front'], ['01', './01']], '.'],
+    [
+      'sb',
+      [
+        ['front', './ingredients/front.md'],
+        ['01', './ingredients/01.md'],
+      ],
+      './ingredients',
+    ],
+    [
+      'ts',
+      [
+        ['front', './front'],
+        ['01', './01'],
+      ],
+      '.',
+    ],
   ])('uses the folder of the listed stories (%s %j)', (type, ingredients, path) => {
     expect(getObsContentPath(entry(type, ingredients))).toBe(path);
   });
