@@ -9,6 +9,7 @@ const getAllCatalogEntriesMock = jest.fn();
 const extractRcSbObsDataMock = jest.fn();
 const extractTsObsDataMock = jest.fn();
 const formatObsDataMock = jest.fn();
+const getObsContentPathMock = jest.fn(() => './stories-folder');
 const extractTsBibleDataMock = jest.fn();
 
 jest.unstable_mockModule('axios', () => ({
@@ -41,6 +42,7 @@ jest.unstable_mockModule('../obsHelpers.js', () => ({
   extractRcSbObsData: extractRcSbObsDataMock,
   extractTsObsData: extractTsObsDataMock,
   formatObsData: formatObsDataMock,
+  getObsContentPath: getObsContentPathMock,
 }));
 
 jest.unstable_mockModule('../tsBibleHelpers.js', () => ({
@@ -236,7 +238,8 @@ describe('getResourceData', () => {
 
     const result = await getResourceData({ owner: 'unfoldingWord', repo: 'en_obs', ref: 'v1', books: [] }, { quiet: true });
 
-    expect(extractRcSbObsDataMock).toHaveBeenCalledWith(catalogEntry, catalogEntry.ingredients[0]);
+    expect(getObsContentPathMock).toHaveBeenCalledWith(catalogEntry);
+    expect(extractRcSbObsDataMock).toHaveBeenCalledWith(catalogEntry, { path: './stories-folder' });
     expect(formatObsDataMock).toHaveBeenCalledWith(obsData, catalogEntry);
     expect(result).toEqual(formatted);
   });
@@ -313,7 +316,8 @@ describe('getResourceData', () => {
 
     const result = await getResourceData({ owner: 'u', repo: 'r', ref: 'ref', books: [] }, { quiet: true });
 
-    expect(extractRcSbObsDataMock).toHaveBeenCalledWith(catalogEntry, catalogEntry.ingredients[0]);
+    expect(getObsContentPathMock).toHaveBeenCalledWith(catalogEntry);
+    expect(extractRcSbObsDataMock).toHaveBeenCalledWith(catalogEntry, { path: './stories-folder' });
     expect(result).toEqual(formatted);
   });
 
@@ -350,7 +354,8 @@ describe('getResourceData', () => {
 
     const result = await getResourceData({ owner: 'u', repo: 'r', ref: 'ref', books: [] }, { quiet: true });
 
-    expect(extractTsObsDataMock).toHaveBeenCalledWith(catalogEntry, catalogEntry.ingredients[0]);
+    expect(getObsContentPathMock).toHaveBeenCalledWith(catalogEntry);
+    expect(extractTsObsDataMock).toHaveBeenCalledWith(catalogEntry, { path: './stories-folder' });
     expect(result).toEqual(formatted);
   });
 
