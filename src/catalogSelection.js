@@ -31,8 +31,8 @@ export function selectAlignedBibles(entries) {
   if (!Array.isArray(entries)) return [];
   if (entries.length <= 2) return entries;
 
-  const literal = entries.find((e) => ['ult', 'glt'].includes(e.abbreviation));
-  const simplified = entries.find((e) => ['ust', 'gst'].includes(e.abbreviation));
+  const literal = entries.find((e) => ['ult', 'glt'].includes(e?.abbreviation));
+  const simplified = entries.find((e) => ['ust', 'gst'].includes(e?.abbreviation));
 
   if (literal && simplified) return [literal, simplified];
   if (literal) return [literal, entries.find((e) => e !== literal) || literal];
@@ -50,7 +50,7 @@ export function selectAlignedBibles(entries) {
  *  - of the Aligned Bibles, at most two are kept (see selectAlignedBibles);
  *  - when `books` is given, the original-language Bible of a testament none of
  *    the books belongs to is dropped (a New Testament render has no use for the
- *    Hebrew Old Testament, and vice versa); unknown or empty `books` keep both.
+ *    Hebrew Old Testament, and vice versa); empty `books`, or any unknown id, keeps both.
  *
  * The result is `[main, ...selectedAlignedBibles, ...otherRequiredEntries]`,
  * each group in blueprint order. A main subject with no required subjects
@@ -72,14 +72,16 @@ export function filterCatalogEntries(catalogEntries, { subject, books } = {}) {
   }
 
   // Testaments the requested books span; an original-language Bible for a
-  // testament outside this set is not needed. Unknown ids keep both.
+  // testament outside this set is not needed. Any unknown id keeps both.
   const testaments = new Set();
+  let unresolved = false;
   for (const bookId of Array.isArray(books) ? books : []) {
     const t = testamentOf(bookId);
     if (t) testaments.add(t);
+    else unresolved = true;
   }
   const skipTestament = (entrySubject) => {
-    if (testaments.size === 0) return false;
+    if (unresolved || testaments.size === 0) return false;
     if (entrySubject === 'Hebrew Old Testament') return !testaments.has('old');
     if (entrySubject === 'Greek New Testament') return !testaments.has('new');
     return false;

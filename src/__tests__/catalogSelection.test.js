@@ -63,6 +63,10 @@ describe('selectAlignedBibles', () => {
   test('tolerates a non-array', () => {
     expect(selectAlignedBibles(undefined)).toEqual([]);
   });
+
+  test('tolerates null holes when choosing among more than two', () => {
+    expect(() => selectAlignedBibles([null, other1, other2, other3])).not.toThrow();
+  });
 });
 
 describe('filterCatalogEntries', () => {
@@ -142,6 +146,13 @@ describe('filterCatalogEntries', () => {
     expect(filterCatalogEntries(blueprint, { books: [] })).toContainEqual(ugnt);
     expect(filterCatalogEntries(blueprint, { books: ['nope'] })).toContainEqual(uhb);
     expect(filterCatalogEntries(blueprint, { books: ['nope'] })).toContainEqual(ugnt);
+  });
+
+  test('an unknown id among known books keeps both original-language Bibles', () => {
+    for (const books of [['tit', 'nope'], ['rut', 'nope']]) {
+      expect(filterCatalogEntries(blueprint, { books })).toContainEqual(uhb);
+      expect(filterCatalogEntries(blueprint, { books })).toContainEqual(ugnt);
+    }
   });
 
   test('handles empty input and skips null entries', () => {
