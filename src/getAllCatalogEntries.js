@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { resolveResource } from './findResources.js';
 
 // The npm package version of this renderer library (distinct from the *resource*
 // version, e.g. 'v89', which is carried separately on the CatalogSet).
@@ -57,7 +58,9 @@ function resolveDescriptor(source, options) {
  * CatalogSet. Accepts a discriminated `source` so callers can fetch fresh or
  * pass an already-resolved set straight through:
  *
- * @param {Object} source - `{ owner, repo, ref, books? }` | a catalog entry | a CatalogSet (returned as-is)
+ * @param {Object} source - `{ owner, repo, ref, books? }` | `{ lang, subject, books?, owner?, stage? }`
+ *   (resolved to the preferred publisher's current release first, see findResources.js)
+ *   | a catalog entry | a CatalogSet (returned as-is)
  * @param {Object} [options]
  * @param {string} [options.dcs_api_url] - DCS API base URL
  * @param {boolean} [options.quiet] - Suppress logging
@@ -76,6 +79,31 @@ export async function getAllCatalogEntries(source, options = {}) {
   // CatalogSet passthrough — already resolved upstream.
   if (Array.isArray(source.catalogEntries)) {
     return source;
+  }
+
+  // Language + subject: find the publisher and release first (stage 0). The
+  // blueprint fetched while choosing is the CatalogSet, so nothing is fetched twice.
+  if (source.lang && source.subject && !source.repo && !source.name) {
+    const books = source.books || options.books || [];
+    const resolved = await resolveResource(
+      { lang: source.lang, subject: source.subject, books, owner: source.owner, stage: source.stage },
+      { ...options, dcs_api_url: options.dcs_api_url || source.dcs_api_url }
+    );
+    const main = resolved.catalogEntries[0] || {};
+    return {
+      resourceVersion: main.branch_or_tag_name || main.release?.tag_name || resolved.ref,
+      libraryVersion,
+      catalogEntries: resolved.catalogEntries,
+      source: {
+        owner: resolved.owner,
+        repo: resolved.repo,
+        ref: resolved.ref,
+        books,
+        dcsApiUrl: options.dcs_api_url || source.dcs_api_url || 'https://git.door43.org/api/v1',
+        lang: source.lang,
+        subject: source.subject,
+      },
+    };
   }
 
   const { owner, repo, ref, books, dcsApiUrl } = resolveDescriptor(source, options);
