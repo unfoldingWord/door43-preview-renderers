@@ -13,6 +13,8 @@ import { filterCatalogEntries, testamentOf } from './catalogSelection.js';
 
 const DEFAULT_API = 'https://git.door43.org/api/v1';
 const PAGE_SIZE = 100;
+/** A search that never returns a short page is a broken endpoint, not a big catalog. */
+const MAX_PAGES = 50;
 
 function apiBase(options = {}) {
   return (options.dcs_api_url || DEFAULT_API).replace(/\/+$/, '');
@@ -20,6 +22,11 @@ function apiBase(options = {}) {
 
 function enc(value) {
   return encodeURIComponent(String(value));
+}
+
+/** A release tag is a version number (`v91`, `3.0.0`), not a branch or a commit. */
+function isReleaseTag(ref) {
+  return /^v?\d+(\.\d+)*$/.test(String(ref));
 }
 
 /** Only a definite "not there" (HTTP 404) may fall through; anything else is an outage and aborts. */
@@ -49,6 +56,11 @@ export async function findResources({ lang, subject, owner, stage = 'prod' } = {
 
   const entries = [];
   for (let page = 1; ; page++) {
+    if (page > MAX_PAGES) {
+      throw new Error(
+        `findResources: ${api}/catalog/search kept returning full pages after ${MAX_PAGES} pages.`
+      );
+    }
     const url = `${api}/catalog/search?${params.join('&')}&page=${page}`;
     const body = await fetchJson(url);
     const data = Array.isArray(body?.data) ? body.data : [];
@@ -73,7 +85,7 @@ export async function resolveRef({ owner, repo, ref = '' } = {}, options = {}) {
   if (!owner || !repo) throw new Error('resolveRef: owner and repo are required.');
   const api = apiBase(options);
   if (ref) {
-    return { ref, isRelease: /^v?\d/.test(ref) };
+    return { ref, isRelease: isReleaseTag(ref) };
   }
   try {
     const release = await fetchJson(`${api}/repos/${enc(owner)}/${enc(repo)}/releases/latest`);
@@ -111,6 +123,23 @@ function rankCandidates(entries, owner) {
       return a.i - b.i;
     })
     .map((x) => x.entry);
+}
+
+/**
+ * Requested books the resource does not carry, judged by the ingredients the
+ * blueprint (or, failing that, the search) lists for it. No ingredient list
+ * at all means the catalog did not say, so nothing is ruled out.
+ */
+function booksMissingFrom(blueprintMain, searchEntry, books) {
+  if (!books || !books.length) return [];
+  const ingredients = Array.isArray(blueprintMain?.ingredients)
+    ? blueprintMain.ingredients
+    : Array.isArray(searchEntry?.ingredients)
+      ? searchEntry.ingredients
+      : null;
+  if (!ingredients) return [];
+  const have = new Set(ingredients.map((i) => String(i?.identifier || '').toLowerCase()));
+  return books.filter((b) => !have.has(String(b).toLowerCase()));
 }
 
 /** The required subjects a blueprint must supply for `subject`, given the books asked for. */
@@ -176,6 +205,24 @@ export async function resolveResource(
       lastReason = `${entry.owner}/${entry.name}@${ref}: empty blueprint`;
       continue;
     }
+    // Downstream treats the first entry as the resource to render, whatever
+    // order the blueprint listed its rows in.
+    const mainIndex = catalogEntries.findIndex(
+      (e) => e?.owner === entry.owner && e?.name === entry.name && e?.branch_or_tag_name === ref
+    );
+    if (mainIndex === -1) {
+      lastReason = `${entry.owner}/${entry.name}@${ref}: blueprint does not list the resource itself`;
+      continue;
+    }
+    if (mainIndex > 0) {
+      catalogEntries = [catalogEntries[mainIndex], ...catalogEntries.filter((_, i) => i !== mainIndex)];
+    }
+    // The package must hold every book asked for, or the render comes back short.
+    const missingBooks = booksMissingFrom(catalogEntries[0], entry, books);
+    if (missingBooks.length) {
+      lastReason = `${entry.owner}/${entry.name}@${ref}: lacks book${missingBooks.length > 1 ? 's' : ''} ${missingBooks.join(', ')}`;
+      continue;
+    }
     const filtered = filterCatalogEntries(catalogEntries, { subject, books });
     const present = new Set(filtered.map((e) => e?.subject));
     const missing = required.filter((s) => !present.has(s));
@@ -188,6 +235,33 @@ export async function resolveResource(
   throw new Error(
     `No complete book package for ${subject} in "${lang}"` + (lastReason ? ` (last tried ${lastReason})` : '.')
   );
+}
+
+/**
+ * Turn what a caller gave into `{ owner, repo, ref }`: a language and subject
+ * name the publisher (keeping a ref the caller gave, else the found release);
+ * an owner and repo without a ref take the latest release.
+ *
+ * @param {Object} target - `{ owner?, repo?, ref?, lang?, subject?, books?, stage? }`
+ * @param {Object} [options]
+ * @returns {Promise<{owner: string, repo: string, ref: string, resolved?: Object}>}
+ */
+export async function resolveTarget(
+  { owner, repo, ref = '', lang, subject, books = [], stage } = {},
+  options = {}
+) {
+  if (lang && subject) {
+    const found = await resolveResource({ lang, subject, books, owner, stage }, options);
+    // A ref the caller named wins; the found package belongs to the found ref,
+    // so it is not carried over to a different one.
+    return ref
+      ? { owner: found.owner, repo: found.repo, ref }
+      : { owner: found.owner, repo: found.repo, ref: found.ref, resolved: found };
+  }
+  if (!owner || !repo) throw new Error('resolveTarget: owner and repo, or lang and subject, are required.');
+  if (ref) return { owner, repo, ref };
+  const latest = await resolveRef({ owner, repo }, options);
+  return { owner, repo, ref: latest.ref };
 }
 
 /**

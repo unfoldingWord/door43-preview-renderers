@@ -3,10 +3,10 @@ import { jest } from '@jest/globals';
 const axiosGetMock = jest.fn();
 jest.unstable_mockModule('axios', () => ({ default: { get: axiosGetMock } }));
 
-const { findResources, resolveRef, resolveResource, listLanguages } = await import(
-  '../findResources.js'
-);
+const { findResources, resolveRef, resolveResource, resolveTarget, listLanguages } =
+  await import('../findResources.js');
 const { getAllCatalogEntries } = await import('../getAllCatalogEntries.js');
+const { getResourceData } = await import('../getResourceData.js');
 const { fetchJson, clearFetchCache } = await import('../dcsApi.js');
 
 const API = 'https://git.door43.org/api/v1';
@@ -108,6 +108,15 @@ describe('findResources', () => {
     );
   });
 
+  test('an endpoint that never returns a short page is an error, not an endless loop', async () => {
+    const full = Array.from({ length: 100 }, (_, i) => entry('o', `r${i}`, 'v1', 'Bible'));
+    axiosGetMock.mockResolvedValue({ data: { ok: true, data: full } });
+    await expect(findResources({ lang: 'es-419' }, { dcs_api_url: API })).rejects.toThrow(
+      'after 50 pages'
+    );
+    expect(axiosGetMock).toHaveBeenCalledTimes(50);
+  });
+
   test('requires lang', async () => {
     await expect(findResources({})).rejects.toThrow('lang is required');
   });
@@ -118,6 +127,9 @@ describe('resolveRef', () => {
     expect(await resolveRef({ owner: 'o', repo: 'r', ref: 'v91' })).toEqual({ ref: 'v91', isRelease: true });
     expect(await resolveRef({ owner: 'o', repo: 'r', ref: '3.0.0' })).toEqual({ ref: '3.0.0', isRelease: true });
     expect(await resolveRef({ owner: 'o', repo: 'r', ref: 'master' })).toEqual({ ref: 'master', isRelease: false });
+    expect(await resolveRef({ owner: 'o', repo: 'r', ref: 'v1.2' })).toEqual({ ref: 'v1.2', isRelease: true });
+    expect(await resolveRef({ owner: 'o', repo: 'r', ref: '2-experimental' })).toEqual({ ref: '2-experimental', isRelease: false });
+    expect(await resolveRef({ owner: 'o', repo: 'r', ref: '0a1b2c3' })).toEqual({ ref: '0a1b2c3', isRelease: false });
     expect(axiosGetMock).not.toHaveBeenCalled();
   });
 
@@ -285,6 +297,181 @@ describe('resolveResource', () => {
   });
 });
 
+describe('resolveResource: the selected resource and its books', () => {
+  const serve = (map) =>
+    axiosGetMock.mockImplementation(async (url) => {
+      for (const [prefix, body] of Object.entries(map)) {
+        if (url.startsWith(prefix)) return { data: body };
+      }
+      throw Object.assign(new Error(`404 ${url}`), { response: { status: 404 } });
+    });
+  const bible = (owner, books) =>
+    entry(owner, 'es-419_glt', 'v41', 'Aligned Bible', {
+      abbreviation: 'glt',
+      ingredients: books.map((b) => ({ identifier: b, path: `./${b}.usfm` })),
+    });
+
+  test('the selected resource is moved to the front of a blueprint that lists it later', async () => {
+    const uhb = entry('unfoldingWord', 'hbo_uhb', 'v3.0.0', 'Hebrew Old Testament');
+    serve({
+      [`${API}/catalog/search?`]: { ok: true, data: [TN_GL] },
+      [`${API}/catalog/bp/es-419_gl/es-419_tn/v66`]: {
+        ok: true,
+        data: [uhb, ...blueprint(TN_GL).filter((e) => e.name !== 'hbo_uhb')],
+      },
+    });
+    const found = await resolveResource(
+      { lang: 'es-419', subject: 'TSV Translation Notes', books: ['rut'] },
+      { dcs_api_url: API }
+    );
+    expect(found.catalogEntries[0]).toBe(found.entry);
+    expect(found.catalogEntries[0].name).toBe('es-419_tn');
+    expect(found.catalogEntries).toHaveLength(blueprint(TN_GL).length);
+    expect(found.catalogEntries.filter((e) => e.name === 'hbo_uhb')).toHaveLength(1);
+  });
+
+  test('a blueprint that does not list the resource itself is skipped', async () => {
+    serve({
+      [`${API}/catalog/search?`]: { ok: true, data: [TN_OBT, TN_GL] },
+      [`${API}/catalog/bp/es-419_obt/es-419_tn/v0.0.5`]: {
+        ok: true,
+        data: blueprint(TN_OBT).slice(1),
+      },
+      [`${API}/catalog/bp/es-419_gl/es-419_tn/v66`]: { ok: true, data: blueprint(TN_GL) },
+    });
+    const found = await resolveResource(
+      { lang: 'es-419', subject: 'TSV Translation Notes' },
+      { dcs_api_url: API }
+    );
+    expect(found.owner).toBe('es-419_gl');
+  });
+
+  test('a candidate missing a requested book is skipped for one that has them all', async () => {
+    const partial = bible('es-419_obt', ['gen']);
+    const complete = bible('es-419_gl', ['gen', 'tit']);
+    serve({
+      [`${API}/catalog/search?`]: { ok: true, data: [{ ...partial, released: '2026-01-01T00:00:00Z' }, complete] },
+      [`${API}/catalog/bp/es-419_obt/es-419_glt/v41`]: { ok: true, data: [partial] },
+      [`${API}/catalog/bp/es-419_gl/es-419_glt/v41`]: { ok: true, data: [complete] },
+    });
+    const found = await resolveResource(
+      { lang: 'es-419', subject: 'Aligned Bible', books: ['gen', 'tit'] },
+      { dcs_api_url: API }
+    );
+    expect(found.owner).toBe('es-419_gl');
+    const urls = axiosGetMock.mock.calls.map(urlOf).filter((u) => u.includes('/catalog/bp/'));
+    // Two books: the unscoped package, first the newer partial one, then the complete one.
+    expect(urls).toEqual([
+      `${API}/catalog/bp/es-419_obt/es-419_glt/v41`,
+      `${API}/catalog/bp/es-419_gl/es-419_glt/v41`,
+    ]);
+  });
+
+  test('no candidate with every requested book is an error naming the missing book', async () => {
+    const partial = bible('es-419_gl', ['gen']);
+    serve({
+      [`${API}/catalog/search?`]: { ok: true, data: [partial] },
+      [`${API}/catalog/bp/es-419_gl/es-419_glt/v41`]: { ok: true, data: [partial] },
+    });
+    await expect(
+      resolveResource({ lang: 'es-419', subject: 'Aligned Bible', books: ['gen', 'tit'] }, { dcs_api_url: API })
+    ).rejects.toThrow('lacks book tit');
+  });
+
+  test('a catalog row without an ingredient list rules nothing out', async () => {
+    const noIngredients = entry('es-419_gl', 'es-419_glt', 'v41', 'Aligned Bible');
+    serve({
+      [`${API}/catalog/search?`]: { ok: true, data: [noIngredients] },
+      [`${API}/catalog/bp/es-419_gl/es-419_glt/v41`]: { ok: true, data: [noIngredients] },
+    });
+    const found = await resolveResource(
+      { lang: 'es-419', subject: 'Aligned Bible', books: ['tit'] },
+      { dcs_api_url: API }
+    );
+    expect(found.owner).toBe('es-419_gl');
+  });
+});
+
+describe('resolveTarget', () => {
+  test('language + subject: the found publisher, and a given ref is kept', async () => {
+    axiosGetMock.mockImplementation(async (url) => {
+      if (url.startsWith(`${API}/catalog/search?`)) return { data: { ok: true, data: [TN_GL] } };
+      if (url.startsWith(`${API}/catalog/bp/es-419_gl/es-419_tn/v66`)) {
+        return { data: { ok: true, data: blueprint(TN_GL) } };
+      }
+      throw new Error(`unexpected ${url}`);
+    });
+    expect(
+      await resolveTarget({ lang: 'es-419', subject: 'TSV Translation Notes', ref: 'v60' }, { dcs_api_url: API })
+    ).toEqual({ owner: 'es-419_gl', repo: 'es-419_tn', ref: 'v60' });
+
+    const found = await resolveTarget({ lang: 'es-419', subject: 'TSV Translation Notes' }, { dcs_api_url: API });
+    expect(found).toMatchObject({ owner: 'es-419_gl', repo: 'es-419_tn', ref: 'v66' });
+    expect(found.resolved.catalogEntries[0].name).toBe('es-419_tn');
+  });
+
+  test('owner + repo: a given ref is untouched without a request; none means the latest release', async () => {
+    expect(await resolveTarget({ owner: 'unfoldingWord', repo: 'en_tn', ref: 'v88' })).toEqual({
+      owner: 'unfoldingWord',
+      repo: 'en_tn',
+      ref: 'v88',
+    });
+    expect(axiosGetMock).not.toHaveBeenCalled();
+
+    axiosGetMock.mockResolvedValueOnce({ data: { tag_name: 'v91' } });
+    expect(await resolveTarget({ owner: 'unfoldingWord', repo: 'en_tn' }, { dcs_api_url: API })).toEqual({
+      owner: 'unfoldingWord',
+      repo: 'en_tn',
+      ref: 'v91',
+    });
+  });
+
+  test('neither form is an error', async () => {
+    await expect(resolveTarget({ lang: 'es-419' })).rejects.toThrow('owner and repo, or lang and subject');
+  });
+});
+
+describe('hand-off into getResourceData', () => {
+  test('a reordered blueprint still renders the selected resource, not its first dependency', async () => {
+    const b64 = (t) => Buffer.from(t, 'utf8').toString('base64');
+    const tn = {
+      ...TN_GL,
+      title: 'Notas de traducción',
+      metadata_type: 'rc',
+      language: 'es-419',
+      ingredients: [{ identifier: 'tit', path: './tn_TIT.tsv', title: 'Tito', sort: 57 }],
+      repo: { name: 'es-419_tn', owner: { username: 'es-419_gl' }, abbreviation: 'tn' },
+    };
+    const uhb = entry('unfoldingWord', 'hbo_uhb', 'v3.0.0', 'Hebrew Old Testament', {
+      ingredients: [{ identifier: 'gen', path: './01-GEN.usfm' }],
+      repo: { name: 'hbo_uhb', owner: { username: 'unfoldingWord' } },
+    });
+    const TSV = 'Reference\tID\tTags\tSupportReference\tQuote\tOccurrence\tNote\n1:1\ta1\t\t\t\t0\tUna nota.';
+    axiosGetMock.mockImplementation(async (url) => {
+      if (url.startsWith(`${API}/catalog/search?`)) return { data: { ok: true, data: [tn] } };
+      if (url.startsWith(`${API}/catalog/bp/es-419_gl/es-419_tn/v66`)) {
+        // A complete package, with a dependency listed before the resource itself.
+        const rest = blueprint(TN_GL).filter((e) => e.name !== 'hbo_uhb' && e.name !== 'es-419_tn');
+        return { data: { ok: true, data: [uhb, tn, ...rest] } };
+      }
+      if (url === `${API}/repos/es-419_gl/es-419_tn/contents/tn_TIT.tsv?ref=v66`) {
+        return { data: { content: b64(TSV) } };
+      }
+      throw Object.assign(new Error(`404 ${url}`), { response: { status: 404 } });
+    });
+
+    const set = await getAllCatalogEntries(
+      { lang: 'es-419', subject: 'TSV Translation Notes', books: ['tit'] },
+      { dcs_api_url: API, quiet: true }
+    );
+    const data = await getResourceData(set, { dcs_api_url: API, quiet: true });
+
+    expect(data.subject).toBe('TSV Translation Notes');
+    expect(data.title).toBe('Notas de traducción');
+    expect(data.books.tit.chapters['1'].verses['1'][0].Note).toBe('Una nota.');
+  });
+});
+
 describe('listLanguages', () => {
   test('maps the catalog language records', async () => {
     axiosGetMock.mockResolvedValueOnce({
@@ -352,7 +539,9 @@ describe('getAllCatalogEntries with { lang, subject }', () => {
       { lang: 'es-419', subject: 'TSV Translation Notes', books: ['tit'] },
       { dcs_api_url: API, quiet: true }
     );
-    expect(set.catalogEntries[0].name).toBe('hbo_uhb');
+    // The selected resource is first whatever order the blueprint listed.
+    expect(set.catalogEntries[0].name).toBe('es-419_tn');
+    expect(set.catalogEntries.map((e) => e.name)).toContain('hbo_uhb');
     expect(set.resourceVersion).toBe('v66');
   });
 });

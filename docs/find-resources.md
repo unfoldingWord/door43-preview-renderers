@@ -38,9 +38,10 @@ entries.map((e) => `${e.owner}/${e.name}@${e.branch_or_tag_name}`);
 The best entry point for a language and subject: `{ owner, repo, ref, entry, catalogEntries }`.
 Several owners can publish the same subject, so candidates are tried in order
 of: the owner you asked for, gateway-language publishers, newest release.
-The first whose book package (`/catalog/bp/`) supplies every subject the
-main subject needs for the requested books wins; the others are skipped with
-the reason kept for the error message if none fit.
+The first whose book package (`/catalog/bp/`) carries every requested book
+and supplies every subject the main subject needs for them wins; the others
+are skipped with the reason kept for the error message if none fit. The
+chosen resource is always the first of the returned `catalogEntries`.
 
 ```js static
 const { owner, repo, ref } = await resolveResource({
@@ -62,6 +63,17 @@ await resolveRef({ owner: 'unfoldingWord', repo: 'en_tn' });
 // → { ref: 'v91', isRelease: true }
 await resolveRef({ owner: 'someone', repo: 'xx_ult_work' });
 // → { ref: 'master', isRelease: false }
+```
+
+## `resolveTarget({ owner?, repo?, ref?, lang?, subject?, books?, stage? }, options?)`
+
+What the CLI does with its flags, for callers that take the same mix: a
+language and subject name the publisher (a `ref` you give is kept, else the
+found release); an owner and repo without a `ref` take the latest release.
+
+```js static
+await resolveTarget({ lang: 'es-419', subject: 'TSV Translation Notes', ref: 'v60' });
+// → { owner: 'es-419_gl', repo: 'es-419_tn', ref: 'v60' }
 ```
 
 ## `listLanguages({ stage? }, options?)`

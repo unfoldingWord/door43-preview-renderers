@@ -20,8 +20,7 @@ import {
   renderHTML,
   renderPdf,
   findResources,
-  resolveRef,
-  resolveResource,
+  resolveTarget,
 } from '../dist/index.esm.js';
 
 // Map the CLI's short page-size keys to PAGE_SIZES keys understood by renderHTML/renderPdf.
@@ -195,28 +194,26 @@ async function main() {
   try {
     let result;
 
-    // Stage 0: a language + subject names the publisher and release; a
-    // missing --ref means the repo's latest release.
+    // Stage 0: a language + subject names the publisher (a --ref given with
+    // them is kept); a missing --ref means the repo's latest release.
     if (command !== 'findResources') {
-      const books = params.bookId ? [params.bookId] : [];
-      if (byLanguage) {
-        if (!quiet) console.error(`Finding ${params.subject} for ${params.lang}...`);
-        const found = await resolveResource(
-          { lang: params.lang, subject: params.subject, books, owner: params.owner, stage: params.stage },
-          { dcs_api_url: dcsApiUrl, quiet }
-        );
-        params.owner = found.owner;
-        params.repo = found.repo;
-        params.ref = found.ref;
-        if (!quiet) console.error(`Using ${found.owner}/${found.repo}@${found.ref}`);
-      } else if (!params.ref) {
-        const { ref } = await resolveRef(
-          { owner: params.owner, repo: params.repo },
-          { dcs_api_url: dcsApiUrl, quiet }
-        );
-        params.ref = ref;
-        if (!quiet) console.error(`Using ${params.owner}/${params.repo}@${ref}`);
-      }
+      if (!quiet && byLanguage) console.error(`Finding ${params.subject} for ${params.lang}...`);
+      const target = await resolveTarget(
+        {
+          owner: params.owner,
+          repo: params.repo,
+          ref: params.ref,
+          lang: params.lang,
+          subject: params.subject,
+          books: params.bookId ? [params.bookId] : [],
+          stage: params.stage,
+        },
+        { dcs_api_url: dcsApiUrl, quiet }
+      );
+      params.owner = target.owner;
+      params.repo = target.repo;
+      params.ref = target.ref;
+      if (!quiet) console.error(`Using ${target.owner}/${target.repo}@${target.ref}`);
     }
 
     switch (command) {
