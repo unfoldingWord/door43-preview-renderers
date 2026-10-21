@@ -58,9 +58,9 @@ function resolveDescriptor(source, options) {
  * CatalogSet. Accepts a discriminated `source` so callers can fetch fresh or
  * pass an already-resolved set straight through:
  *
- * @param {Object} source - `{ owner, repo, ref, books? }` | `{ lang, subject, books?, owner?, stage? }`
- *   (resolved to the preferred publisher's current release first, see findResources.js)
- *   | a catalog entry | a CatalogSet (returned as-is)
+ * @param {Object} source - `{ owner, repo, ref, books? }` | `{ lang, subject, books?, owner?, stage?, ref? }`
+ *   (the preferred publisher is found first, see findResources.js; its current
+ *   release is used unless `ref` names one) | a catalog entry | a CatalogSet (returned as-is)
  * @param {Object} [options]
  * @param {string} [options.dcs_api_url] - DCS API base URL
  * @param {boolean} [options.quiet] - Suppress logging
@@ -89,6 +89,14 @@ export async function getAllCatalogEntries(source, options = {}) {
       { lang: source.lang, subject: source.subject, books, owner: source.owner, stage: source.stage },
       { ...options, dcs_api_url: options.dcs_api_url || source.dcs_api_url }
     );
+    // A ref the caller named wins over the found release: the publisher is
+    // kept, the blueprint is fetched for that ref like any other descriptor.
+    if (source.ref) {
+      return getAllCatalogEntries(
+        { owner: resolved.owner, repo: resolved.repo, ref: source.ref, books, dcs_api_url: source.dcs_api_url },
+        options
+      );
+    }
     // The version is the ref that was resolved, not whatever row the blueprint lists first.
     return {
       resourceVersion: resolved.ref,
@@ -121,13 +129,21 @@ export async function getAllCatalogEntries(source, options = {}) {
       throw new Error('Invalid response from /catalog/bp endpoint');
     }
 
-    const catalogEntries = response.data.data;
+    let catalogEntries = response.data.data;
     if (!Array.isArray(catalogEntries) || catalogEntries.length === 0) {
       throw new Error('No catalog entries returned from /catalog/bp endpoint');
     }
 
+    // Downstream treats the first entry as the resource to render. DCS lists
+    // the queried repo first; should a blueprint ever not, put it there.
+    const mainIndex = catalogEntries.findIndex(
+      (e) => e?.owner === owner && e?.name === repo && (!e.branch_or_tag_name || e.branch_or_tag_name === ref)
+    );
+    if (mainIndex > 0) {
+      catalogEntries = [catalogEntries[mainIndex], ...catalogEntries.filter((_, i) => i !== mainIndex)];
+    }
     const main = catalogEntries[0] || {};
-    const resourceVersion = main.branch_or_tag_name || main.release?.tag_name || ref;
+    const resourceVersion = mainIndex === -1 ? ref : main.branch_or_tag_name || main.release?.tag_name || ref;
 
     return {
       resourceVersion,
