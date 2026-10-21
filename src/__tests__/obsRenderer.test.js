@@ -15,7 +15,14 @@ function buildResourceData(overrides = {}) {
     version: 'v9',
     front: '# Front matter\n\nAbout these stories.',
     back: '# Back matter\n\nHow to use them.',
+    // Keys chosen so that lexical order ("1", "10", "12", "2") differs from
+    // numeric order (1, 2, 10, 12): the renderer must sort numerically.
     stories: {
+      12: {
+        title: '12. The Exodus',
+        reference: 'A Bible story from: Exodus 12:33-15:21',
+        frames: { 1: { text: 'The Israelites left Egypt.' } },
+      },
       2: {
         title: '2. Sin Enters the World',
         reference: 'A Bible story from: Genesis 3',
@@ -29,6 +36,7 @@ function buildResourceData(overrides = {}) {
         reference: 'A Bible story from: Genesis 1-2',
         frames: {
           1: { text: 'This is how the beginning of everything happened.' },
+          2: { text: 'God made the light.' },
           10: { text: 'God saw that it was good.' },
         },
       },
@@ -62,24 +70,24 @@ describe('renderObsHtml', () => {
     expect(body).toContain('<div class="section" id="obs" data-toc-title="unfoldingWord® Open Bible Stories">');
   });
 
-  test('renders stories in numeric order with anchors, headings and TOC entries', () => {
-    const story1 = body.indexOf('id="nav-obs-1"');
-    const story2 = body.indexOf('id="nav-obs-2"');
-    expect(story1).toBeGreaterThan(-1);
-    expect(story2).toBeGreaterThan(story1);
+  test('renders stories in numeric order (2 before 12) with anchors, headings and TOC entries', () => {
+    const ids = [...body.matchAll(/<section class="section story" id="nav-obs-(\d+)"/g)].map((m) =>
+      Number(m[1])
+    );
+    expect(ids).toEqual([1, 2, 12]);
     expect(body).toContain('<section class="section story" id="nav-obs-1" data-toc-title="1. The Creation">');
     expect(body).toContain('<a href="#nav-obs-1" class="header-link">1. The Creation</a></h1>');
     expect(sections.toc).toEqual([
       { id: 'nav-obs-1', title: '1. The Creation', story: 1 },
       { id: 'nav-obs-2', title: '2. Sin Enters the World', story: 2 },
+      { id: 'nav-obs-12', title: '12. The Exodus', story: 12 },
     ]);
   });
 
-  test('renders frames in numeric order (10 after 1) with their text', () => {
-    const frame1 = body.indexOf('id="obs-1-1"');
-    const frame10 = body.indexOf('id="obs-1-10"');
-    expect(frame1).toBeGreaterThan(-1);
-    expect(frame10).toBeGreaterThan(frame1);
+  test('renders frames in numeric order (2 before 10) with their text', () => {
+    const story1 = body.slice(body.indexOf('id="nav-obs-1"'), body.indexOf('id="nav-obs-2"'));
+    const frameIds = [...story1.matchAll(/id="obs-1-(\d+)"/g)].map((m) => Number(m[1]));
+    expect(frameIds).toEqual([1, 2, 10]);
     expect(body).toContain('<p>This is how the beginning of everything happened.</p>');
     expect(body).toContain('<p>God saw that it was good.</p>');
   });
@@ -112,24 +120,31 @@ describe('renderObsHtml', () => {
     expect(body).toContain('<div class="article obs-back-article" id="obs-back-article"><h1>Back matter</h1>');
     // Front matter comes before the first story; back matter after the last.
     expect(body.indexOf('obs-front-matter')).toBeLessThan(body.indexOf('id="nav-obs-1"'));
-    expect(body.indexOf('obs-back-section')).toBeGreaterThan(body.indexOf('id="nav-obs-2"'));
+    expect(body.indexOf('obs-back-section')).toBeGreaterThan(body.indexOf('id="nav-obs-12"'));
   });
 
-  test('escapes HTML in titles, text and references', () => {
+  test('escapes HTML in titles, text, references and the image src attribute', () => {
     const data = buildResourceData({
       stories: {
         1: {
           title: 'Tom & "Jerry" <3',
           reference: 'A <b>ref</b>',
-          frames: { 1: { text: 'He said "hi" & left', img: 'https://x.test/a.jpg?w=1&h=2' } },
+          frames: {
+            1: { text: 'He said "hi" & left', img: 'https://x.test/a.jpg?w=1&h=2"><script>x()</script>' },
+          },
         },
       },
     });
-    const { sections: s } = renderObsHtml(data, { resolution: 'none' });
+    // Default resolution keeps the pictures, so the frame's own URL reaches the src sink.
+    const { sections: s } = renderObsHtml(data);
     expect(s.body).toContain('data-toc-title="Tom &amp; &quot;Jerry&quot; &lt;3"');
     expect(s.body).toContain('<p>He said &quot;hi&quot; &amp; left</p>');
     expect(s.body).toContain('<em>A &lt;b&gt;ref&lt;/b&gt;</em>');
     expect(s.body).not.toContain('<b>ref</b>');
+    expect(s.body).toContain(
+      '<img src="https://x.test/a.jpg?w=1&amp;h=2&quot;&gt;&lt;script&gt;x()&lt;/script&gt;" alt="Frame 1-1">'
+    );
+    expect(s.body).not.toContain('<script>');
   });
 });
 

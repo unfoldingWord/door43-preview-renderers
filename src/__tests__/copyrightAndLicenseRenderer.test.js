@@ -52,6 +52,14 @@ describe('generateCopyrightAndLicenseHtml', () => {
     expect(html).toContain('<strong>CC BY-SA 4.0</strong> applies.');
   });
 
+  test('escapes raw HTML inside fetched license markdown', async () => {
+    fetchContentMock.mockResolvedValueOnce('# License\n\n<script>alert(1)</script> and <b>bold</b>');
+    const html = await generateCopyrightAndLicenseHtml(mainEntry);
+    expect(html).toContain('&lt;script&gt;alert(1)&lt;/script&gt;');
+    expect(html).toContain('&lt;b&gt;bold&lt;/b&gt;');
+    expect(html).not.toContain('<script>');
+  });
+
   test('passes a custom DCS API URL through to the license fetch', async () => {
     fetchContentMock.mockResolvedValueOnce('');
     await generateCopyrightAndLicenseHtml(mainEntry, [], { dcs_api_url: 'https://qa.door43.org/api/v1' });
@@ -101,7 +109,13 @@ describe('generateCopyrightAndLicenseHtml', () => {
   test('falls back to master when the entry has no ref, and carries on without a license', async () => {
     fetchContentMock.mockRejectedValueOnce(new Error('404'));
     const html = await generateCopyrightAndLicenseHtml({ owner: 'o', name: 'r' });
-    expect(fetchContentMock).toHaveBeenCalledWith('o', 'r', 'master', 'LICENSE.md', expect.any(String));
+    expect(fetchContentMock).toHaveBeenCalledWith(
+      'o',
+      'r',
+      'master',
+      'LICENSE.md',
+      'https://git.door43.org/api/v1'
+    );
     expect(html).toContain('<h1>Copyrights &amp; Licensing</h1>');
     expect(html).not.toContain('<h1>License</h1>');
     expect(html).toContain('class="built-with-entry"');
@@ -110,7 +124,13 @@ describe('generateCopyrightAndLicenseHtml', () => {
   test('uses the commit sha as the ref when there is no tag or branch', async () => {
     fetchContentMock.mockResolvedValueOnce('');
     await generateCopyrightAndLicenseHtml({ owner: 'o', name: 'r', commit_sha: 'abc123' });
-    expect(fetchContentMock).toHaveBeenCalledWith('o', 'r', 'abc123', 'LICENSE.md', expect.any(String));
+    expect(fetchContentMock).toHaveBeenCalledWith(
+      'o',
+      'r',
+      'abc123',
+      'LICENSE.md',
+      'https://git.door43.org/api/v1'
+    );
   });
 
   test('renders the generator footer: linked name, version, and today', async () => {
