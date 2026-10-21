@@ -31,6 +31,10 @@ const rendered = renderHtmlData(resourceData, {
 - `Open Bible Stories`
 - `TSV Translation Notes` / `TSV OBS Translation Notes`
 - `TSV Translation Questions` / `Study Questions` / `Study Notes` (+ OBS variants)
+- `TSV Translation Words Links` — the Translation Words for a book, by verse (scripture
+  columns + the words in each verse, articles as an appendix) or as a glossary
+  (`renderOptions.layout: 'glossary'`: one entry per article, grouped Key Terms / Names /
+  Other, article body inline, references listed)
 
 It returns:
 

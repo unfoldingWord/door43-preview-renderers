@@ -76,10 +76,11 @@ const data = await getResourceData('adipatealberto', 'pid_rut_text_reg', 'master
 | Open Bible Stories | `renderObsHtml` |
 | TSV Translation Notes, TSV OBS Translation Notes | `renderTranslationNotesHtml` |
 | TSV Translation Questions, TSV Study Notes, TSV Study Questions, TSV OBS Translation Questions, TSV OBS Study Notes, TSV OBS Study Questions | `renderTsvQuestionsHtml` |
+| TSV Translation Words Links | `renderTranslationWordsLinksHtml` (by verse, or as a glossary) |
 | Translation Academy | `renderTranslationAcademyHtml` |
 | Translation Words | `renderTranslationWordsHtml` |
 
-`getResourceData()` can also fetch and parse additional subjects (for example, Translation Words Links) as supporting data for the renderers above, even where there is not yet a dedicated top-level HTML renderer for them.
+`getResourceData()` also fetches the supporting resources each of these needs (aligned Bibles, Translation Academy, Translation Words, Translation Words Links, the original-language Bibles) and hands them to the renderer as `extras`.
 
 ## Core functions
 
@@ -92,7 +93,7 @@ const data = await getResourceData('adipatealberto', 'pid_rut_text_reg', 'master
 ### Rendering
 
 - **`renderHtmlData()`** — the subject-aware HTML pipeline. [Learn more →](renderers.md)
-- Subject renderers: `renderAlignedBibleHtml`, `renderObsHtml`, `renderTranslationNotesHtml`, `renderTsvQuestionsHtml`, `renderTranslationAcademyHtml`, `renderTranslationWordsHtml`, and the generic `renderHTML`.
+- Subject renderers: `renderAlignedBibleHtml`, `renderObsHtml`, `renderTranslationNotesHtml`, `renderTsvQuestionsHtml`, `renderTranslationWordsLinksHtml`, `renderTranslationAcademyHtml`, `renderTranslationWordsHtml`, and the generic `renderHTML`.
 - **`generateCopyrightAndLicenseHtml()`** / **`copyrightCss`** — copyright and license page (LICENSE.md is converted from Markdown to HTML).
 
 ### Print and PDF
