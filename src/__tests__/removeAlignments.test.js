@@ -6,9 +6,12 @@ import { removeAlignments, removeMilestonesAndWordMarkers } from '../usfm/remove
 /**
  * removeAlignments() was inlined from usfm-alignment-remover 0.1.6 (issue #45).
  * The stored `*.stripped.usfm` fixtures are the ORIGINAL package's output for
- * the aligned v91 Titus files next to them, recorded once; the port must keep
- * reproducing them byte for byte. The hand-written cases below were likewise
- * checked against the original package when they were written.
+ * the aligned v91 Titus 1:1–1:8 files next to them (headers + `\c 1` + eight
+ * verses, cut before `\v 9` so the diff stays reviewable — a full chapter is
+ * ~125 KB of alignment markup), recorded once with usfm-alignment-remover@0.1.6
+ * installed in a throwaway folder; the port must keep reproducing them byte
+ * for byte. The hand-written cases below were likewise checked against the
+ * original package when they were written.
  */
 const here = path.dirname(fileURLToPath(import.meta.url));
 const fixture = (name) => fs.readFileSync(path.join(here, '..', 'fixtures', 'usfm', name), 'utf8');
@@ -19,24 +22,24 @@ const ZS = (content) =>
 const ZE = '\\zaln-e\\*';
 
 describe('removeAlignments — parity with usfm-alignment-remover 0.1.6', () => {
-  test.each(['ult', 'ust'])('reproduces the recorded output for en_%s v91 Titus', (bible) => {
+  test.each(['ult', 'ust'])('reproduces the recorded output for en_%s v91 Titus 1:1–8', (bible) => {
     const aligned = fixture(`57-TIT.${bible}.aligned.usfm`);
     const expected = fixture(`57-TIT.${bible}.stripped.usfm`);
     expect(aligned).toContain('\\zaln-s');
     expect(removeAlignments(aligned)).toBe(expected);
   });
 
-  test.each(['ult', 'ust'])('leaves no alignment markup in en_%s Titus and keeps every verse', (bible) => {
+  test.each(['ult', 'ust'])('leaves no alignment markup in en_%s Titus 1:1–8 and keeps every verse', (bible) => {
     const aligned = fixture(`57-TIT.${bible}.aligned.usfm`);
     const out = removeAlignments(aligned);
     expect(out).not.toMatch(/\\zaln-[se]/);
     expect(out).not.toMatch(/\\w[ *]/);
     expect(out).not.toContain('x-occurrence');
-    // Titus: 16 + 15 + 15 verses, each `\v N ` present exactly once.
-    expect(out.match(/\\v \d+ /g)).toHaveLength(46);
-    expect((aligned.match(/\\v \d+ /g) || []).length).toBe(46);
+    // Titus 1:1–1:8: eight verses, each `\v N ` present exactly once.
+    expect(out.match(/\\v \d+ /g)).toHaveLength(8);
+    expect((aligned.match(/\\v \d+ /g) || []).length).toBe(8);
     expect(out).toContain('\\c 1\n');
-    expect(out).toContain('\\c 3\n');
+    expect(out).not.toContain('\\c 2');
     // Headers survive.
     expect(out.startsWith('\\id TIT ')).toBe(true);
     expect(out).toContain('\\h Titus\n');
