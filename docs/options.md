@@ -53,6 +53,16 @@ Fetches and parses a resource (and its dependencies) from DCS into a
 
 ---
 
+### Catalog selection helpers
+
+The rules `getResourceData()` applies to a book package before fetching extras are exported as pure functions, so a caller can compute the same set from a `CatalogSet` (door43-preview-app derives its cache identity from it):
+
+| Function | Description |
+|---|---|
+| `filterCatalogEntries(catalogEntries, { subject?, books? })` | Keeps the main entry (`[0]`) plus the entries whose subject `requiredSubjectsMap[subject]` lists, at most two Aligned Bibles (via `selectAlignedBibles`), and — when `books` is given — only the original-language Bible of a testament the books belong to. Returns `[main, ...alignedBibles, ...others]` in blueprint order. |
+| `selectAlignedBibles(entries)` | At most two Aligned Bibles: a literal (`ult`/`glt`) and a simplified (`ust`/`gst`) one when present, else the first two. |
+| `testamentOf(bookId)` | `'old'`, `'new'`, or `undefined`. |
+
 ## `renderHtmlData(resourceData, options?)`
 
 Pure, synchronous. Turns parsed `resourceData` into reusable HTML **sections**.
