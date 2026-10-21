@@ -259,27 +259,47 @@ describe('getResourceData', () => {
     );
   });
 
-  test('returns SB Bible payload for scripture/textTranslation flavor', async () => {
-    axiosGetMock.mockResolvedValueOnce({
-      data: {
+  test.each([
+    ['Bible', './ingredients/TIT.usfm'],
+    ['Aligned Bible', './57-TIT.usfm'],
+  ])(
+    'delegates an SB scripture/textTranslation %s to extractRcAlignedBibleData',
+    async (subject, path) => {
+      // Scripture Burrito Bibles keep one USFM per book at the ingredient path,
+      // like RC and TC Bibles, so the same extractor fetches and strips them.
+      const catalogEntry = {
         title: 'SB Bible',
-        subject: 'Bible',
-        ingredients: [{ identifier: 'tit' }],
+        subject,
+        ingredients: [{ identifier: 'tit', path }],
         metadata_type: 'sb',
         flavor_type: 'scripture',
         flavor: 'textTranslation',
-      },
-    });
+      };
+      axiosGetMock.mockResolvedValueOnce({ data: catalogEntry });
+      extractRcAlignedBibleDataMock.mockResolvedValueOnce({
+        type: 'usfm',
+        subject,
+        books: { tit: '\\id TIT\n\\c 1\n\\v 1 Paul, a servant of God' },
+      });
 
-    const result = await getResourceData({ owner: 'u', repo: 'r', ref: 'ref', books: ['tit'] }, { quiet: true });
+      const result = await getResourceData(
+        { owner: 'u', repo: 'r', ref: 'ref', books: ['tit'] },
+        { quiet: true }
+      );
 
-    expect(result).toEqual(
-      expect.objectContaining({
-        subject: 'Bible',
-        books: ['tit'],
-      })
-    );
-  });
+      expect(extractRcAlignedBibleDataMock).toHaveBeenCalledWith(
+        expect.objectContaining({ metadata_type: 'sb', flavor: 'textTranslation', subject }),
+        ['tit'],
+        expect.any(Object)
+      );
+      expect(result).toEqual(
+        expect.objectContaining({ type: 'usfm', subject, books: { tit: expect.stringContaining('\\v 1') } })
+      );
+      // No placeholder fields from the old stub.
+      expect(result).not.toHaveProperty('flavorType');
+      expect(result).not.toHaveProperty('options');
+    }
+  );
 
   test('throws for unsupported SB scripture flavor', async () => {
     axiosGetMock.mockResolvedValueOnce({

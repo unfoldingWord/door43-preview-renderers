@@ -405,18 +405,17 @@ async function getRcTsvObsTranslationWordsLinksData(catalogEntry, options) {
 }
 
 /**
- * Get resource data for SB Bible
+ * Get resource data for SB Bible (scripture / textTranslation)
+ *
+ * A Scripture Burrito Bible stores one USFM file per book at the ingredient
+ * paths the catalog entry lists (`./ingredients/PHM.usfm`, or `./01-GEN.usfm`
+ * for the aligned Bibles) — the same layout as RC and TC Bibles — so the same
+ * extractor fetches the books and strips alignments for display. Both
+ * `Bible` and `Aligned Bible` subjects arrive here, as DCS publishes both
+ * with this flavor.
  */
 async function getSbBibleData(catalogEntry, books, options) {
-  return {
-    flavorType: catalogEntry.flavor_type,
-    flavor: catalogEntry.flavor,
-    subject: catalogEntry.subject,
-    ingredients: catalogEntry.ingredients.map((i) => i.identifier),
-    title: catalogEntry.title,
-    books,
-    options,
-  };
+  return await extractRcAlignedBibleData(catalogEntry, books, options);
 }
 
 /**
