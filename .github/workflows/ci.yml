@@ -104,7 +104,7 @@ jobs:
             console.error('exports map must resolve to dist/index.esm.js');
             process.exit(1);
           }
-          const m = await import(spec);
+          const m = await import(href);
           const missing = required.filter((k) => m[k] === undefined);
           if (missing.length) {
             console.error('missing exports: ' + missing.join(', '));
