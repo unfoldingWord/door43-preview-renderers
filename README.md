@@ -160,7 +160,7 @@ The shape depends on `type` (`usfm`, `tsv`, `obs`, `ta`, `tw`); TSV resources ca
 Stage 3. Renders subject-specific HTML **sections** from ResourceData. Pure and synchronous, no network.
 
 - `options.renderOptions`: renderer-specific options (e.g. `showChaptersInToc`, `editorMode`, `includeRawUsfmView`, `resolution`, `layout`)
-- `options.books`: for the USFM subjects, an array of ids selects and orders the books to render (the TSV, OBS and manual renderers render every book in the data, in catalog `sort` order); the object form `{ id: range }` applies per-book reference ranges (TSV and USFM) without dropping other books
+- `options.books`: for the USFM subjects (Aligned Bible, Bible, Greek NT, Hebrew OT) the listed ids — array entries or object keys — select and order the books rendered, and unlisted books are omitted (`resourceData.requestedBooks` takes precedence when set); the TSV, OBS and manual renderers render every book in the data in catalog `sort` order. Object-form values add per-book reference ranges (TSV and USFM); `'*'` keeps a book whole
 
 Supported subjects:
 

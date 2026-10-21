@@ -66,7 +66,7 @@ console.log(ntBooks.length); // 27
 
 ## requiredSubjectsMap
 
-Maps catalog entry subjects to their required supplementary subjects. This is what `getResourceData()` uses to filter the Book Package blueprint from `getAllCatalogEntries()` down to the dependencies a subject actually needs.
+Maps catalog entry subjects to their required supplementary subjects. `getResourceData()` applies it to the `/catalog/bp/` entries through `filterCatalogEntries(catalogEntries, { subject, books })` (exported, with `selectAlignedBibles()`), which also keeps at most two Aligned Bibles and drops the original-language Bible of a testament the requested books do not touch.
 
 ### Structure
 

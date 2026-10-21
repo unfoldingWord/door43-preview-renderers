@@ -57,6 +57,16 @@ catalog entry object, or an existing `resourceData` (returned unchanged).
 
 ---
 
+### Catalog selection helpers
+
+The rules `getResourceData()` applies to a book package before fetching extras are exported as pure functions, so a caller can compute the same set from a `CatalogSet` (door43-preview-app derives its cache identity from it):
+
+| Function | Description |
+|---|---|
+| `filterCatalogEntries(catalogEntries, { subject?, books? })` | Keeps the main entry (`[0]`) plus the entries whose subject `requiredSubjectsMap[subject]` lists, at most two Aligned Bibles (via `selectAlignedBibles`), and — when `books` is given — only the original-language Bible of a testament the books belong to. Returns `[main, ...alignedBibles, ...others]`: the Aligned Bible pair in preference order (literal first, then simplified), the remaining entries in blueprint order. |
+| `selectAlignedBibles(entries)` | At most two Aligned Bibles, literal (`ult`/`glt`) first and simplified (`ust`/`gst`) second when present, else the first two in blueprint order. Non-object entries are ignored. |
+| `testamentOf(bookId)` | `'old'`, `'new'`, or `undefined`. |
+
 ## `renderHtmlData(resourceData, options?)`
 
 Pure, synchronous. Turns parsed `resourceData` into reusable HTML **sections**.
@@ -66,9 +76,9 @@ resource data.
 | Option | Type | Default | Status | Description |
 |---|---|---|---|---|
 | `renderOptions` | object | `{}` | ✅ | Subject-specific knobs passed to the renderer (see below). |
-| `books` | string[] **or** `{ id: range }` | `[]` | ✅ | Array form: for the USFM subjects (Aligned Bible, Bible, Greek NT, Hebrew OT) selects and orders the books to render; the TSV, OBS and manual renderers render every book in the data, in catalog `sort` order. Object form: additionally applies a per-book **reference range** (the value) — TSV and USFM — without dropping the other books. |
+| `books` | string[] **or** `{ id: range }` | `[]` | ✅ | **USFM subjects** (Aligned Bible, Bible, Greek NT, Hebrew OT): the ids — array entries, or the object's keys — select and order the books rendered; a book in the data but not listed is **omitted**. `resourceData.requestedBooks`, when a caller sets it, takes precedence over this option. **TSV, OBS and manual subjects**: every book in the data is rendered, in catalog `sort` order, whatever is listed. Object form values add a per-book **reference range** (TSV and USFM); `'*'` or `true` keeps that book whole. |
 
-**`books` object form** (ranges) — ✅ active for TSV and USFM resources (narrows the listed books; others render whole):
+**`books` object form** (ranges) — ✅ active for TSV and USFM resources. For TSV the listed books are narrowed and the rest render whole; for USFM the keys are also the selection, so list every book you want (`'*'` for a whole one):
 
 ```js
 renderHtmlData(resourceData, {

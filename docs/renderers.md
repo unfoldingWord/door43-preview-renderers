@@ -17,12 +17,14 @@ renderHtmlData(resourceData, options?)
 - **resourceData** (object): output of `getResourceData()`
 - **options** (object, optional):
   - **renderOptions** (object): subject-specific knobs, passed straight to the renderer
-  - **books** (array | object): for the USFM subjects (Aligned Bible, Bible,
-    Greek New Testament, Hebrew Old Testament) the array selects and orders the
-    books to render; the TSV, OBS and manual renderers always render every book
-    in the data, in catalog `sort` order. The object form `{ tit: '1:1-2:5' }`
-    applies a per-book **reference range** (TSV and USFM) without dropping the
-    other books.
+  - **books** (array | object): for the USFM subjects (Aligned Bible, Bible, Greek New Testament, Hebrew Old Testament)
+    the listed ids — array entries or object keys — select and order the books
+    rendered, and a book in the data but not listed is omitted
+    (`resourceData.requestedBooks` takes precedence when a caller sets it); the
+    TSV, OBS and manual renderers always render every book in the data, in
+    catalog `sort` order. Object-form values add a per-book **reference range**
+    (TSV and USFM): `{ tit: '1:1-2:5', phm: '*' }` renders Titus 1:1–2:5 and all
+    of Philemon — and, for a USFM resource, nothing else.
 
 See [Rendering options](./options.md) for every option by subject.
 
@@ -95,8 +97,8 @@ const { sections } = renderTranslationNotesHtml(resourceData, { showChaptersInTo
 ```
 
 Going through `renderHtmlData()` is preferable: it applies the `books` selection
-(USFM subjects), the reference ranges, and the anchor prefix, and promotes the
-identity fields.
+(USFM subjects) and the reference ranges, rewrites the anchor prefix, and promotes
+the identity fields.
 
 ## Shared renderer helpers (`src/renderers/`)
 

@@ -9,7 +9,7 @@ import { extractRcTwData } from './twHelpers.js';
 import { extractRcTaData } from './taHelpers.js';
 import { extractRcAlignedBibleData } from './rcAlignedBibleHelpers.js';
 import { extractTsBibleData } from './tsBibleHelpers.js';
-import { requiredSubjectsMap } from './constants.js';
+import { filterCatalogEntries } from './catalogSelection.js';
 import { getAllCatalogEntries } from './getAllCatalogEntries.js';
 import axios from 'axios';
 
@@ -273,39 +273,15 @@ async function getRcTranslationAcademyData(catalogEntry, options) {
 }
 
 /**
- * Select at most 2 Aligned Bible entries from the blueprint results.
- *
- * Preference:
- *  - One "literal" Bible: abbreviation ult or glt
- *  - One "simplified" Bible: abbreviation ust or gst
- *  - If neither preferred abbreviation is found, use the first (and optionally second) Aligned Bible
- *
- * @param {Array} entries - Aligned Bible catalog entries from the blueprint
- * @returns {Array} At most 2 selected entries
- */
-function selectAlignedBibles(entries) {
-  if (entries.length <= 2) return entries;
-
-  const literal = entries.find((e) => ['ult', 'glt'].includes(e.abbreviation));
-  const simplified = entries.find((e) => ['ust', 'gst'].includes(e.abbreviation));
-
-  if (literal && simplified) return [literal, simplified];
-  if (literal) return [literal, entries.find((e) => e !== literal) || literal];
-  if (simplified) return [entries.find((e) => e !== simplified) || simplified, simplified];
-
-  // No preferred abbreviations found — use first two
-  return entries.slice(0, 2);
-}
-
-/**
  * Fetch and filter blueprint catalog entries to only include resources
  * that the given subject actually needs (per requiredSubjectsMap).
  *
  * The /catalog/bp/ endpoint is the source of truth for which resources
  * (and specific versions) are available for a book package. This function
  * filters those entries to the subjects the main resource actually needs
- * for rendering, and applies Aligned Bible selection logic (at most 2,
- * preferring ult/glt + ust/gst).
+ * for rendering, applies Aligned Bible selection logic (at most 2,
+ * preferring ult/glt + ust/gst), and drops the original-language Bible of a
+ * testament the requested books do not touch — see filterCatalogEntries().
  *
  * When options.isExtra is set, skips the blueprint call entirely — extras should
  * not recursively fetch their own dependencies. When options.preEntries is set
@@ -322,33 +298,9 @@ async function getFilteredCatalogEntries(catalogEntry, books, options) {
   const catalogEntries =
     options.preEntries || (await getAllCatalogEntries(catalogEntry, { ...options, books })).catalogEntries;
 
-  const requiredSubjects = requiredSubjectsMap[catalogEntry.subject];
-  if (!requiredSubjects || requiredSubjects.length === 0) {
-    return catalogEntries;
-  }
-
-  // Separate Aligned Bible entries for special selection logic
-  const alignedBibleEntries = [];
-  const otherEntries = [];
-
-  for (let i = 1; i < catalogEntries.length; i++) {
-    const entry = catalogEntries[i];
-    if (!requiredSubjects.includes(entry.subject)) {
-      continue; // Subject not needed by this resource — skip
-    }
-    if (entry.subject === 'Aligned Bible') {
-      alignedBibleEntries.push(entry);
-    } else {
-      otherEntries.push(entry);
-    }
-  }
-
-  // Select at most 2 Aligned Bibles, preferring ult/glt + ust/gst
-  const selectedBibles = requiredSubjects.includes('Aligned Bible')
-    ? selectAlignedBibles(alignedBibleEntries)
-    : [];
-
-  return [catalogEntries[0], ...selectedBibles, ...otherEntries];
+  // The selection rules live in catalogSelection.js (exported, so a caller can
+  // derive the same set from a CatalogSet without re-implementing them).
+  return filterCatalogEntries(catalogEntries, { subject: catalogEntry.subject, books });
 }
 
 /**

@@ -36,13 +36,9 @@ holds (see `renderHtmlData()` for ordering).
 
 The pure filtering `getResourceData()` applies to a blueprint is exported, so a
 caller can compute the same set (for a cache key, for instance) without fetching:
-
-- `filterCatalogEntries(catalogEntries, { subject?, books? })` — main entry first,
-  only the subjects in `requiredSubjectsMap`, at most two Aligned Bibles (literal
-  then simplified), the original-language Bible for the books' testament when
-  every book is known
-- `selectAlignedBibles(entries)` — the Aligned Bible pair rule on its own
-- `testamentOf(bookId)` — `'old'`, `'new'`, or `undefined`
+`filterCatalogEntries(catalogEntries, { subject?, books? })`,
+`selectAlignedBibles(entries)` and `testamentOf(bookId)`. Their rules are in the
+[options reference](./options.md#catalog-selection-helpers).
 
 ## Returns
 
