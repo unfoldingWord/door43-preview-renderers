@@ -57,6 +57,8 @@ $RECYCLE.BIN/
 # VSCode
 .history
 
-# CLI output dumps (node src/cli.js … --output tmp/x.json) and agent worktrees
-tmp/
+# CLI output dumps (node src/cli.js … --output tmp/x.json, or a root file.json)
+# and agent worktrees. Rooted so a tmp/ inside src/ or docs/ is not hidden.
+/tmp/
+/file.json
 .claude/worktrees/
