@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { removeAlignments } from '../usfm/removeAlignments.js';
+import { removeAlignments, removeMilestonesAndWordMarkers } from '../usfm/removeAlignments.js';
 
 /**
  * removeAlignments() was inlined from usfm-alignment-remover 0.1.6 (issue #45).
@@ -75,11 +75,60 @@ describe('removeAlignments — hand-written cases', () => {
     expect(removeAlignments(usfm)).toBe('\\id TIT\n\n\\c 1\n\\s5\n\\p\n\\v 1 Hello\n');
   });
 
-  test('does not mutate the caller’s parsed structures between calls', () => {
+  test('gives the same output on repeated calls', () => {
     const usfm = `\\id TIT\n\\c 1\n\\p\n\\v 1 ${ZS('Παῦλος')}${W('Paul')}${ZE}.\n`;
     const first = removeAlignments(usfm);
     const second = removeAlignments(usfm);
     expect(second).toBe(first);
     expect(first).toBe('\\id TIT\n\n\\c 1\n\\p\n\\v 1 Paul.\n');
+  });
+
+  test('does not mutate the verse objects it is given (nested children are copied)', () => {
+    const verseObjects = [
+      { type: 'word', text: 'Paul' },
+      {
+        tag: 'add',
+        type: 'character',
+        endTag: 'add*',
+        children: [
+          { type: 'word', text: 'a' },
+          { type: 'milestone', tag: 'zaln', children: [{ type: 'word', text: 'servant' }] },
+        ],
+      },
+    ];
+    const before = JSON.parse(JSON.stringify(verseObjects));
+    const { verseObjects: out } = removeMilestonesAndWordMarkers({ verseObjects });
+    expect(verseObjects).toEqual(before);
+    expect(out[1].children).toEqual([
+      { type: 'text', text: 'a' },
+      { type: 'text', text: ' servant' },
+    ]);
+    expect(out[1]).not.toBe(verseObjects[1]);
+  });
+});
+
+/**
+ * Node 16 (still allowed by `engines`) has no global `structuredClone`; the
+ * nested-children branch must not depend on it. Expected strings were checked
+ * against usfm-alignment-remover 0.1.6 with `structuredClone` deleted.
+ */
+describe('removeAlignments — nested character formatting without structuredClone (Node 16)', () => {
+  let saved;
+  beforeEach(() => {
+    saved = globalThis.structuredClone;
+    delete globalThis.structuredClone;
+  });
+  afterEach(() => {
+    globalThis.structuredClone = saved;
+  });
+
+  test('keeps \\bd with nested \\+it', () => {
+    const usfm = '\\id TIT\n\\c 1\n\\p\n\\v 1 \\bd bold \\+it italic\\+it*\\bd* end.\n';
+    expect(removeAlignments(usfm)).toBe('\\id TIT\n\n\\c 1\n\\p\n\\v 1 \\bd bold \\+it italic\\+it*\\bd* end.\n');
+  });
+
+  test('strips word markers inside \\add', () => {
+    const usfm = `\\id TIT\n\\c 1\n\\p\n\\v 1 ${W('Paul')} \\add ${W('a')} ${W('servant')}\\add* ${W('of')} ${W('God')}.\n`;
+    expect(removeAlignments(usfm)).toBe('\\id TIT\n\n\\c 1\n\\p\n\\v 1 Paul \\add a servant\\add* of God.\n');
   });
 });

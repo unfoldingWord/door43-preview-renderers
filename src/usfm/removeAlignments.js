@@ -18,6 +18,23 @@ import usfmjs from 'usfm-js';
  */
 
 /**
+ * Deep-copy a usfm-js verse object (plain objects, arrays and primitives only).
+ * Stands in for upstream's `lodash.clonedeep`; `structuredClone` is not used
+ * because it is missing on Node 16, which `engines` still supports.
+ * @param {*} value
+ * @returns {*}
+ */
+function clonePlain(value) {
+  if (Array.isArray(value)) return value.map(clonePlain);
+  if (value && typeof value === 'object') {
+    const out = {};
+    for (const key of Object.keys(value)) out[key] = clonePlain(value[key]);
+    return out;
+  }
+  return value;
+}
+
+/**
  * Dive into a milestone to extract its words and text.
  * @param {Object} verseObject - Milestone verse object
  * @returns {string} Text content of the milestone
@@ -92,7 +109,7 @@ function replaceWordsAndMilestones(verseObject, wordSpacing) {
 
     if (verseObject.children) {
       // Handle nested children on a copy so the parsed tree is left untouched.
-      const copy = structuredClone(verseObject);
+      const copy = clonePlain(verseObject);
       let childSpacing = '';
       const length = verseObject.children.length;
 
