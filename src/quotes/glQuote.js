@@ -143,7 +143,8 @@ function isAlignedTo(targetToken, matchedSource, source, cache) {
         a.content === s.norm &&
         s.chapter === targetToken.chapter &&
         versesOverlap(s.verse, targetToken.verse) &&
-        a.occurrence === sourceOccurrenceIn(source, s, targetToken.chapter, targetToken.verse, cache)
+        a.occurrence ===
+          sourceOccurrenceIn(source, s, targetToken.chapter, targetToken.verse, cache)
       ) {
         return true;
       }
