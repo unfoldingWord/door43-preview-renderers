@@ -30,8 +30,16 @@ export { extractVerseObjectsText };
  * chapters maps chapter -> verse -> plain verse text. The data layer hands us raw
  * (alignment-stripped) USFM strings per book, so we parse them with usfm-js here.
  * Greek/Hebrew originals are excluded — they are quote-conversion sources, not GL scripture.
+ *
+ * ULT/UST mark supplied words with {curly braces}. The Aligned Bible renderer
+ * hides those unless `editorMode`; the columns do the same by dropping the
+ * braces from the text, keeping them only when `editorMode` is set.
+ *
+ * @param {Object} extras - ResourceData extras
+ * @param {Object} [options]
+ * @param {boolean} [options.editorMode=false] - Keep the implied-word braces
  */
-export function parseScriptureExtras(extras) {
+export function parseScriptureExtras(extras, { editorMode = false } = {}) {
   const parsed = {};
   if (!extras) return parsed;
 
@@ -49,7 +57,8 @@ export function parseScriptureExtras(extras) {
           out[ch] = {};
           for (const [v, verseData] of Object.entries(verses)) {
             if (v === 'front') continue;
-            const text = extractVerseObjectsText(verseData?.verseObjects).replace(/\s+/g, ' ').trim();
+            const raw = extractVerseObjectsText(verseData?.verseObjects).replace(/\s+/g, ' ').trim();
+            const text = editorMode ? raw : raw.replace(/[{}]/g, '').replace(/\s{2,}/g, ' ').trim();
             if (text) out[ch][v] = text;
           }
         }

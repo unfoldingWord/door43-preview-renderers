@@ -610,7 +610,9 @@ export function renderTranslationWordsLinksHtml(resourceData, options = {}) {
     isObs,
     bookIds,
     bibles: isObs ? [] : getBibleColumns(extras),
-    parsedScriptureExtras: isObs ? {} : parseScriptureExtras(extras),
+    parsedScriptureExtras: isObs
+      ? {}
+      : parseScriptureExtras(extras, { editorMode: options.editorMode === true }),
     obsData: isObs ? findObsExtra(extras) : null,
     twResource: extras.tw,
     extras,
