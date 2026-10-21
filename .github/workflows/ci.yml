@@ -69,6 +69,7 @@ jobs:
             'copyrightCss',
             'coverCss',
             'fetchResource',
+            'filterCatalogEntries',
             'generateCopyrightAndLicenseHtml',
             'generatePdf',
             'generatePdfFromAssembled',
@@ -89,13 +90,16 @@ jobs:
             'renderTranslationAcademyHtml',
             'renderTranslationNotesHtml',
             'renderTranslationWordsHtml',
+            'renderTranslationWordsLinksHtml',
             'renderTsvQuestionsHtml',
             'requiredSubjectsMap',
             'resolveComposeOptions',
             'resolvePageSize',
             'runningHeaderModeFor',
+            'selectAlignedBibles',
             'subjectIdentifierMap',
-            'supportsBodyColumns'
+            'supportsBodyColumns',
+            'testamentOf'
           ];
           const spec = '@unfoldingword/door43-preview-renderers';
           const href = import.meta.resolve(spec);

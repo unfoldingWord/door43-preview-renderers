@@ -2,7 +2,7 @@
 
 Welcome to the **Door43 Preview Renderers** documentation.
 
-This is a headless JavaScript library (no React dependency) for fetching unfoldingWord Bible translation resources from the Door43 Content Service (DCS) and turning them into HTML and print-ready PDF. It powers the preview and print features of the Door43 Preview App, but it can be used on its own in the browser or in Node.
+This is a headless JavaScript library for fetching unfoldingWord Bible translation resources — the rendering functions do not use React (only the styleguide demos do; the `react` peer declarations in `package.json` are a leftover tracked in [#32](https://github.com/unfoldingWord/door43-preview-renderers/issues/32)) — from the Door43 Content Service (DCS) and turning them into HTML and print-ready PDF. It powers the preview and print features of the Door43 Preview App, but it can be used on its own in the browser or in Node.
 
 ## What is Door43?
 
@@ -14,7 +14,7 @@ The library is a chain of stages. Each stage takes the previous stage's output, 
 
 ```
 getAllCatalogEntries(source, opts)   → CatalogSet      (network)
-getResourceData(input, opts)         → ResourceData    (network; or cached/local)
+getResourceData(input, opts)         → ResourceData    (network; or a cached ResourceData passed through)
 renderHtmlData(resourceData, opts)   → HtmlData        (pure, no I/O)
 renderHTML(htmlData, opts)           → HTML string     (media: 'screen' | 'print')
 renderPdf(htmlData, opts)            → PDF             (WeasyPrint)

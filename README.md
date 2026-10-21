@@ -1,6 +1,6 @@
 # Door43 Preview Renderers
 
-A headless JavaScript library for fetching unfoldingWord Bible translation resources from the Door43 Content Service (DCS) and rendering them to HTML and print-ready PDF. No React dependency; runs in Node and in the browser.
+A headless JavaScript library for fetching unfoldingWord Bible translation resources from the Door43 Content Service (DCS) and rendering them to HTML and print-ready PDF. The rendering functions do not use React (it is only used by the styleguide demos; the `react` / `react-dom` peer declarations in `package.json` are a leftover tracked in [#32](https://github.com/unfoldingWord/door43-preview-renderers/issues/32)); runs in Node and in the browser.
 
 ## Features
 
@@ -14,11 +14,11 @@ A headless JavaScript library for fetching unfoldingWord Bible translation resou
 
 ## Pipeline at a glance
 
-The renderer is a **composable chain**. Each stage takes the previous stage's output, so you can run the whole thing or resume from any cached or local intermediate:
+The renderer is a **composable chain**. Each stage takes the previous stage's output, so you can run the whole thing or resume from any cached intermediate (a local-directory source, `getResourceDataFromDirectory`, is still planned):
 
 ```
 getAllCatalogEntries(source, opts)   → CatalogSet      (network)
-getResourceData(input, opts)         → ResourceData    (network; or cached/local)
+getResourceData(input, opts)         → ResourceData    (network; or a cached ResourceData passed through)
 renderHtmlData(resourceData, opts)   → HtmlData        (pure, no I/O)
 renderHTML(htmlData, opts)           → HTML string     (media: 'screen' | 'print')
 renderPdf(htmlData, opts)            → PDF             (WeasyPrint)
@@ -111,7 +111,7 @@ door43-renderers generatePdf --owner unfoldingWord --repo en_tn --ref v91 --book
 door43-renderers getAllCatalogEntries --owner BSOJ --repo ar_twl --ref v5 --book 1jn --dcs-api-url https://qa.door43.org/api/v1
 ```
 
-Commands: `getAllCatalogEntries`, `getResourceData`, `renderHtml`, `assemblePrint`, `generatePdf`. Options: `--owner`, `--repo`, `--ref` (all required), `--book`, `--dcs-api-url`, `--output`, `--quiet`, `--page-size`, `--columns`, `--pdf-service-url`. See [`docs/cli.md`](docs/cli.md).
+Commands: `getAllCatalogEntries`, `getResourceData`, `renderHtml`, `assemblePrint`, `generatePdf`. Options: `--owner`, `--repo`, `--ref` (all required), `--book`, `--dcs-api-url`, `--output`, `--quiet`, `--page-size` (`A4` → `A4_PORTRAIT`, `A5` → `A5_PORTRAIT`, `USL` → `US_LETTER_PORTRAIT`, `TRADE`, `CQ` → `CROWN_QUARTO`), `--columns`, `--pdf-service-url`. See [`docs/cli.md`](docs/cli.md).
 
 ## API reference
 
@@ -168,7 +168,7 @@ Supported subjects:
 - `Translation Academy`, `Translation Words`
 - `Open Bible Stories`
 - `TSV Translation Notes` / `TSV OBS Translation Notes`
-- `TSV Translation Questions` / `Study Questions` / `Study Notes` (+ OBS variants)
+- `TSV Translation Questions` / `TSV Study Questions` / `TSV Study Notes` (+ their `TSV OBS …` variants)
 - `TSV Translation Words Links` (by verse, or as a glossary with `renderOptions.layout: 'glossary'`); `TSV OBS Translation Words Links` is routed here but its data extraction is still a stub ([#21](https://github.com/unfoldingWord/door43-preview-renderers/issues/21))
 
 Returns an **HtmlData** package:

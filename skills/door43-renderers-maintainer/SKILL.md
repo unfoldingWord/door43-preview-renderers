@@ -11,7 +11,7 @@ Use this skill when implementing or extending rendering logic for subjects (Alig
 
 ```
 getAllCatalogEntries(source, opts)   → CatalogSet      (network)
-getResourceData(input, opts)         → ResourceData    (network; or cached/local)
+getResourceData(input, opts)         → ResourceData    (network; or a cached ResourceData passed through)
 renderHtmlData(resourceData, opts)   → HtmlData        (pure, no I/O)
 renderHTML(htmlData, opts)           → HTML string     (media: 'screen' | 'print')
 renderPdf(htmlData, opts)            → PDF             (WeasyPrint)

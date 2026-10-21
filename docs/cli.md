@@ -38,9 +38,9 @@ node src/cli.js getResourceData --owner unfoldingWord --repo en_tn --ref v91 --b
 - `--dcs-api-url <url>` — DCS API base (default `https://git.door43.org/api/v1`)
 - `--output <file>` — write to a file instead of stdout
 - `--quiet`, `-q` — no progress logging; JSON only, so the output pipes cleanly into `jq`
-- `--page-size <size>` — `assemblePrint` / `generatePdf`: `A4` (default), `A5`, `USL`, `TRADE`, `CQ`
+- `--page-size <size>` — `assemblePrint` / `generatePdf`: a short key mapped to a `PAGE_SIZES` key — `A4` → `A4_PORTRAIT` (default), `A5` → `A5_PORTRAIT`, `USL` → `US_LETTER_PORTRAIT`, `TRADE` → `TRADE`, `CQ` → `CROWN_QUARTO`; anything else falls back to `A4_PORTRAIT`
 - `--columns <n>` — `assemblePrint` / `generatePdf`: body column count (continuous-flow bodies only; see [options](./options.md))
-- `--pdf-service-url <url>` — `generatePdf`: POST the assembled HTML to a hosted WeasyPrint service instead of running the local binary
+- `--pdf-service-url <url>` — `generatePdf`: POST the assembled HTML to a hosted WeasyPrint service instead of running the local binary. The service receives the complete document, text and all, so use only a host you trust
 
 ## Examples
 

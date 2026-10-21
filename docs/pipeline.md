@@ -1,11 +1,13 @@
 # Full Pipeline
 
 The renderer is a **composable chain** — each stage takes the previous stage's
-output, so you can run the whole thing or resume from any cached/local intermediate:
+output, so you can run the whole thing or resume from any cached intermediate (reading
+checked-out repositories from disk, `getResourceDataFromDirectory`, is still planned —
+see [Rendering Options](./options.md)):
 
 ```
 getAllCatalogEntries(source, opts)   → CatalogSet      (network)
-getResourceData(input, opts)         → ResourceData    (network; or cached/local)
+getResourceData(input, opts)         → ResourceData    (network; or a cached ResourceData passed through)
 renderHtmlData(resourceData, opts)   → HtmlData        (pure, no I/O)
 renderHTML(htmlData, opts)           → HTML string     (media: 'screen' | 'print')
 renderPdf(htmlData, opts)            → PDF             (WeasyPrint)
