@@ -20,6 +20,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
@@ -45,4 +47,55 @@ jobs:
         run: pnpm build
 
       - name: Verify the built entry exports the public API
-        run: node -e "import('./dist/index.esm.js').then(m => { const n = Object.keys(m).length; if (n < 30) throw new Error('only ' + n + ' exports'); console.log(n + ' exports OK'); })"
+        # 1.5.0 shipped a CJS bundle under `type: module`, so a bare import
+        # returned no exports at all. Check the names, not a count.
+        run: |
+          node --input-type=module <<'EOF'
+          const required = [
+            'BibleBookData',
+            'PAGE_SIZES',
+            'alignedBibleSubjects',
+            'assemblePrintDocument',
+            'buildAppendicesToc',
+            'buildCoverPage',
+            'convertMarkdown',
+            'convertNoteFromMD2HTML',
+            'copyrightCss',
+            'coverCss',
+            'fetchResource',
+            'generateCopyrightAndLicenseHtml',
+            'generatePdf',
+            'generatePdfFromAssembled',
+            'generatePdfViaService',
+            'generateTocFromHtml',
+            'generateTocHtml',
+            'getAllCatalogEntries',
+            'getCatalogEntry',
+            'getPrintCss',
+            'getResourceData',
+            'parseBooksOption',
+            'renderAlignedBibleHtml',
+            'renderAppendicesHtml',
+            'renderHTML',
+            'renderHtmlData',
+            'renderObsHtml',
+            'renderPdf',
+            'renderTranslationAcademyHtml',
+            'renderTranslationNotesHtml',
+            'renderTranslationWordsHtml',
+            'renderTsvQuestionsHtml',
+            'requiredSubjectsMap',
+            'resolveComposeOptions',
+            'resolvePageSize',
+            'runningHeaderModeFor',
+            'subjectIdentifierMap',
+            'supportsBodyColumns'
+          ];
+          const m = await import('./dist/index.esm.js');
+          const missing = required.filter((k) => m[k] === undefined);
+          if (missing.length) {
+            console.error('missing exports: ' + missing.join(', '));
+            process.exit(1);
+          }
+          console.log(required.length + ' required exports present');
+          EOF
