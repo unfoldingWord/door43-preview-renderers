@@ -270,6 +270,7 @@ renderHtmlData(resourceData, options?)
 - `Open Bible Stories`
 - `TSV Translation Notes` / `TSV OBS Translation Notes`
 - `TSV Translation Questions` / `Study Questions` / `Study Notes` (+ OBS variants)
+- `TSV Translation Words Links` (by verse, or as a glossary with `renderOptions.layout: 'glossary'`)
 
 #### Returns
 

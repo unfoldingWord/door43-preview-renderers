@@ -18,6 +18,7 @@ import enUltTitResourceData from './en_ult_tit.resourceData.json';
 import enUltTitHtmlData from './en_ult_tit.htmlData.json';
 import enTn3jnHtmlData from './en_tn_3jn.htmlData.json';
 import enObsHtmlData from './en_obs.htmlData.json';
+import enTwlTitHtmlData from './en_twl_tit.htmlData.json';
 
 /** ResourceData fixtures (input to renderHtmlData). */
 export const resourceDataFixtures = [
@@ -29,4 +30,5 @@ export const htmlDataFixtures = [
   { key: 'en_ult_tit', label: 'Aligned Bible — ULT — Titus', data: enUltTitHtmlData },
   { key: 'en_tn_3jn', label: 'Translation Notes — 3 John', data: enTn3jnHtmlData },
   { key: 'en_obs', label: 'Open Bible Stories', data: enObsHtmlData },
+  { key: 'en_twl_tit', label: 'Translation Words Links — Titus (v91)', data: enTwlTitHtmlData },
 ];

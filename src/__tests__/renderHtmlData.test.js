@@ -4,6 +4,7 @@ const renderAlignedBibleHtmlMock = jest.fn();
 const renderTranslationAcademyHtmlMock = jest.fn();
 const renderTranslationWordsHtmlMock = jest.fn();
 const renderObsHtmlMock = jest.fn();
+const renderTranslationWordsLinksHtmlMock = jest.fn();
 
 jest.unstable_mockModule('../renderers/alignedBibleRenderer.js', () => ({
   renderAlignedBibleHtml: renderAlignedBibleHtmlMock,
@@ -19,6 +20,10 @@ jest.unstable_mockModule('../renderers/translationWordsRenderer.js', () => ({
 
 jest.unstable_mockModule('../renderers/obsRenderer.js', () => ({
   renderObsHtml: renderObsHtmlMock,
+}));
+
+jest.unstable_mockModule('../renderers/translationWordsLinksRenderer.js', () => ({
+  renderTranslationWordsLinksHtml: renderTranslationWordsLinksHtmlMock,
 }));
 
 const { renderHtmlData } = await import('../renderHtmlData.js');
@@ -177,6 +182,26 @@ describe('renderHtmlData', () => {
 
     expect(renderObsHtmlMock).toHaveBeenCalledWith(resourceData, { resolution: '360px' });
     expect(result.subject).toBe('Open Bible Stories');
+  });
+
+  test('routes Translation Words Links subjects with render options', () => {
+    const resourceData = {
+      subject: 'TSV Translation Words Links',
+      type: 'tsv',
+      title: 'TWL',
+      abbreviation: 'twl',
+      books: {},
+    };
+    const rendered = { subject: 'TSV Translation Words Links', sections: { body: '<div />' } };
+    renderTranslationWordsLinksHtmlMock.mockReturnValueOnce(rendered);
+
+    const result = renderHtmlData(resourceData, { renderOptions: { layout: 'glossary' } });
+
+    expect(renderTranslationWordsLinksHtmlMock).toHaveBeenCalledWith(resourceData, {
+      layout: 'glossary',
+    });
+    expect(result.subject).toBe('TSV Translation Words Links');
+    expect(result.abbreviation).toBe('twl');
   });
 
   test('throws for unsupported subjects', () => {

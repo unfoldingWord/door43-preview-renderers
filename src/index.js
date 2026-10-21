@@ -22,6 +22,7 @@ export { renderTranslationWordsHtml } from './renderers/translationWordsRenderer
 export { renderObsHtml } from './renderers/obsRenderer.js';
 export { renderTranslationNotesHtml } from './renderers/translationNotesRenderer.js';
 export { renderTsvQuestionsHtml } from './renderers/tsvQuestionsRenderer.js';
+export { renderTranslationWordsLinksHtml } from './renderers/translationWordsLinksRenderer.js';
 export {
   generateCopyrightAndLicenseHtml,
   copyrightCss,

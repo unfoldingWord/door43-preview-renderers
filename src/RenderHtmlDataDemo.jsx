@@ -6,7 +6,8 @@ import { renderHTML } from './renderHTML';
 /**
  * Example resources covering every supported subject + metadata type, so the
  * styleguide exercises each route in renderHtmlData(). Each entry is
- * [label, owner, repo, ref, books].
+ * [label, owner, repo, ref, books, renderOptions?] — the optional sixth entry
+ * fills the render options box for subjects whose layout is an option.
  */
 const EXAMPLE_GROUPS = [
   {
@@ -33,6 +34,15 @@ const EXAMPLE_GROUPS = [
       ['Translation Questions — Romans (v89)', 'unfoldingWord', 'en_tq', 'v89', 'rom'],
       ['Study Notes — Titus', 'unfoldingWord', 'en_sn', 'master', 'tit'],
       ['Study Questions — Titus', 'unfoldingWord', 'en_sq', 'master', 'tit'],
+      ['Translation Words Links — Titus, by verse (v91)', 'unfoldingWord', 'en_twl', 'v91', 'tit'],
+      [
+        'Translation Words Links — Titus, glossary (v91)',
+        'unfoldingWord',
+        'en_twl',
+        'v91',
+        'tit',
+        { layout: 'glossary' },
+      ],
     ],
   },
   {
@@ -54,6 +64,8 @@ const EXAMPLE_GROUPS = [
   },
 ];
 
+const DEFAULT_RENDER_OPTIONS = { includeRawUsfmView: false, editorMode: false };
+
 /**
  * Demo component for renderHtmlData function.
  */
@@ -72,14 +84,7 @@ export default function RenderHtmlDataDemo() {
     )
   );
   const [renderOptions, setRenderOptions] = useState(
-    JSON.stringify(
-      {
-        includeRawUsfmView: false,
-        editorMode: false,
-      },
-      null,
-      2
-    )
+    JSON.stringify(DEFAULT_RENDER_OPTIONS, null, 2)
   );
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -124,11 +129,14 @@ export default function RenderHtmlDataDemo() {
     return fullHtml;
   }, [result]);
 
-  const loadExample = (nextOwner, nextRepo, nextRef, nextBooksInput) => {
+  const loadExample = (nextOwner, nextRepo, nextRef, nextBooksInput, nextRenderOptions) => {
     setOwner(nextOwner);
     setRepo(nextRepo);
     setRef(nextRef);
     setBooksInput(nextBooksInput);
+    // Always reset the box, so an example without options does not inherit the
+    // previous example's (e.g. "by verse" after "glossary").
+    setRenderOptions(JSON.stringify(nextRenderOptions || DEFAULT_RENDER_OPTIONS, null, 2));
   };
 
   const handleSubmit = async (e) => {
@@ -195,11 +203,11 @@ export default function RenderHtmlDataDemo() {
             <div key={group} style={{ marginBottom: '8px' }}>
               <strong style={{ fontSize: '13px' }}>{group}</strong>
               <div style={{ marginTop: '6px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                {examples.map(([label, exOwner, exRepo, exRef, exBooks]) => (
+                {examples.map(([label, exOwner, exRepo, exRef, exBooks, exRenderOptions]) => (
                   <button
                     key={label}
                     type="button"
-                    onClick={() => loadExample(exOwner, exRepo, exRef, exBooks)}
+                    onClick={() => loadExample(exOwner, exRepo, exRef, exBooks, exRenderOptions)}
                     title={`${exOwner}/${exRepo}/${exRef}${exBooks ? ` (${exBooks})` : ''}`}
                     style={{ padding: '6px 10px', cursor: 'pointer' }}
                   >

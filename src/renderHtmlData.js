@@ -4,6 +4,7 @@ import { renderTranslationWordsHtml } from './renderers/translationWordsRenderer
 import { renderObsHtml } from './renderers/obsRenderer.js';
 import { renderTranslationNotesHtml } from './renderers/translationNotesRenderer.js';
 import { renderTsvQuestionsHtml } from './renderers/tsvQuestionsRenderer.js';
+import { renderTranslationWordsLinksHtml } from './renderers/translationWordsLinksRenderer.js';
 import { parseBooksOption } from './renderOptions.js';
 import { alignedBibleSubjects } from './constants.js';
 import { rewriteSectionAnchors } from './renderers/anchors.js';
@@ -15,6 +16,10 @@ const obsSubjects = new Set(['Open Bible Stories']);
 const translationNotesSubjects = new Set([
   'TSV Translation Notes',
   'TSV OBS Translation Notes',
+]);
+const translationWordsLinksSubjects = new Set([
+  'TSV Translation Words Links',
+  'TSV OBS Translation Words Links',
 ]);
 const tsvQuestionsSubjects = new Set([
   'TSV Translation Questions',
@@ -76,6 +81,8 @@ export function renderHtmlData(resourceData, options = {}) {
     rendered = renderTranslationNotesHtml(data, renderOptions);
   } else if (tsvQuestionsSubjects.has(data.subject)) {
     rendered = renderTsvQuestionsHtml(data, renderOptions);
+  } else if (translationWordsLinksSubjects.has(data.subject)) {
+    rendered = renderTranslationWordsLinksHtml(data, renderOptions);
   } else {
     throw new Error(`HTML rendering is not implemented yet for subject \`${data.subject}\`.`);
   }
