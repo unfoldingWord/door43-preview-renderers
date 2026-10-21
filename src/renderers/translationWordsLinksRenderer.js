@@ -206,7 +206,10 @@ table.twl-scripture-cols,
   break-inside: avoid;
 }
 
-/* Glossary layout: each category opens a page; an entry stays whole. */
+/* Glossary layout: each category opens a page. An entry's heading stays with
+   the start of its body, but the body itself may split — a Translation Words
+   article can run longer than a page, and an unbreakable block taller than the
+   page is pushed whole, leaving the previous page short. */
 .twl-category-header {
   break-before: page !important;
 }
@@ -217,9 +220,12 @@ section > .twl-category-header:first-child {
 }
 
 article.twl-term {
-  break-inside: avoid;
   orphans: 2;
   widows: 2;
+}
+
+.twl-term-refs {
+  break-inside: avoid;
 }
 `;
 
