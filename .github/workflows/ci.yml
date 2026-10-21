@@ -48,7 +48,9 @@ jobs:
 
       - name: Verify the built entry exports the public API
         # 1.5.0 shipped a CJS bundle under `type: module`, so a bare import
-        # returned no exports at all. Check the names, not a count.
+        # returned no exports at all. Import the package by name, so the
+        # `exports` map is what resolves (as a consumer sees it), and check the
+        # names, not a count.
         run: |
           node --input-type=module <<'EOF'
           const required = [
@@ -91,7 +93,7 @@ jobs:
             'subjectIdentifierMap',
             'supportsBodyColumns'
           ];
-          const m = await import('./dist/index.esm.js');
+          const m = await import('@unfoldingword/door43-preview-renderers');
           const missing = required.filter((k) => m[k] === undefined);
           if (missing.length) {
             console.error('missing exports: ' + missing.join(', '));
