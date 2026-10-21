@@ -19,6 +19,9 @@ import {
   renderHtmlData,
   renderHTML,
   renderPdf,
+  findResources,
+  resolveRef,
+  resolveResource,
 } from '../dist/index.esm.js';
 
 // Map the CLI's short page-size keys to PAGE_SIZES keys understood by renderHTML/renderPdf.
@@ -65,6 +68,8 @@ function parseArgs(args) {
         parsed.params.pageSize = value;
       } else if (key === 'columns') {
         parsed.params.columns = parseInt(value, 10) || 1;
+      } else if (key === 'stage') {
+        parsed.params.stage = value;
       } else {
         parsed.params[key] = value;
       }
@@ -84,6 +89,7 @@ Usage:
   cli.js <command> [options]
 
 Commands:
+  findResources           List what is published for a language (optionally one subject/owner)
   getAllCatalogEntries    Get all catalog entries for rendering
   getResourceData        Get resource data for a specific book
   renderHtml             Fetch resource data and render to HTML sections (JSON)
@@ -91,9 +97,12 @@ Commands:
   generatePdf            Fetch, render, assemble, and render a PDF via WeasyPrint (requires the weasyprint binary)
 
 Options:
-  --owner <owner>         Repository owner (required)
-  --repo <repo>           Repository name (required)
-  --ref <ref>             Git reference (branch/tag/commit)
+  --owner <owner>         Repository owner (required unless --lang/--subject are given)
+  --repo <repo>           Repository name (required unless --lang/--subject are given)
+  --lang <code>           Language code, e.g. en, es-419 (with --subject: find the publisher)
+  --subject <subject>     Catalog subject, e.g. "TSV Translation Notes"
+  --stage <stage>         Catalog stage for --lang lookups: prod (default), preprod, latest, branch
+  --ref <ref>             Branch, tag or commit; omitted = the latest release
   --book <bookId>         Book ID (e.g., gen, exo, mat, 1ti)
   --dcs-api-url <url>     Custom DCS API URL (optional)
   --output <file>         Output file path (optional, defaults to stdout)
@@ -103,6 +112,16 @@ Options:
   --pdf-service-url <url> generatePdf: use a hosted weasyprint-pdf service instead of the local binary
 
 Examples:
+  # What is published for a language?
+  node src/cli.js findResources --lang es-419
+  node src/cli.js findResources --lang es-419 --subject "TSV Translation Notes" --quiet
+
+  # Render by language + subject: the publisher and release are found for you
+  node src/cli.js renderHtml --lang es-419 --subject "TSV Translation Notes" --book tit --quiet
+
+  # Omit --ref to use the latest release
+  node src/cli.js getResourceData --owner unfoldingWord --repo en_tn --book tit --quiet
+
   # Get catalog entries and output to stdout
   node src/cli.js getAllCatalogEntries --owner unfoldingWord --repo en_tn --ref v80 --book gen
 
@@ -159,9 +178,16 @@ async function main() {
 
   const { command, params, output, quiet } = parseArgs(args);
 
-  // Validate required parameters
-  if (!params.owner || !params.repo) {
-    console.error('Error: --owner and --repo are required');
+  const dcsApiUrl = params.dcsApiUrl || 'https://git.door43.org/api/v1';
+  const byLanguage = !!(params.lang && params.subject);
+
+  if (command === 'findResources') {
+    if (!params.lang) {
+      console.error('Error: findResources needs --lang (and optionally --subject, --owner, --stage)');
+      process.exit(1);
+    }
+  } else if (!byLanguage && (!params.owner || !params.repo)) {
+    console.error('Error: --owner and --repo are required (or --lang with --subject)');
     console.error('Use --help for usage information');
     process.exit(1);
   }
@@ -169,7 +195,51 @@ async function main() {
   try {
     let result;
 
+    // Stage 0: a language + subject names the publisher and release; a
+    // missing --ref means the repo's latest release.
+    if (command !== 'findResources') {
+      const books = params.bookId ? [params.bookId] : [];
+      if (byLanguage) {
+        if (!quiet) console.error(`Finding ${params.subject} for ${params.lang}...`);
+        const found = await resolveResource(
+          { lang: params.lang, subject: params.subject, books, owner: params.owner, stage: params.stage },
+          { dcs_api_url: dcsApiUrl, quiet }
+        );
+        params.owner = found.owner;
+        params.repo = found.repo;
+        params.ref = found.ref;
+        if (!quiet) console.error(`Using ${found.owner}/${found.repo}@${found.ref}`);
+      } else if (!params.ref) {
+        const { ref } = await resolveRef(
+          { owner: params.owner, repo: params.repo },
+          { dcs_api_url: dcsApiUrl, quiet }
+        );
+        params.ref = ref;
+        if (!quiet) console.error(`Using ${params.owner}/${params.repo}@${ref}`);
+      }
+    }
+
     switch (command) {
+      case 'findResources': {
+        if (!quiet) console.error(`Searching the catalog for ${params.lang}...`);
+        const entries = await findResources(
+          { lang: params.lang, subject: params.subject, owner: params.owner, stage: params.stage },
+          { dcs_api_url: dcsApiUrl, quiet }
+        );
+        result = entries.map((e) => ({
+          owner: e.owner,
+          repo: e.name,
+          ref: e.branch_or_tag_name,
+          subject: e.subject,
+          title: e.title,
+          released: e.released,
+          language_is_gl: e.language_is_gl,
+          language_direction: e.language_direction,
+        }));
+        break;
+      }
+
+
       case 'getAllCatalogEntries': {
         if (!quiet) {
           console.error(`Fetching catalog entries for ${params.owner}/${params.repo}...`);
@@ -269,7 +339,7 @@ async function main() {
       default:
         console.error(`Error: Unknown command "${command}"`);
         console.error(
-          'Valid commands: getAllCatalogEntries, getResourceData, renderHtml, assemblePrint, generatePdf'
+          'Valid commands: findResources, getAllCatalogEntries, getResourceData, renderHtml, assemblePrint, generatePdf'
         );
         process.exit(1);
     }
