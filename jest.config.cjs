@@ -1,15 +1,15 @@
 module.exports = {
   testEnvironment: 'node',
   testMatch: ['**/__tests__/**/*.js', '**/?(*.)+(spec|test).js'],
+  // Every source file counts, including the data extractors (tsvHelpers,
+  // obsHelpers, taHelpers, …), so the threshold below reflects the whole library.
   collectCoverageFrom: [
-    'src/getAllCatalogEntries.js',
-    'src/getResourceData.js',
-    'src/renderHtmlData.js',
-    'src/dcsApi.js',
-    'src/api/client.js',
-    'src/index.js',
-    'src/renderers/**/*.js',
+    'src/**/*.js',
+    '!src/**/__tests__/**',
+    '!src/cli.js',
+    '!src/fixtures/**',
     '!src/renderers/sofria2html.js',
+    '!src/assets/**',
   ],
   moduleNameMapper: {
     '^(\\.{1,2}/.*)\\.js$': '$1',
