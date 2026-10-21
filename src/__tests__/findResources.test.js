@@ -146,6 +146,17 @@ describe('resolveRef', () => {
       isRelease: false,
     });
   });
+
+  test('an outage on the release lookup is an error, not the default branch', async () => {
+    const outage = Object.assign(new Error('503'), { response: { status: 503 } });
+    axiosGetMock.mockRejectedValueOnce(outage);
+    await expect(resolveRef({ owner: 'x', repo: 'w' }, { dcs_api_url: API })).rejects.toThrow('503');
+    expect(axiosGetMock).toHaveBeenCalledTimes(1); // never reached the default-branch lookup
+
+    const notFound = Object.assign(new Error('404'), { response: { status: 404 } });
+    axiosGetMock.mockRejectedValueOnce(notFound).mockRejectedValueOnce(outage);
+    await expect(resolveRef({ owner: 'x', repo: 'v' }, { dcs_api_url: API })).rejects.toThrow('503');
+  });
 });
 
 describe('resolveResource', () => {
@@ -223,6 +234,37 @@ describe('resolveResource', () => {
     expect(found.owner).toBe('es-419_gl');
   });
 
+  test('an outage on a blueprint aborts instead of serving the next publisher', async () => {
+    serve({
+      [`${API}/catalog/search?`]: { ok: true, data: [TN_OBT, TN_GL] },
+      [`${API}/catalog/bp/es-419_obt/es-419_tn/v0.0.5`]: Object.assign(new Error('500'), {
+        response: { status: 500 },
+      }),
+      [`${API}/catalog/bp/es-419_gl/es-419_tn/v66`]: { ok: true, data: blueprint(TN_GL) },
+    });
+    await expect(
+      resolveResource({ lang: 'es-419', subject: 'TSV Translation Notes', books: ['tit'] }, { dcs_api_url: API })
+    ).rejects.toThrow('500');
+  });
+
+  test('books from both testaments are checked against the unscoped package', async () => {
+    serve({
+      [`${API}/catalog/search?`]: { ok: true, data: [TN_GL] },
+      [`${API}/catalog/bp/es-419_gl/es-419_tn/v66?book=`]: {
+        ok: true,
+        data: blueprint(TN_GL, { withNT: false }),
+      },
+      [`${API}/catalog/bp/es-419_gl/es-419_tn/v66`]: { ok: true, data: blueprint(TN_GL) },
+    });
+    const found = await resolveResource(
+      { lang: 'es-419', subject: 'TSV Translation Notes', books: ['gen', 'tit'] },
+      { dcs_api_url: API }
+    );
+    expect(found.owner).toBe('es-419_gl');
+    const urls = axiosGetMock.mock.calls.map(urlOf).filter((u) => u.includes('/catalog/bp/'));
+    expect(urls).toEqual([`${API}/catalog/bp/es-419_gl/es-419_tn/v66`]);
+  });
+
   test('nothing published, or no complete package, is an error that says why', async () => {
     serve({ [`${API}/catalog/search?`]: { ok: true, data: [] } });
     await expect(
@@ -293,5 +335,24 @@ describe('getAllCatalogEntries with { lang, subject }', () => {
     // One search, one blueprint — no second /catalog/bp/ call.
     const urls = axiosGetMock.mock.calls.map(urlOf);
     expect(urls.filter((u) => u.includes('/catalog/bp/'))).toHaveLength(1);
+  });
+
+  test('resourceVersion is the resolved ref even when the blueprint lists another repo first', async () => {
+    const bp = blueprint(TN_GL);
+    const uhb = bp.find((e) => e.name === 'hbo_uhb');
+    const reordered = [uhb, ...bp.filter((e) => e !== uhb)];
+    axiosGetMock.mockImplementation(async (url) => {
+      if (url.startsWith(`${API}/catalog/search?`)) return { data: { ok: true, data: [TN_GL] } };
+      if (url.startsWith(`${API}/catalog/bp/es-419_gl/es-419_tn/v66`)) {
+        return { data: { ok: true, data: reordered } };
+      }
+      throw new Error(`unexpected ${url}`);
+    });
+    const set = await getAllCatalogEntries(
+      { lang: 'es-419', subject: 'TSV Translation Notes', books: ['tit'] },
+      { dcs_api_url: API, quiet: true }
+    );
+    expect(set.catalogEntries[0].name).toBe('hbo_uhb');
+    expect(set.resourceVersion).toBe('v66');
   });
 });

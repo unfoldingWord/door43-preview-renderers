@@ -89,9 +89,9 @@ export async function getAllCatalogEntries(source, options = {}) {
       { lang: source.lang, subject: source.subject, books, owner: source.owner, stage: source.stage },
       { ...options, dcs_api_url: options.dcs_api_url || source.dcs_api_url }
     );
-    const main = resolved.catalogEntries[0] || {};
+    // The version is the ref that was resolved, not whatever row the blueprint lists first.
     return {
-      resourceVersion: main.branch_or_tag_name || main.release?.tag_name || resolved.ref,
+      resourceVersion: resolved.ref,
       libraryVersion,
       catalogEntries: resolved.catalogEntries,
       source: {

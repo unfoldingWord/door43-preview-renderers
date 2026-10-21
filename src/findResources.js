@@ -22,6 +22,11 @@ function enc(value) {
   return encodeURIComponent(String(value));
 }
 
+/** Only a definite "not there" (HTTP 404) may fall through; anything else is an outage and aborts. */
+function isNotFound(err) {
+  return err?.response?.status === 404;
+}
+
 /**
  * All published catalog entries for a language, optionally narrowed by
  * subject and owner. Pages through `/catalog/search` until a short page.
@@ -73,14 +78,16 @@ export async function resolveRef({ owner, repo, ref = '' } = {}, options = {}) {
   try {
     const release = await fetchJson(`${api}/repos/${enc(owner)}/${enc(repo)}/releases/latest`);
     if (release?.tag_name) return { ref: release.tag_name, isRelease: true };
-  } catch {
-    // No published release (404) or an outage: fall through to the branch.
+  } catch (err) {
+    // No published release (404): fall through to the branch. An outage aborts.
+    if (!isNotFound(err)) throw err;
   }
   try {
     const info = await fetchJson(`${api}/repos/${enc(owner)}/${enc(repo)}`);
     if (info?.default_branch) return { ref: info.default_branch, isRelease: false };
-  } catch {
-    // Unreadable repo: assume the conventional default.
+  } catch (err) {
+    // No repo metadata (404): assume the conventional default. An outage aborts.
+    if (!isNotFound(err)) throw err;
   }
   return { ref: 'master', isRelease: false };
 }
@@ -148,7 +155,9 @@ export async function resolveResource(
   }
 
   const required = requiredSubjectsFor(subject, books);
-  const bookParam = books.length ? `?book=${enc(books[0])}` : '';
+  // A book-scoped blueprint only lists that book's dependencies, so scope it
+  // only for a single book; several books are checked against the full package.
+  const bookParam = books.length === 1 ? `?book=${enc(books[0])}` : '';
   let lastReason = '';
   for (const entry of candidates) {
     const ref = entry.branch_or_tag_name;
@@ -158,6 +167,8 @@ export async function resolveResource(
       const body = await fetchJson(url);
       catalogEntries = Array.isArray(body?.data) ? body.data : [];
     } catch (e) {
+      // Only a missing blueprint moves on to the next publisher; an outage aborts.
+      if (!isNotFound(e)) throw e;
       lastReason = `${entry.full_name || `${entry.owner}/${entry.name}`}@${ref}: ${e.message}`;
       continue;
     }
