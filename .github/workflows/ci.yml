@@ -1,0 +1,48 @@
+name: CI
+
+# Lint, test and build on every pull request and on pushes to main, so a PR can't
+# merge green without the suite passing. Mirrors the toolchain in npm-publish.yml.
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Test (with coverage threshold)
+        run: pnpm test:coverage
+
+      - name: Build
+        run: pnpm build
+
+      - name: Verify the built entry exports the public API
+        run: node -e "import('./dist/index.esm.js').then(m => { const n = Object.keys(m).length; if (n < 30) throw new Error('only ' + n + ' exports'); console.log(n + ' exports OK'); })"
