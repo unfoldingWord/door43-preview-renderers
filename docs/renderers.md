@@ -1,74 +1,108 @@
-# Renderers
+# Render HTML Data
 
-Renderers are responsible for converting processed content into HTML format suitable for display or PDF generation.
+`renderHtmlData()` is **stage 3** of the pipeline. It takes parsed
+**ResourceData** (from [`getResourceData()`](./get-resource-data.md), or any
+cached copy of it), routes it to the renderer for its subject, and returns an
+**HtmlData** package: reusable HTML sections plus the identity fields the later
+stages need. It is pure and synchronous — no network, no disk.
 
-## Subject Renderer Pipeline
+**Source:** `src/renderHtmlData.js`, renderers in `src/renderers/`
 
-Use `renderHtmlData()` when you want a subject-aware rendering pipeline:
-
-`renderHtmlData()` is pure and synchronous — pass it parsed resource data (no
-network). See [Rendering options](./options.md) for all options.
+## Signature
 
 ```js static
-import { getResourceData, renderHtmlData } from 'door43-preview-renderers';
+renderHtmlData(resourceData, options?)
+```
 
-const resourceData = await getResourceData('unfoldingWord', 'en_ult', 'v88', ['tit'], {
-  dcs_api_url: 'https://git.door43.org/api/v1',
+- **resourceData** (object): output of `getResourceData()`
+- **options** (object, optional):
+  - **renderOptions** (object): subject-specific knobs, passed straight to the renderer
+  - **books** (array | object): book selection and order; the object form
+    `{ tit: '1:1-2:5' }` also applies a per-book reference range
+
+See [Rendering options](./options.md) for every option by subject.
+
+```js static
+import { getResourceData, renderHtmlData } from '@unfoldingword/door43-preview-renderers';
+
+const resourceData = await getResourceData(
+  { owner: 'unfoldingWord', repo: 'en_tn', ref: 'v91', books: ['tit'] }
+);
+
+const htmlData = renderHtmlData(resourceData, {
+  renderOptions: { showChaptersInToc: true },
 });
+```
 
-const rendered = renderHtmlData(resourceData, {
-  renderOptions: {
-    includeRawUsfmView: false,
-    editorMode: false,
+## Supported subjects
+
+| Subject(s) | Renderer |
+|---|---|
+| Aligned Bible, Bible, Greek New Testament, Hebrew Old Testament | `renderAlignedBibleHtml` (USFM via Proskomma) |
+| Translation Academy | `renderTranslationAcademyHtml` |
+| Translation Words | `renderTranslationWordsHtml` |
+| Open Bible Stories | `renderObsHtml` |
+| TSV Translation Notes, TSV OBS Translation Notes | `renderTranslationNotesHtml` |
+| TSV Translation Questions, TSV Study Questions, TSV Study Notes, TSV OBS Translation Questions, TSV OBS Study Notes, TSV OBS Study Questions | `renderTsvQuestionsHtml` |
+| TSV Translation Words Links, TSV OBS Translation Words Links | `renderTranslationWordsLinksHtml` — the Translation Words for a book, by verse (scripture columns and the words in each verse, articles as an appendix) or as a glossary (`renderOptions.layout: 'glossary'`: one entry per article, grouped Key Terms / Names / Other, article body inline, references listed) |
+
+Any other subject throws `HTML rendering is not implemented yet for subject …`.
+
+## Returns
+
+An **HtmlData** package:
+
+```js static
+{
+  subject: 'TSV Translation Notes',
+  title: 'unfoldingWord® Translation Notes',
+  abbreviation: 'tn',
+  version: 'v91',
+  direction: 'ltr',
+  sections: {
+    cover: '…',          // cover page HTML
+    copyright: '…',      // license page HTML
+    body: '…',           // the content
+    toc: [{ id: 'tn-tit', title: 'Titus', book: 'tit', sections: [...] }],
+    css: { web: '…', print: '…' },
+    appendices: { ta: { [articlePath]: { id, title, html } }, tw: {…} },  // TN and TWL only
+    appendixTitles: { ta: '…', tw: '…' },
+    webView: null,
   },
-});
+}
 ```
 
-`renderHtmlData()` currently supports these subjects:
+Anchors are rewritten from the renderers' generic `nav-` prefix to the resource
+abbreviation (`tn-tit-1-1`), so several resources can share one page; see
+[Anchors](./options.md#anchors-deep-linking).
 
-- `Aligned Bible`, `Bible`, `Greek New Testament`, `Hebrew Old Testament`
-- `Translation Academy`, `Translation Words`
-- `Open Bible Stories`
-- `TSV Translation Notes` / `TSV OBS Translation Notes`
-- `TSV Translation Questions` / `Study Questions` / `Study Notes` (+ OBS variants)
-- `TSV Translation Words Links` — the Translation Words for a book, by verse (scripture
-  columns + the words in each verse, articles as an appendix) or as a glossary
-  (`renderOptions.layout: 'glossary'`: one entry per article, grouped Key Terms / Names /
-  Other, article body inline, references listed)
+There is no document string here. Stage 4, [`renderHTML()`](./render-html.md),
+composes these sections into a web page or a print document, and
+[`renderPdf()`](./render-pdf.md) turns that into a PDF.
 
-It returns:
+## Calling a renderer directly
 
-- `sections`: packaged HTML parts (`cover`, `body`, `toc`, `css`, optional `webView`)
-- `fullHtml`: complete HTML document suitable for iframe/browser preview
-- `resourceData`: original output from `getResourceData()`
-
-## HTML Renderer
-
-The HTML renderer provides flexible options for generating generic HTML snippets.
-
-### Basic Usage
+Each renderer is exported and takes the same ResourceData shape:
 
 ```js static
-import { renderHTML } from 'door43-preview-renderers';
+import { renderTranslationNotesHtml } from '@unfoldingword/door43-preview-renderers';
 
-const html = renderHTML('Your content here');
+const { sections } = renderTranslationNotesHtml(resourceData, { showChaptersInToc: false });
 ```
 
-### With Options
+Going through `renderHtmlData()` is preferable: it applies the `books` selection,
+the reference ranges, and the anchor prefix, and promotes the identity fields.
 
-```js static
-const html = renderHTML(content, {
-  className: 'custom-preview',
-  styles: {
-    padding: '20px',
-    'background-color': '#f5f5f5',
-  },
-});
-```
+## Shared renderer helpers (`src/renderers/`)
+
+- `scriptureColumns.js` — parallel ULT | UST scripture columns and GL-quote headers
+- `rcAppendices.js` — `rc://` link resolution and the Translation Academy / Translation Words appendices
+- `twlTable.js` — the per-verse Translation Words table used by Translation Notes and Translation Words Links
+- `obsFrames.js` — Open Bible Stories frame panels for the OBS-based TSV subjects
+- `anchors.js` — the `nav-` → `<abbreviation>-` anchor rewrite
+- `printDocumentAssembler.js` — cover page, table of contents, appendices, print CSS, `PAGE_SIZES`
 
 ## Interactive Demo
 
-Use the interactive component on this page to fetch and render a live Bible resource and inspect both:
-
-- packaged HTML/CSS JSON values
-- full rendered output in an iframe
+Use the component on this page to fetch a resource live from DCS and inspect both
+the packaged section JSON and the composed document in an iframe.

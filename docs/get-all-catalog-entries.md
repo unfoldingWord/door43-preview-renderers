@@ -28,7 +28,7 @@ A Promise resolving to a **CatalogSet**:
 
 ```js static
 {
-  resourceVersion: string,   // the resource's version (tag/branch), e.g. "v89"
+  resourceVersion: string,   // the resource's version (tag/branch), e.g. "v91"
   libraryVersion: string,    // this renderer library's npm version
   catalogEntries: [          // main entry first, then dependencies
     {...},                   // [0] the requested resource
@@ -54,16 +54,16 @@ CatalogSet you pass it — avoiding a second blueprint call.
 ## Usage
 
 ```js static
-import { getAllCatalogEntries } from 'door43-preview-renderers';
+import { getAllCatalogEntries } from '@unfoldingword/door43-preview-renderers';
 
 // From a descriptor
 const set = await getAllCatalogEntries(
-  { owner: 'unfoldingWord', repo: 'en_tn', ref: 'v89', books: ['1th'] }
+  { owner: 'unfoldingWord', repo: 'en_tn', ref: 'v91', books: ['1th'] }
 );
 console.log(set.resourceVersion, set.catalogEntries.length);
 
 // Reuse it downstream — no second /catalog/bp/ call
-import { getResourceData } from 'door43-preview-renderers';
+import { getResourceData } from '@unfoldingword/door43-preview-renderers';
 const data = await getResourceData(set);
 ```
 

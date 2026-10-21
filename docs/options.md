@@ -10,12 +10,13 @@ Rendering happens in stages. You can run the whole thing or start from any
 intermediate you already have cached:
 
 ```js
-import { getResourceData, renderHtmlData, renderHTML, renderPdf } from 'door43-preview-renderers';
+import { getResourceData, renderHtmlData, renderHTML, renderPdf } from '@unfoldingword/door43-preview-renderers';
 
 // 1. Fetch + parse the resource (network)
-const resourceData = await getResourceData('unfoldingWord', 'en_ult', 'v89', ['tit'], {
-  dcs_api_url: 'https://git.door43.org/api/v1',
-});
+const resourceData = await getResourceData(
+  { owner: 'unfoldingWord', repo: 'en_ult', ref: 'v91', books: ['tit'] },
+  { dcs_api_url: 'https://git.door43.org/api/v1' }
+);
 
 // 2. Render to reusable HTML sections (pure, no network — pass cached data here to skip step 1)
 const htmlData = renderHtmlData(resourceData, { renderOptions: { editorMode: false } });
@@ -34,19 +35,22 @@ Each option below is marked:
 
 ---
 
-## `getResourceData(owner, repo, ref, books?, options?)`
+## `getResourceData(input, options?)`
 
 Fetches and parses a resource (and its dependencies) from DCS into a
-`resourceData` object.
+`resourceData` object. `input` is a descriptor `{ owner, repo, ref, books? }`, a
+CatalogSet from `getAllCatalogEntries()` (reused, no second blueprint call), a
+catalog entry object, or an existing `resourceData` (returned unchanged).
 
 | Argument / option | Type | Default | Status | Description |
 |---|---|---|---|---|
-| `owner` | string | — | ✅ | Repository owner (e.g. `unfoldingWord`). |
-| `repo` | string | — | ✅ | Repository name (e.g. `en_tn`). |
-| `ref` | string | — | ✅ | Git ref: tag, branch, or commit (e.g. `v89`, `master`). |
-| `books` | string[] | `[]` | ✅ | Book ids to fetch (e.g. `['tit','rom']`). Empty = all books. |
+| `input.owner` | string | — | ✅ | Repository owner (e.g. `unfoldingWord`). |
+| `input.repo` | string | — | ✅ | Repository name (e.g. `en_tn`). |
+| `input.ref` | string | — | ✅ | Tag, branch, or commit (e.g. `v91`, `master`). |
+| `input.books` | string[] | `[]` | ✅ | Book ids to fetch (e.g. `['tit','rom']`). Empty = all books. |
 | `options.dcs_api_url` | string | `https://git.door43.org/api/v1` | ✅ | DCS API base URL. |
 | `options.quiet` | boolean | `false` | ✅ | Suppress progress logging. |
+| `options.books` | string[] | `[]` | ✅ | Books, when `input` does not carry them (catalog-entry form). |
 
 > The local/CLI sibling `getResourceDataFromDirectory(catalogEntries, dirPath, options)`
 > (reads checked-out repos from disk instead of DCS, same output shape) is 🚧 planned.

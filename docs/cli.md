@@ -1,147 +1,93 @@
 # CLI Tool
 
-The door43-preview-renderers package includes a command-line interface for fetching catalog entries and resource data.
+The package ships a command line, `door43-renderers`, that runs the same staged
+pipeline as the library: fetch the catalog, fetch and parse a resource, render it
+to HTML sections, compose a print document, or produce a PDF.
 
 ## Installation
 
-After installing the package globally, you can use the `door43-renderers` command:
-
 ```bash
-npm install -g door43-preview-renderers
+npm install -g @unfoldingword/door43-preview-renderers
 door43-renderers --help
 ```
 
-Or use it directly with pnpm:
+From a checkout, the CLI imports the built library, so run `pnpm build` once, then:
 
 ```bash
-pnpm cli getAllCatalogEntries --owner unfoldingWord --repo en_tn --ref v80 --book gen
+pnpm cli getResourceData --owner unfoldingWord --repo en_tn --ref v91 --book tit
+# or
+node src/cli.js getResourceData --owner unfoldingWord --repo en_tn --ref v91 --book tit
 ```
 
 ## Commands
 
-### getAllCatalogEntries
+| Command | What it runs | Output |
+|---|---|---|
+| `getAllCatalogEntries` | `getAllCatalogEntries()` | CatalogSet JSON |
+| `getResourceData` | `getResourceData()` | ResourceData JSON |
+| `renderHtml` | `getResourceData()` → `renderHtmlData()` | HtmlData JSON (sections + identity) |
+| `assemblePrint` | … → `renderHTML(htmlData, { media: 'print' })` | a complete print-ready HTML document |
+| `generatePdf` | … → `renderPdf()` | a PDF file (`--output` required) |
 
-Fetches all catalog entries needed for rendering a specific book.
+## Options
 
-```bash
-door43-renderers getAllCatalogEntries --owner <owner> --repo <repo> --ref <ref> --book <bookId>
-```
+- `--owner <owner>` — repository owner (required)
+- `--repo <repo>` — repository name (required)
+- `--ref <ref>` — git tag, branch, or commit (required by every command; there is no default)
+- `--book <bookId>` — one book id (e.g. `gen`, `tit`, `1jn`); omit for whole-resource output (OBS, TA, TW)
+- `--dcs-api-url <url>` — DCS API base (default `https://git.door43.org/api/v1`)
+- `--output <file>` — write to a file instead of stdout
+- `--quiet`, `-q` — no progress logging; JSON only, so the output pipes cleanly into `jq`
+- `--page-size <size>` — `assemblePrint` / `generatePdf`: `A4` (default), `A5`, `USL`, `TRADE`, `CQ`
+- `--columns <n>` — `assemblePrint` / `generatePdf`: body column count (continuous-flow bodies only; see [options](./options.md))
+- `--pdf-service-url <url>` — `generatePdf`: POST the assembled HTML to a hosted WeasyPrint service instead of running the local binary
 
-**Options:**
-- `--owner` - Repository owner (required)
-- `--repo` - Repository name (required)
-- `--ref` - Git reference/tag/branch (optional)
-- `--book` - Book ID (e.g., gen, exo, mat, 1ti) (optional)
-- `--dcs-api-url` - Custom DCS API URL (optional)
-- `--output` - Output file path (optional, defaults to stdout)
-
-**Examples:**
-
-```bash
-# Output to stdout
-pnpm cli getAllCatalogEntries --owner unfoldingWord --repo en_tn --ref v80 --book gen
-
-# Save to file
-pnpm cli getAllCatalogEntries --owner unfoldingWord --repo en_tn --ref v80 --book gen --output results.json
-
-# Custom DCS API URL
-pnpm cli getAllCatalogEntries --owner BSOJ --repo ar_twl --ref v5 --book 1jn --dcs-api-url https://git.door43.org/api/v1
-```
-
-### getResourceData
-
-Fetches resource data for a specific repository and book.
+## Examples
 
 ```bash
-door43-renderers getResourceData --owner <owner> --repo <repo> --ref <ref> --book <bookId>
+# The book package for Titus, as JSON
+door43-renderers getAllCatalogEntries --owner unfoldingWord --repo en_tn --ref v91 --book tit --quiet | jq '.catalogEntries[] | {owner, repo: .name, subject}'
+
+# Parsed Translation Notes data, saved to a file
+door43-renderers getResourceData --owner unfoldingWord --repo en_tn --ref v91 --book tit --quiet --output tn_tit.json
+
+# HTML sections (what the styleguide fixtures are made from)
+door43-renderers renderHtml --owner unfoldingWord --repo en_ult --ref v91 --book tit --quiet --output ult_tit.htmlData.json
+
+# A print-ready HTML document, Trade size
+door43-renderers assemblePrint --owner unfoldingWord --repo en_obs --ref v9 --page-size TRADE --output obs.html
+
+# A PDF, no browser (needs `weasyprint` on the PATH)
+door43-renderers generatePdf --owner unfoldingWord --repo en_tn --ref v91 --book tit --output tit_tn.pdf
+
+# The same PDF via a hosted WeasyPrint service
+door43-renderers generatePdf --owner unfoldingWord --repo en_tn --ref v91 --book tit \
+  --pdf-service-url https://weasyprint-pdf.example.com --output tit_tn.pdf
+
+# A non-English resource on a custom DCS host
+door43-renderers getAllCatalogEntries --owner BSOJ --repo ar_twl --ref v5 --book 1jn --dcs-api-url https://qa.door43.org/api/v1
 ```
 
-**Options:**
-- `--owner` - Repository owner (required)
-- `--repo` - Repository name (required)
-- `--ref` - Git reference/tag/branch (optional)
-- `--book` - Book ID (optional)
-- `--dcs-api-url` - Custom DCS API URL (optional)
-- `--output` - Output file path (optional, defaults to stdout)
-
-**Examples:**
-
-```bash
-# Output to stdout
-pnpm cli getResourceData --owner unfoldingWord --repo en_tn --ref v80 --book gen
-
-# Save to file
-pnpm cli getResourceData --owner unfoldingWord --repo en_tn --ref v80 --book gen --output data.json
-```
-
-## Test Cases
-
-The following test cases are documented in the test suite:
-
-### Valid Cases
-
-```bash
-# unfoldingWord English Translation Notes
-pnpm cli getAllCatalogEntries --owner unfoldingWord --repo en_tn --ref v80 --book gen
-
-# fr_gl Greek Translation Notes with valid book ID
-pnpm cli getAllCatalogEntries --owner fr_gl --repo gr_tn --ref v2 --book 1ti
-```
-
-### Invalid Cases
-
-```bash
-# Invalid book ID (1th doesn't exist)
-pnpm cli getAllCatalogEntries --owner fr_gl --repo fr_tn --ref v2 --book 1th
-
-# Aligned Bible issue (currently fails, needs fix to search by owner and subject)
-pnpm cli getAllCatalogEntries --owner BSOJ --repo ar_twl --ref v5 --book 1jn
-```
-
-## Output Format
+## Output format
 
 ### getAllCatalogEntries
-
-Returns a JSON object with:
-- `version` - Package version (e.g., "1.4.0")
-- `catalogEntries` - Array of catalog entry objects
 
 ```json
 {
-  "version": "1.4.0",
-  "catalogEntries": [
-    {
-      "subject": "Translation Notes",
-      "owner": "unfoldingWord",
-      "repo": "en_tn",
-      "ref": "v80",
-      "language": "en",
-      ...
-    }
-  ]
+  "resourceVersion": "v91",
+  "libraryVersion": "1.5.6",
+  "catalogEntries": [ { "name": "en_tn", "owner": "unfoldingWord", "subject": "TSV Translation Notes", "...": "..." } ],
+  "source": { "owner": "unfoldingWord", "repo": "en_tn", "ref": "v91", "books": ["tit"], "dcsApiUrl": "https://git.door43.org/api/v1" }
 }
 ```
 
-### getResourceData
+The main entry is first, followed by every related resource in the book package.
 
-Returns resource-specific data structure (varies by resource type).
+### getResourceData / renderHtml
 
-## Development
+The ResourceData and HtmlData shapes are described in
+[Get Resource Data](./get-resource-data.md) and [Render HTML Data](./renderers.md).
 
-Run tests:
+### assemblePrint / generatePdf
 
-```bash
-pnpm test
-```
-
-Run tests in watch mode:
-
-```bash
-pnpm test:watch
-```
-
-Run tests with coverage:
-
-```bash
-pnpm test:coverage
-```
+A complete HTML document (stdout or `--output`), or a PDF written to `--output`.

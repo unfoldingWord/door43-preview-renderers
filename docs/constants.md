@@ -19,7 +19,7 @@ Each book entry contains:
 ### Example
 
 ```js static
-import { BibleBookData } from 'door43-preview-renderers';
+import { BibleBookData } from '@unfoldingword/door43-preview-renderers';
 
 // Get information about a specific book
 const genesis = BibleBookData['gen'];
@@ -66,7 +66,7 @@ console.log(ntBooks.length); // 27
 
 ## requiredSubjectsMap
 
-Maps catalog entry subjects to their required supplementary subjects. This is used by `getAllCatalogEntriesForRendering()` to determine which dependencies need to be fetched.
+Maps catalog entry subjects to their required supplementary subjects. This is what `getResourceData()` uses to filter the Book Package blueprint from `getAllCatalogEntries()` down to the dependencies a subject actually needs.
 
 ### Structure
 
@@ -79,7 +79,7 @@ Maps catalog entry subjects to their required supplementary subjects. This is us
 ### Mappings
 
 ```js static
-import { requiredSubjectsMap } from 'door43-preview-renderers';
+import { requiredSubjectsMap } from '@unfoldingword/door43-preview-renderers';
 
 // TSV Translation Notes requires:
 requiredSubjectsMap['TSV Translation Notes']
@@ -135,7 +135,7 @@ requiredSubjectsMap['TSV OBS Translation Questions']
 ### Example Usage
 
 ```js static
-import { requiredSubjectsMap } from 'door43-preview-renderers';
+import { requiredSubjectsMap } from '@unfoldingword/door43-preview-renderers';
 
 function getRequirements(subject) {
   const requirements = requiredSubjectsMap[subject];
@@ -164,7 +164,7 @@ Maps subject names to their repository identifier abbreviations. Used for catalo
 ### Mappings
 
 ```js static
-import { subjectIdentifierMap } from 'door43-preview-renderers';
+import { subjectIdentifierMap } from '@unfoldingword/door43-preview-renderers';
 
 // Bible translations
 subjectIdentifierMap['Aligned Bible']
@@ -207,7 +207,7 @@ subjectIdentifierMap['TSV OBS Translation Words Links']
 ### Example Usage
 
 ```js static
-import { subjectIdentifierMap } from 'door43-preview-renderers';
+import { subjectIdentifierMap } from '@unfoldingword/door43-preview-renderers';
 
 // Build a repository name for catalog search
 function buildRepoName(lang, subject) {
@@ -235,5 +235,5 @@ console.log(buildRepoName('en', 'Aligned Bible'));
 
 ## See Also
 
-- [getAllCatalogEntriesForRendering](get-all-catalog-entries-for-rendering.md) - Uses these constants to determine dependencies
+- [getAllCatalogEntries](get-all-catalog-entries.md) - Fetches the Book Package these constants filter
 - [getResourceData](get-resource-data.md) - Main function for fetching resource data

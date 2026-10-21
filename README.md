@@ -1,51 +1,60 @@
 # Door43 Preview Renderers
 
-A JavaScript library for gathering content from various repositories and rendering HTML snippets for web previews and PDFs of translation resources.
+A headless JavaScript library for fetching unfoldingWord Bible translation resources from the Door43 Content Service (DCS) and rendering them to HTML and print-ready PDF. No React dependency; runs in Node and in the browser.
 
 ## Features
 
-- 🔌 API client for fetching content from Door43 repositories
-- 🎨 Multiple converters for different content formats
-- 📝 HTML snippet generation for web previews
-- 🧱 Subject-aware HTML packaging via `renderHtmlData()`
-- 📄 PDF-ready rendering
-- ⚡ Modular and extensible architecture
-- 🖥️ Command-line interface (CLI) for easy data retrieval
-- 🔍 Smart dependency resolution for translation resources
+- 🔌 One call to the DCS Book Package endpoint resolves a resource and everything it depends on
+- 📦 Parsed, normalized data for USFM, TSV, Markdown and Open Bible Stories resources
+- 🧱 Subject-aware HTML sections (cover, copyright, body, table of contents, CSS, appendices)
+- 📝 One self-contained document for the screen or for print, composed from those sections
+- 📄 PDF via WeasyPrint (local binary or a hosted service)
+- 🖥️ A command line that runs every stage
+- ⚡ Composable stages: start from any cached intermediate
+
+## Pipeline at a glance
+
+The renderer is a **composable chain**. Each stage takes the previous stage's output, so you can run the whole thing or resume from any cached or local intermediate:
+
+```
+getAllCatalogEntries(source, opts)   → CatalogSet      (network)
+getResourceData(input, opts)         → ResourceData    (network; or cached/local)
+renderHtmlData(resourceData, opts)   → HtmlData        (pure, no I/O)
+renderHTML(htmlData, opts)           → HTML string     (media: 'screen' | 'print')
+renderPdf(htmlData, opts)            → PDF             (WeasyPrint)
+```
 
 ## Installation
 
-### As a Library
+### As a library
 
 ```bash
 # Using pnpm (recommended)
-pnpm add door43-preview-renderers
+pnpm add @unfoldingword/door43-preview-renderers
 
 # Using npm
-npm install door43-preview-renderers
+npm install @unfoldingword/door43-preview-renderers
 
 # Using yarn
-yarn add door43-preview-renderers
+yarn add @unfoldingword/door43-preview-renderers
 ```
 
-### CLI Tool
+### CLI tool
 
-The package includes a CLI tool that can be used directly:
+The package installs a `door43-renderers` command:
 
 ```bash
 # Install globally
-npm install -g door43-preview-renderers
+npm install -g @unfoldingword/door43-preview-renderers
+door43-renderers getAllCatalogEntries --owner unfoldingWord --repo en_tn --ref v91 --book tit
 
-# Or use via npx (no installation required)
-npx door43-preview-renderers getAllCatalogEntries --owner unfoldingWord --repo en_tn --ref v80 --book gen
+# Or run it without installing
+npx -p @unfoldingword/door43-preview-renderers door43-renderers getAllCatalogEntries --owner unfoldingWord --repo en_tn --ref v91 --book tit
 ```
 
 ## Usage
 
-### Library Usage
-
-The renderer is a **composable chain**: each stage takes the previous stage's
-output, so you can run the whole thing or start from any cached intermediate.
+### Library usage
 
 ```javascript
 import {
@@ -53,435 +62,246 @@ import {
   renderHtmlData,
   renderHTML,
   renderPdf,
-} from 'door43-preview-renderers';
+} from '@unfoldingword/door43-preview-renderers';
 
-// 1. Fetch + parse a resource (and its dependencies) from DCS
-const resourceData = await getResourceData('unfoldingWord', 'en_ult', 'v89', ['tit'], {
-  dcs_api_url: 'https://git.door43.org/api/v1',
-});
+// 1–2. Fetch + parse a resource and the resources it depends on (network)
+const resourceData = await getResourceData(
+  { owner: 'unfoldingWord', repo: 'en_tn', ref: 'v91', books: ['tit'] },
+  { dcs_api_url: 'https://git.door43.org/api/v1' }
+);
 
-// 2. Render to reusable HTML sections (pure, no network).
-//    Already have cached resourceData? Skip step 1 and pass it straight in here.
+// 3. Render to reusable HTML sections (pure, no network).
+//    Already have cached resourceData? Skip steps 1–2 and pass it straight in.
 const htmlData = renderHtmlData(resourceData, {
-  renderOptions: { includeRawUsfmView: false, editorMode: false },
+  renderOptions: { showChaptersInToc: true },
 });
 
 console.log(htmlData.sections.body); // HTML body string
 
-// 3. Compose a self-contained document — web or print
+// 4. Compose a self-contained document — web or print
 const webHtml = renderHTML(htmlData); // continuous web page
 const printHtml = renderHTML(htmlData, { media: 'print', print: { pageSize: 'A4_PORTRAIT' } });
 
-// 4. …or render a PDF (requires the `weasyprint` binary)
+// 5. …or render a PDF (requires the `weasyprint` binary, or a pdfServiceUrl)
 const pdf = await renderPdf(htmlData, { pageSize: 'A4_PORTRAIT', outputPath: 'titus.pdf' });
 ```
 
 > **📖 All options are documented in [`docs/options.md`](docs/options.md)** — every
-> argument for each function, with defaults, examples, and recipes.
+> argument for each stage, with defaults, examples, and recipes.
 
-### CLI Usage
-
-The CLI provides two main commands: `getAllCatalogEntries` and `getResourceData`.
-
-#### Get All Catalog Entries
-
-Retrieve a catalog entry along with all its required dependencies:
+### CLI usage
 
 ```bash
-# Basic usage
-node src/cli.js getResourceData --owner unfoldingWord --repo en_tn --ref v80 --book gen
+# The book package for Titus, as JSON (quiet = JSON only, pipes into jq)
+door43-renderers getAllCatalogEntries --owner unfoldingWord --repo en_tn --ref v91 --book tit --quiet | jq '.catalogEntries[] | {owner, repo: .name, subject}'
 
-# Quiet mode (no logging, just JSON output) - perfect for piping to jq
-node src/cli.js getAllCatalogEntries --owner BSOJ --repo ar_twl --ref v5 --book 1jn --quiet
+# Parsed resource data, saved to a file
+door43-renderers getResourceData --owner unfoldingWord --repo en_tn --ref v91 --book tit --output tn_tit.json
 
-# Pipe to jq for filtering
-node src/cli.js getAllCatalogEntries --owner BSOJ --repo ar_twl --ref v5 --book 1jn --quiet | jq '.catalogEntries[] | {owner, repo: .name, subject}'
+# HTML sections (HtmlData JSON)
+door43-renderers renderHtml --owner unfoldingWord --repo en_ult --ref v91 --book tit --quiet --output ult_tit.htmlData.json
 
-# Save to file
-node src/cli.js getAllCatalogEntries --owner unfoldingWord --repo en_tn --ref v80 --book gen --output result.json
+# A print-ready HTML document
+door43-renderers assemblePrint --owner unfoldingWord --repo en_obs --ref v9 --page-size TRADE --output obs.html
 
-# Use custom DCS API URL
-node src/cli.js getAllCatalogEntries --owner myorg --repo myrepo --ref main --dcs-api-url https://custom-dcs.example.com/api/v1
+# A PDF, no browser (needs `weasyprint` on the PATH, or --pdf-service-url)
+door43-renderers generatePdf --owner unfoldingWord --repo en_tn --ref v91 --book tit --output tit_tn.pdf
+
+# A custom DCS host
+door43-renderers getAllCatalogEntries --owner BSOJ --repo ar_twl --ref v5 --book 1jn --dcs-api-url https://qa.door43.org/api/v1
 ```
 
-#### Get Resource Data
+Commands: `getAllCatalogEntries`, `getResourceData`, `renderHtml`, `assemblePrint`, `generatePdf`. Options: `--owner`, `--repo`, `--ref` (all required), `--book`, `--dcs-api-url`, `--output`, `--quiet`, `--page-size`, `--columns`, `--pdf-service-url`. See [`docs/cli.md`](docs/cli.md).
 
-Retrieve just the resource data for a specific repository:
+## API reference
 
-```bash
-node src/cli.js getResourceData --owner unfoldingWord --repo en_tn --ref v80 --book gen
-```
+### `getAllCatalogEntries(source, options?)`
 
-#### CLI Options
+Stage 1. Fetches the full book-package catalog (the blueprint) for a resource in one call to the DCS `/catalog/bp/` endpoint: the main entry plus every related resource at the versions that belong together.
 
-- `--owner <owner>` - Repository owner (required)
-- `--repo <repo>` - Repository name (required)
-- `--ref <ref>` - Git reference (branch, tag, or commit)
-- `--book <bookId>` - Book ID (e.g., gen, exo, mat, 1ti, 1jn)
-- `--dcs-api-url <url>` - Custom DCS API URL (optional, defaults to https://git.door43.org/api/v1)
-- `--output <file>` - Output file path (optional, defaults to stdout)
-- `--quiet, -q` - Suppress logging output (perfect for piping to jq or other tools)
+- `source`: a descriptor `{ owner, repo, ref, books? }`, a catalog entry object (its `url` gives the DCS API base), or an existing CatalogSet (returned unchanged)
+- `options.dcs_api_url` (default `https://git.door43.org/api/v1`), `options.quiet`, `options.books` (with the catalog-entry form)
 
-## API Reference
-
-### `getAllCatalogEntries()`
-
-Fetches the full book-package catalog (the blueprint) for a resource — the main
-entry plus all its dependencies. Stage 1 of the pipeline.
-
-#### Parameters
-
-```javascript
-getAllCatalogEntries(source, options?)
-```
-
-- `source` (object): one of
-  - a **descriptor** `{ owner, repo, ref, books? }`
-  - an existing **catalog entry** object (its `url` is used to infer the DCS API base)
-  - an existing **CatalogSet** (returned unchanged — passthrough)
-- `options` (object, optional):
-  - `dcs_api_url` (string): DCS API base URL (default: `https://git.door43.org/api/v1`)
-  - `quiet` (boolean): Suppress logging output (default: `false`)
-  - `books` (array): Books, when using the catalog-entry source form
-
-#### Returns
-
-Returns a Promise that resolves to a **CatalogSet**:
+Returns a **CatalogSet**:
 
 ```javascript
 {
-  resourceVersion: "v89",      // the resource's version (tag/branch)
-  libraryVersion: "1.4.1",     // this renderer library's npm version
-  catalogEntries: [            // main entry first, then dependencies
-    { /* main catalog entry */ },
-    { /* dependency 1 */ },
-    ...
-  ],
-  source: { owner, repo, ref, books, dcsApiUrl }
+  resourceVersion: 'v91',      // the resource's version (tag/branch)
+  libraryVersion: '1.5.6',     // this library's npm version
+  catalogEntries: [ /* main entry first, then every related resource */ ],
+  source: { owner, repo, ref, books, dcsApiUrl },
 }
 ```
 
-#### Logic and Dependency Resolution
+The blueprint is the single source of truth for which resources and versions belong together; no client-side date or name matching is done. Filtering to what a subject actually needs for rendering (per `requiredSubjectsMap`, at most two Aligned Bibles preferring `ult`/`glt` + `ust`/`gst`, testament-aware original-language Bibles) happens in `getResourceData()`, which reuses a CatalogSet you pass it. [More →](docs/get-all-catalog-entries.md)
 
-The function intelligently resolves dependencies based on the resource subject:
+### `getResourceData(input, options?)`
 
-1. **Translation Notes/Words** (`TSV Translation Notes`, `TSV Translation Words Links`):
-   - Finds the associated Translation Academy (TA)
-   - Finds the associated Translation Words (TW)
-   - Finds the Aligned Bible for the language
-   - Finds the Original Language texts (Hebrew OT and/or Greek NT)
+Stage 2. Fetches one resource, parses it, fetches the supporting resources its subject needs, and returns normalized **ResourceData**.
 
-2. **Translation Questions** (`TSV Translation Questions`):
-   - Finds the associated Bible translation
-   - Finds the Original Language texts
-
-3. **OBS (Open Bible Stories)**:
-   - Finds the associated OBS Translation Notes
-   - Finds the associated OBS Translation Questions
-   - Finds the associated Translation Words
-
-4. **Testament Filtering**: When specific books are requested, it only fetches:
-   - Hebrew Old Testament if OT books are requested
-   - Greek New Testament if NT books are requested
-
-5. **Book Validation**: For Bible-related resources, it validates that the dependency contains all requested books before including it
-
-6. **Date-Based Matching**: When searching for dependencies, it looks for entries with release dates within 5 days of the main entry's release date
-
-7. **Fallback Search**: For Aligned Bibles, if standard naming (`*_ult`, `*_ust`) doesn't find a match, it searches by subject and language to find alternative Aligned Bible resources
-
-8. **Stage Matching**: Attempts to match the same stage (e.g., `prod`, `preprod`, `latest`) as the main entry
-
-#### Example
+- `input`: a descriptor `{ owner, repo, ref, books? }`, a CatalogSet (reused, no second blueprint call), a catalog entry object, or existing ResourceData (returned unchanged)
+- `options.dcs_api_url`, `options.quiet`, `options.books`
 
 ```javascript
-const result = await getAllCatalogEntries(
-  { owner: 'unfoldingWord', repo: 'en_tn', ref: 'v80', books: ['tit'] },
+const resourceData = await getResourceData(
+  { owner: 'unfoldingWord', repo: 'en_ult', ref: 'v91', books: ['gen', 'exo'] },
   { quiet: true }
 );
 
-// result.catalogEntries contains:
-// - en_tn (Translation Notes)
-// - en_ult (Aligned Bible)
-// - en_ta (Translation Academy)
-// - en_tw (Translation Words)
-// - el-x-koine_ugnt (Greek New Testament)
+console.log(resourceData.type);    // 'usfm'
+console.log(resourceData.subject); // 'Aligned Bible'
+console.log(Object.keys(resourceData.books)); // ['gen', 'exo']
 ```
 
-### `getResourceData()`
+The shape depends on `type` (`usfm`, `tsv`, `obs`, `ta`, `tw`); TSV resources carry their supporting resources in `extras` and GL quotes per aligned Bible in each row's `GLQuotes`. [More →](docs/get-resource-data.md)
 
-Fetches the catalog entry for a specific resource without resolving dependencies.
+### `renderHtmlData(resourceData, options?)`
 
-#### Parameters
+Stage 3. Renders subject-specific HTML **sections** from ResourceData. Pure and synchronous, no network.
 
-```javascript
-getResourceData(owner, repo, ref, books?, options?, is_extra?)
-```
+- `options.renderOptions`: renderer-specific options (e.g. `showChaptersInToc`, `editorMode`, `includeRawUsfmView`, `resolution`, `layout`)
+- `options.books`: book ordering/selection; an array of ids, or `{ id: range }` for per-book reference ranges
 
-- `owner` (string): Repository owner
-- `repo` (string): Repository name
-- `ref` (string): Git reference (branch, tag, or commit)
-- `books` (array, optional): Array of book identifiers to filter (default: `[]`)
-- `options` (object, optional):
-  - `dcs_api_url` (string): DCS API base URL (default: `https://git.door43.org/api/v1`)
-  - `quiet` (boolean): Suppress logging output (default: `false`)
-- `is_extra` (boolean, optional): Whether to include extra data (default: `false`)
-
-#### Returns
-
-Returns a Promise that resolves to a catalog entry object with detailed information about the resource.
-
-#### Example
-
-```javascript
-const catalogEntry = await getResourceData('unfoldingWord', 'en_ult', 'master', ['gen', 'exo'], {
-  quiet: true,
-  dcs_api_url: 'https://git.door43.org/api/v1',
-});
-
-console.log(catalogEntry.subject); // "Aligned Bible"
-console.log(catalogEntry.language); // "en"
-console.log(catalogEntry.ingredients); // Array of books/chapters
-```
-
-### `renderHtmlData()`
-
-Renders subject-specific HTML **sections** from parsed resource data. Pure and
-synchronous — **no network**. Feed it the output of `getResourceData()` (or any
-cached/hand-built resource data).
-
-> **Full option reference:** [`docs/options.md`](docs/options.md).
-
-#### Parameters
-
-```javascript
-renderHtmlData(resourceData, options?)
-```
-
-- `resourceData` (object): Output of `getResourceData()` — the parsed resource.
-- `options` (object, optional):
-  - `renderOptions` (object): Renderer-specific options (e.g. `includeRawUsfmView`, `editorMode`, `showChaptersInToc`)
-  - `books` (array | object): Book ordering/selection. Array of ids, or `{ id: range }` for per-book reference ranges (range filtering is planned).
-
-#### Current subject support
+Supported subjects:
 
 - `Aligned Bible`, `Bible`, `Greek New Testament`, `Hebrew Old Testament`
 - `Translation Academy`, `Translation Words`
 - `Open Bible Stories`
 - `TSV Translation Notes` / `TSV OBS Translation Notes`
 - `TSV Translation Questions` / `Study Questions` / `Study Notes` (+ OBS variants)
-- `TSV Translation Words Links` (by verse, or as a glossary with `renderOptions.layout: 'glossary'`)
+- `TSV Translation Words Links` / `TSV OBS Translation Words Links` (by verse, or as a glossary with `renderOptions.layout: 'glossary'`)
 
-#### Returns
-
-An `HtmlData` package (cover/identity fields promoted to the top level):
+Returns an **HtmlData** package:
 
 ```javascript
 {
-  subject: "Aligned Bible",
-  title: "unfoldingWord® Literal Text",
-  abbreviation: "ult",
-  version: "v89",
-  direction: "ltr",
+  subject: 'Aligned Bible',
+  title: 'unfoldingWord® Literal Text',
+  abbreviation: 'ult',
+  version: 'v91',
+  direction: 'ltr',
   sections: {
-    cover: "<h1 ...",
-    copyright: "<div ...",
-    body: "<div class=\"section bible-book\" ...",
-    toc: [{ id: "nav-tit", title: "Titus", book: "tit" }],
-    css: { web: "...", print: "..." },
-    webView: null
-  }
+    cover: '<h1 ...',
+    copyright: '<div ...',
+    body: '<section class="bible-book" ...',
+    toc: [{ id: 'ult-tit', title: 'Titus', book: 'tit' }],
+    css: { web: '...', print: '...' },
+    appendices: undefined,   // { ta, tw } for Translation Notes and Translation Words Links
+    webView: null,
+  },
 }
 ```
 
-### `renderHTML()`
+[More →](docs/renderers.md)
 
-Composes an `HtmlData` package into **one self-contained HTML document** for the
-screen or for print. Pure and synchronous; returns a string.
+### `renderHTML(htmlData, options?)`
 
-> **Full option reference:** [`docs/options.md`](docs/options.md).
+Stage 4. Composes an HtmlData package into **one self-contained HTML document** for the screen or for print. Pure and synchronous; returns a string.
 
-#### Parameters
-
-```javascript
-renderHTML(htmlData, options?)
-```
-
-- `htmlData` (object): Output of `renderHtmlData()`.
-- `options` (object, optional): `media` (`'screen'`|`'print'`), `show` (which
-  sections to include), `columns`, `direction`, `engine`, and `print.*`
-  (pageSize, footerHtml, …). Screen omits cover/copyright/toc by default; print
-  includes them.
+- `options.media`: `'screen'` (default; continuous page, cover/copyright/toc off) or `'print'` (paged, PagedJS/WeasyPrint-ready, cover/copyright/toc on)
+- `options.show`, `options.columns`, `options.direction`, `options.engine`, `options.print.*` (`pageSize`, `footerHtml`, `runningHeader`, `pageNumber.position`)
 
 ```javascript
-const webHtml = renderHTML(htmlData);                                    // continuous web page
-const printHtml = renderHTML(htmlData, { media: 'print' });              // PagedJS/WeasyPrint-ready
+const webHtml = renderHTML(htmlData);                       // continuous web page
+const printHtml = renderHTML(htmlData, { media: 'print' }); // PagedJS/WeasyPrint-ready
 ```
+
+[More →](docs/render-html.md)
+
+### `renderPdf(htmlData, options?)`
+
+Stage 5. Composes the print document and renders it with WeasyPrint: the local `weasyprint` binary, or a hosted service when `options.pdfServiceUrl` is set. Returns PDF bytes, or writes to `options.outputPath`. [More →](docs/render-pdf.md)
+
+### Also exported
+
+Subject renderers (`renderAlignedBibleHtml`, `renderObsHtml`, `renderTranslationNotesHtml`, `renderTsvQuestionsHtml`, `renderTranslationWordsLinksHtml`, `renderTranslationAcademyHtml`, `renderTranslationWordsHtml`), the print assembler pieces (`assemblePrintDocument`, `generateTocHtml`, `generateTocFromHtml`, `buildAppendicesToc`, `renderAppendicesHtml`, `buildCoverPage`, `coverCss`, `getPrintCss`, `PAGE_SIZES`, `resolvePageSize`), the PDF back ends (`generatePdf`, `generatePdfFromAssembled`, `generatePdfViaService`), option helpers (`resolveComposeOptions`, `parseBooksOption`, `supportsBodyColumns`, `runningHeaderModeFor`), Markdown helpers (`convertMarkdown`, `convertNoteFromMD2HTML`), `getCatalogEntry`, `fetchResource`, and the constants `BibleBookData`, `requiredSubjectsMap`, `subjectIdentifierMap`, `alignedBibleSubjects`. See [`docs/introduction.md`](docs/introduction.md).
 
 ## Development
 
 ### Prerequisites
 
-- Node.js >= 16.0.0
-- pnpm >= 8.0.0
+- Node.js 22 (what CI and the publish workflow use)
+- pnpm 11
 
 ### Setup
 
 ```bash
-# Clone the repository
 git clone https://github.com/unfoldingWord/door43-preview-renderers.git
 cd door43-preview-renderers
-
-# Install dependencies
 pnpm install
 ```
 
-### Running in Development
+### Style guide
 
-#### Style Guide (Component Documentation)
-
-The style guide provides interactive documentation and examples of all components:
+Interactive demos of every stage, in pipeline order:
 
 ```bash
-# Start the style guide development server
-pnpm run styleguide
-
-# Or use the dev alias
 pnpm run styleguide:dev
-
-# The style guide will be available at http://localhost:6060
+# http://localhost:6060
 ```
 
-#### CLI Development
+### CLI from source
+
+The CLI imports the built library, so build first:
 
 ```bash
-# Run the CLI directly from source
-node src/cli.js getAllCatalogEntries --owner unfoldingWord --repo en_tn --ref v80 --book gen
-
-# Or use the npm script
-pnpm run cli getAllCatalogEntries --owner unfoldingWord --repo en_tn --ref v80 --book gen
-
-# Run with quiet mode for clean JSON output
-node src/cli.js getAllCatalogEntries --owner BSOJ --repo ar_twl --ref v5 --book 1jn --quiet | jq
-```
-
-#### Development Build
-
-```bash
-# Start the development build watcher
-pnpm run dev
-
-# This will watch for changes and rebuild automatically
+pnpm build
+node src/cli.js getAllCatalogEntries --owner unfoldingWord --repo en_tn --ref v91 --book tit
+# or
+pnpm cli getAllCatalogEntries --owner unfoldingWord --repo en_tn --ref v91 --book tit
 ```
 
 ### Building
 
 ```bash
-# Build the library for production
-pnpm run build
-
-# Build the style guide for deployment
-pnpm run styleguide:build
-
-# The built files will be in:
-# - dist/ (library)
-# - styleguide/ (documentation)
+pnpm run build             # library → dist/
+pnpm run dev               # rebuild on change
+pnpm run styleguide:build  # style guide → styleguide/
 ```
 
 ### Testing
 
 ```bash
-# Run tests
-pnpm test
-
-# Run tests in watch mode
+pnpm test                  # Jest (ESM; runs with --experimental-vm-modules)
 pnpm run test:watch
-
-# Run tests with coverage
-pnpm run test:coverage
-
-# Run linting
+pnpm run test:coverage     # enforces the global coverage threshold
 pnpm run lint
-
-# Format code
 pnpm run format
 ```
 
-## Production Usage
+CI runs lint, the coverage-gated tests, the build and an export check on every pull request and push to `main`. Pull requests target `main` and are reviewed by the `uwreview` bench.
 
-### Using the Library
-
-After installing the package, import the functions you need:
-
-```javascript
-import { getAllCatalogEntries, getResourceData, renderHtmlData, renderHTML } from 'door43-preview-renderers';
-
-// Your code here
-```
-
-### Using the CLI
-
-#### Global Installation
-
-```bash
-# Install globally
-npm install -g door43-preview-renderers
-
-# Use the CLI command
-door43-renderers getAllCatalogEntries --owner unfoldingWord --repo en_tn --ref v80 --book gen
-```
-
-#### Using npx (No Installation)
-
-```bash
-# Run directly with npx
-npx door43-preview-renderers getAllCatalogEntries --owner unfoldingWord --repo en_tn --ref v80 --book gen
-```
-
-#### In CI/CD Pipelines
-
-```bash
-# Install as a dev dependency
-npm install --save-dev door43-preview-renderers
-
-# Use in package.json scripts
-{
-  "scripts": {
-    "fetch-data": "door43-renderers getAllCatalogEntries --owner myorg --repo myrepo --ref main --quiet"
-  }
-}
-
-# Or use directly in CI
-node_modules/.bin/door43-renderers getAllCatalogEntries --owner myorg --repo myrepo --ref main --output data.json
-```
-
-## Project Structure
+## Project structure
 
 ```
 door43-preview-renderers/
 ├── src/
-│   ├── index.js                              # Main entry point
-│   ├── cli.js                                # Command-line interface
-│   ├── constants.js                          # Bible books and resource constants
-│   ├── getResourceData.js                    # Core resource data fetching
-│   ├── getAllCatalogEntries.js               # Book-package catalog (blueprint)
-│   ├── api/                                  # API client modules
-│   ├── renderers/                            # HTML rendering components
-│   └── converters/                           # Content format converters
-├── docs/                                     # Documentation markdown files
-│   ├── introduction.md
-│   ├── constants.md                          # Constants documentation
-│   ├── get-resource-data.md
-│   ├── get-all-catalog-entries-for-rendering.md
-│   └── ...
-├── dist/                                     # Built library files (generated)
-├── styleguide/                               # Built style guide (generated)
-└── package.json
+│   ├── index.js                     # public exports
+│   ├── cli.js                       # door43-renderers command line
+│   ├── constants.js                 # Bible books and resource mappings
+│   ├── getAllCatalogEntries.js      # stage 1: the book-package catalog
+│   ├── getResourceData.js           # stage 2: fetch + parse, with the extractors:
+│   ├── *Helpers.js                  #   rcAlignedBible, tsBible, tsv, obs, ta, tw, bible
+│   ├── dcsApi.js                    # DCS fetching with request-level caching
+│   ├── renderHtmlData.js            # stage 3: subject router (+ rangeFilter.js)
+│   ├── renderers/                   # subject renderers, shared helpers, print assembler
+│   ├── renderHTML.js, renderOptions.js   # stage 4: composition
+│   ├── pdf/                         # stage 5: WeasyPrint
+│   ├── converters/                  # Markdown conversion
+│   ├── api/                         # GitHub API helper
+│   ├── fixtures/                    # demo fixtures (not published)
+│   ├── *Demo.jsx, *Demo.md          # styleguide demos
+│   └── __tests__/
+├── docs/                            # styleguide pages
+├── skills/door43-renderers-maintainer/   # AI maintainer skill
+├── .github/workflows/               # ci.yml (PRs, main), npm-publish.yml (releases)
+├── dist/                            # built library (generated)
+└── styleguide/                      # built style guide (generated)
 ```
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions are welcome. Open a pull request against `main`.
 
 ## License
 
@@ -491,4 +311,3 @@ MIT © [unfoldingWord](https://github.com/unfoldingWord)
 
 - [GitHub Repository](https://github.com/unfoldingWord/door43-preview-renderers)
 - [Documentation](https://door43-preview-renderers.netlify.app)
-- [Issue Tracker](https://github.com/unfoldingWord/door43-preview-renderers/issues)
