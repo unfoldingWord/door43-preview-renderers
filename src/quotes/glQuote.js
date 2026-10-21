@@ -110,15 +110,40 @@ function matchSourceGroups(sourceTokens, groups, occurrence) {
   return matched;
 }
 
+/**
+ * The occurrence an OL word has in the GL verse's own numbering. A GL
+ * alignment's `x-occurrence` counts the OL word over the GL verse label; when
+ * the GL bridges verses the OL keeps apart ("1-2" over "1" and "2"), the OL
+ * token's per-verse count is re-counted over every OL verse the bridge covers.
+ * When the OL label is the wider one, the OL count is kept as it is.
+ */
+function sourceOccurrenceIn(source, s, chapter, verse, cache) {
+  if (s.verse === verse) return s.occurrence;
+  const key = `${chapter}:${verse}`;
+  let counts = cache.get(key);
+  if (!counts) {
+    counts = new Map();
+    const refs = expandVerseRange(verse).map((v) => `${chapter}:${v}`);
+    const seen = {};
+    for (const t of tokensFor(source, refs)) {
+      if (t.type !== 'word') continue;
+      seen[t.norm] = (seen[t.norm] || 0) + 1;
+      counts.set(t, seen[t.norm]);
+    }
+    cache.set(key, counts);
+  }
+  return counts.has(s) ? counts.get(s) : s.occurrence;
+}
+
 /** Whether a GL word is aligned to one of the matched OL words. */
-function isAlignedTo(targetToken, matchedSource) {
+function isAlignedTo(targetToken, matchedSource, source, cache) {
   for (const a of targetToken.aligned || []) {
     for (const s of matchedSource) {
       if (
         a.content === s.norm &&
-        a.occurrence === s.occurrence &&
         s.chapter === targetToken.chapter &&
-        versesOverlap(s.verse, targetToken.verse)
+        versesOverlap(s.verse, targetToken.verse) &&
+        a.occurrence === sourceOccurrenceIn(source, s, targetToken.chapter, targetToken.verse, cache)
       ) {
         return true;
       }
@@ -222,12 +247,13 @@ export function getGlQuote({ quote, occurrence = 1, reference, source, target })
   let firstToken = null;
   let firstGroupWords = [];
   let inFirstGroup = true;
+  const occurrenceCache = new Map();
   for (const token of targetTokens) {
     if (token.type !== 'word') {
       if (current) between += token.text;
       continue;
     }
-    if (isAlignedTo(token, matched)) {
+    if (isAlignedTo(token, matched, source, occurrenceCache)) {
       if (!current && glGroups.length === 0) firstToken = token;
       // Whatever sat between two aligned words comes along, with runs of
       // whitespace (a poetry line break, a marker's trailing space) collapsed.

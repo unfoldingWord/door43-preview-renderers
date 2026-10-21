@@ -121,6 +121,30 @@ describe('getGlQuote', () => {
     expect(lookup('Θεοῦ', 2, '1:1-2')).toEqual({ quote: 'of God', occurrence: 2 });
   });
 
+  test('a GL bridge over unbridged OL verses: alignment occurrences count the whole bridge', () => {
+    // OL verses 1 and 2 each hold one θεός (verse-local occurrence 1). The GL
+    // bridges 1-2, so its alignment numbers them 1 and 2 across the bridge.
+    const src = indexUsfmBook(
+      ['\\id TIT', '\\c 1', '\\p', '\\v 1 \\w θεός\\w* \\w καὶ\\w*', '\\v 2 \\w θεός\\w*', ''].join('\n')
+    );
+    const tgt = indexUsfmBook(
+      [
+        '\\id TIT',
+        '\\c 1',
+        '\\p',
+        `\\v 1-2 ${zaln('θεός', 1, 2, w('God'))} ${zaln('καὶ', 1, 1, w('and'))} ${zaln('θεός', 2, 2, w('deity'))}`,
+        '',
+      ].join('\n')
+    );
+    const gl = (reference) => getGlQuote({ quote: 'θεός', occurrence: 1, reference, source: src, target: tgt });
+    expect(gl('1:1')).toEqual({ quote: 'God', occurrence: 1 });
+    expect(gl('1:2')).toEqual({ quote: 'deity', occurrence: 1 });
+    expect(getGlQuote({ quote: 'θεός', occurrence: 2, reference: '1:1-2', source: src, target: tgt })).toEqual({
+      quote: 'deity',
+      occurrence: 1,
+    });
+  });
+
   test('GL words that differ only by internal punctuation are counted apart', () => {
     // "son’s" and "sons" share a punctuation-free norm; the highlighter
     // (locateQuoteInVerse) treats them as different words, so must the count.
