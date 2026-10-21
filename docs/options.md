@@ -59,8 +59,8 @@ The rules `getResourceData()` applies to a book package before fetching extras a
 
 | Function | Description |
 |---|---|
-| `filterCatalogEntries(catalogEntries, { subject?, books? })` | Keeps the main entry (`[0]`) plus the entries whose subject `requiredSubjectsMap[subject]` lists, at most two Aligned Bibles (via `selectAlignedBibles`), and — when `books` is given — only the original-language Bible of a testament the books belong to. Returns `[main, ...alignedBibles, ...others]` in blueprint order. |
-| `selectAlignedBibles(entries)` | At most two Aligned Bibles: a literal (`ult`/`glt`) and a simplified (`ust`/`gst`) one when present, else the first two. |
+| `filterCatalogEntries(catalogEntries, { subject?, books? })` | Keeps the main entry (`[0]`) plus the entries whose subject `requiredSubjectsMap[subject]` lists, at most two Aligned Bibles (via `selectAlignedBibles`), and — when `books` is given — only the original-language Bible of a testament the books belong to. Returns `[main, ...alignedBibles, ...others]`: the Aligned Bible pair in preference order (literal first, then simplified), the remaining entries in blueprint order. |
+| `selectAlignedBibles(entries)` | At most two Aligned Bibles, literal (`ult`/`glt`) first and simplified (`ust`/`gst`) second when present, else the first two in blueprint order. Non-object entries are ignored. |
 | `testamentOf(bookId)` | `'old'`, `'new'`, or `undefined`. |
 
 ## `renderHtmlData(resourceData, options?)`

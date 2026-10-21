@@ -60,6 +60,17 @@ describe('selectAlignedBibles', () => {
     expect(selectAlignedBibles([])).toEqual([]);
   });
 
+  test('orders a literal + simplified pair by preference even when only two are given', () => {
+    expect(selectAlignedBibles([ust, ult])).toEqual([ult, ust]);
+  });
+
+  test('a null hole never fills the second slot', () => {
+    expect(selectAlignedBibles([null, ult, other1])).toEqual([ult, other1]);
+    expect(selectAlignedBibles([null, ust, other1])).toEqual([other1, ust]);
+    expect(selectAlignedBibles([null, ult])).toEqual([ult]);
+    expect(selectAlignedBibles([null])).toEqual([]);
+  });
+
   test('tolerates a non-array', () => {
     expect(selectAlignedBibles(undefined)).toEqual([]);
   });

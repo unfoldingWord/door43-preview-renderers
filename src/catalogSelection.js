@@ -17,29 +17,34 @@ export function testamentOf(bookId) {
 }
 
 /**
- * Select at most 2 Aligned Bible entries from the blueprint results.
+ * Select at most 2 Aligned Bible entries from the blueprint results, in
+ * preference order:
  *
- * Preference:
- *  - One "literal" Bible: abbreviation ult or glt
- *  - One "simplified" Bible: abbreviation ust or gst
- *  - If neither preferred abbreviation is found, use the first (and optionally second) Aligned Bible
+ *  - the "literal" Bible (abbreviation ult or glt) first, then the
+ *    "simplified" one (ust or gst);
+ *  - a lone preferred Bible is paired with the first other entry, the literal
+ *    one leading and the simplified one trailing;
+ *  - with no preferred abbreviation at all, the first two in blueprint order.
+ *
+ * Entries that are not objects (a null hole in the list) are ignored.
  *
  * @param {Array} entries - Aligned Bible catalog entries from the blueprint
  * @returns {Array} At most 2 selected entries
  */
 export function selectAlignedBibles(entries) {
   if (!Array.isArray(entries)) return [];
-  if (entries.length <= 2) return entries;
+  const list = entries.filter((e) => e && typeof e === 'object');
+  if (list.length <= 1) return list;
 
-  const literal = entries.find((e) => ['ult', 'glt'].includes(e?.abbreviation));
-  const simplified = entries.find((e) => ['ust', 'gst'].includes(e?.abbreviation));
+  const literal = list.find((e) => ['ult', 'glt'].includes(e.abbreviation));
+  const simplified = list.find((e) => ['ust', 'gst'].includes(e.abbreviation));
 
   if (literal && simplified) return [literal, simplified];
-  if (literal) return [literal, entries.find((e) => e !== literal) || literal];
-  if (simplified) return [entries.find((e) => e !== simplified) || simplified, simplified];
+  if (literal) return [literal, list.find((e) => e !== literal)];
+  if (simplified) return [list.find((e) => e !== simplified), simplified];
 
   // No preferred abbreviations found — use first two
-  return entries.slice(0, 2);
+  return list.slice(0, 2);
 }
 
 /**
@@ -52,9 +57,10 @@ export function selectAlignedBibles(entries) {
  *    the books belongs to is dropped (a New Testament render has no use for the
  *    Hebrew Old Testament, and vice versa); empty `books`, or any unknown id, keeps both.
  *
- * The result is `[main, ...selectedAlignedBibles, ...otherRequiredEntries]`,
- * each group in blueprint order. A main subject with no required subjects
- * returns the entries unchanged.
+ * The result is `[main, ...selectedAlignedBibles, ...otherRequiredEntries]`:
+ * the Aligned Bible pair in preference order (literal first, then simplified;
+ * see selectAlignedBibles), the remaining required entries in blueprint order.
+ * A main subject with no required subjects returns the entries unchanged.
  *
  * @param {Array} catalogEntries - Blueprint entries, main entry first
  * @param {Object} [options]
