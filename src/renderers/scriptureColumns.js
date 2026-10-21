@@ -86,7 +86,7 @@ export function getBibleColumns(extras) {
 
 /**
  * Display form of a TSV quote. A discontiguous quote is stored with its spans
- * joined by `&` — the form tsv-quote-converters emits and the form
+ * joined by `&` — the form the quote lookup emits and the form
  * twQuoteTrim.js splits on — but it reads as an ellipsis:
  * "God & the people whom he has chosen" → "God … the people whom he has chosen".
  *

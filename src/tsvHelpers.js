@@ -1,7 +1,8 @@
 import { fetchContent, fetchLicense } from './dcsApi.js';
-import { addGLQuoteCols } from 'tsv-quote-converters';
 import { applyTwlQuoteTrimming } from './twlQuoteTrimming.js';
 import { BibleBookData } from './constants.js';
+import { indexUsfmBook } from './quotes/usfmBookIndex.js';
+import { addGlQuotes } from './quotes/addGlQuotes.js';
 
 /**
  * Parse TSV content into array of objects
@@ -28,9 +29,9 @@ function parseTsv(tsvContent) {
 /**
  * Normalize TSV columns, converting GLQuote/GLOccurrence columns into a GLQuotes object.
  * @param {Array} rows - Parsed TSV rows
- * @param {string|null} singleBibleRepo - When addGLQuoteCols was called with a single bible,
- *   the repo identifier columns will be "GLQuote"/"GLOccurrence" (no suffix). This param
- *   provides the repo name to key them under in GLQuotes.
+ * @param {string|null} singleBibleRepo - A published TSV may already carry GL quote
+ *   columns; when they are unsuffixed ("GLQuote"/"GLOccurrence") this names the
+ *   repo to key them under in GLQuotes.
  */
 function normalizeTsvColumns(rows, singleBibleRepo = null) {
   if (rows.length === 0) return rows;
@@ -127,7 +128,7 @@ function entryLink(entry) {
 
 /**
  * Build bibleLinks array from catalog entries that are Aligned Bibles.
- * Returns links in the format "owner/repo/ref" for addGLQuoteCols.
+ * Returns links in the format "owner/repo/ref".
  */
 function buildBibleLinks(catalogEntries) {
   return catalogEntries.filter((entry) => entry.subject === 'Aligned Bible').map(entryLink);
@@ -153,62 +154,54 @@ async function fetchBookUsfm(entry, bookId, dcsApiUrl, quiet) {
 }
 
 /**
- * Add GL quote columns to TSV content using tsv-quote-converters.
+ * Fill the rows' GLQuotes from their original-language quotes.
  *
- * The Bibles the converter aligns against are fetched here first (through the
- * dcsApi cache, so the display extractor reuses the same download) and handed
- * to addGLQuoteCols as content. The original-language Bible is the one the
- * blueprint pinned, not whatever is in production today.
+ * The aligned Bibles and the original-language Bible the blueprint pinned are
+ * fetched (through the dcsApi cache, so the display extractor reuses the same
+ * download), indexed once per book, and looked up locally — see src/quotes/.
+ * A quote that cannot be matched leaves that Bible out of the row's GLQuotes;
+ * the renderers then show the original-language quote.
  *
- * @param {string} tsvContent
+ * @param {Array<Object>} rows - Normalised rows (Reference, Quote, Occurrence)
  * @param {string} bookCode
  * @param {Array} bibleEntries - Catalog entries for the Aligned Bibles, plus the
  *   Hebrew OT / Greek NT entries when known
  * @param {Object} options
+ * @returns {Promise<{converted: number, missed: Array}>}
  */
-async function addGLQuotes(tsvContent, bookCode, bibleEntries, options = {}) {
+async function convertQuotes(rows, bookCode, bibleEntries, options = {}) {
   const glEntries = bibleEntries.filter((e) => e.subject === 'Aligned Bible');
-  const bibleLinks = glEntries.map(entryLink);
-  if (bibleLinks.length === 0) return tsvContent;
+  if (glEntries.length === 0) return { converted: 0, missed: [] };
 
   const dcsApiUrl = options.dcs_api_url || 'https://git.door43.org/api/v1';
-  // Strip /api/v1 to get the base DCS URL that addGLQuoteCols expects
-  const dcsUrl = dcsApiUrl.replace(/\/api\/v[0-9]+\/?$/, '');
   const quiet = options.quiet !== false;
-
   const olEntry = bibleEntries.find((e) => e.subject === olSubjectForBook(bookCode));
-
-  // Preload every Bible the converter needs, concurrently.
-  const [glContents, olBibleContent] = await Promise.all([
-    Promise.all(glEntries.map((entry) => fetchBookUsfm(entry, bookCode, dcsApiUrl, quiet))),
-    olEntry ? fetchBookUsfm(olEntry, bookCode, dcsApiUrl, quiet) : undefined,
-  ]);
-  const bibleContents = {};
-  glEntries.forEach((entry, i) => {
-    if (glContents[i] != null) bibleContents[entryLink(entry)] = glContents[i];
-  });
-
-  const result = await addGLQuoteCols({
-    bibleLinks,
-    bookCode,
-    tsvContent,
-    trySeparatorsAndOccurrences: true,
-    usePreviousGLQuotes: true,
-    dcsUrl,
-    quiet,
-    // Honoured by tsv-quote-converters >= 1.2.0; older versions ignore these
-    // and download the Bibles themselves. The original-language link travels
-    // only with its content: if the preload failed, the converter is left to
-    // its own resolution rather than being pointed at a ref it cannot read.
-    bibleContents,
-    ...(olBibleContent != null ? { olBibleLink: entryLink(olEntry), olBibleContent } : {}),
-  });
-
-  if (result.errors && result.errors.length > 0 && !quiet) {
-    console.warn(`GL quote conversion had ${result.errors.length} error(s) for ${bookCode}`);
+  if (!olEntry) {
+    if (!quiet) console.warn(`No original-language Bible for ${bookCode}; GL quotes skipped`);
+    return { converted: 0, missed: [] };
   }
 
-  return result.output;
+  // Fetch every Bible the lookup needs, concurrently.
+  const [glContents, olContent] = await Promise.all([
+    Promise.all(glEntries.map((entry) => fetchBookUsfm(entry, bookCode, dcsApiUrl, quiet))),
+    fetchBookUsfm(olEntry, bookCode, dcsApiUrl, quiet),
+  ]);
+  if (olContent == null) return { converted: 0, missed: [] };
+
+  const source = indexUsfmBook(olContent);
+  const bibles = [];
+  glEntries.forEach((entry, i) => {
+    if (glContents[i] != null) {
+      bibles.push({ repo: entryCoords(entry).repo, index: indexUsfmBook(glContents[i]) });
+    }
+  });
+  if (!bibles.length) return { converted: 0, missed: [] };
+
+  const result = addGlQuotes(rows, { source, bibles });
+  if (result.missed.length && !quiet) {
+    console.warn(`${result.missed.length} quote(s) in ${bookCode} had no aligned words`);
+  }
+  return result;
 }
 
 /** Whether any row carries an original-language quote worth converting. */
@@ -280,8 +273,8 @@ export async function extractRcTsvData(catalogEntry, books, options = {}, catalo
       ? catalogEntries.filter((e) => GL_CONVERSION_SUBJECTS.has(e.subject))
       : options.glBibleEntries || [];
   const bibleLinks = buildBibleLinks(bibleEntriesForGl);
-  // When there's exactly one aligned bible, addGLQuoteCols outputs "GLQuote"/"GLOccurrence"
-  // without a repo suffix — pass the single repo name so normalization can key it properly.
+  // A published TSV with exactly one GL Bible may carry unsuffixed
+  // "GLQuote"/"GLOccurrence" columns — the single repo name keys them.
   const singleBibleRepo = bibleLinks.length === 1 ? bibleLinks[0].split('/')[1] : null;
 
   // Process each requested book
@@ -296,24 +289,22 @@ export async function extractRcTsvData(catalogEntry, books, options = {}, catalo
     // Extract the file path (remove leading ./)
     const filePath = ingredient.path.replace(/^\.\//, '');
 
-    // Fetch the TSV file
-    let tsvContent = await fetchContent(owner, repo, ref, filePath, dcs_api_url);
+    // Fetch and parse the TSV
+    const tsvContent = await fetchContent(owner, repo, ref, filePath, dcs_api_url);
+    const normalizedRows = normalizeTsvColumns(parseTsv(tsvContent), singleBibleRepo);
 
-    // Add GL quote columns if aligned bibles are available and there is
+    // Look up the GL quotes if aligned bibles are available and there is
     // anything to convert (Translation Questions rows carry no Quote).
-    if (bibleLinks.length > 0 && hasQuotes(parseTsv(tsvContent))) {
+    if (bibleLinks.length > 0 && hasQuotes(normalizedRows)) {
       try {
-        tsvContent = await addGLQuotes(tsvContent, bookId, bibleEntriesForGl, options);
+        await convertQuotes(normalizedRows, bookId, bibleEntriesForGl, options);
       } catch (e) {
         if (!options.quiet) {
-          console.warn(`GL quote conversion failed for ${bookId}: ${e.message}`);
+          console.warn(`GL quote lookup failed for ${bookId}: ${e.message}`);
         }
       }
     }
 
-    // Parse and normalize the TSV
-    const rows = parseTsv(tsvContent);
-    const normalizedRows = normalizeTsvColumns(rows, singleBibleRepo);
     const chapters = groupByChapterVerse(normalizedRows);
 
     // Add book data
