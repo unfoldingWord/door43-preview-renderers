@@ -337,7 +337,9 @@ export function renderTsvQuestionsHtml(resourceData, options = {}) {
 
   // Bible-versed: parse aligned-Bible USFM and pick the ordered GL Bibles.
   // OBS: locate the OBS stories carried in the extras.
-  const parsedScriptureExtras = isObs ? {} : parseScriptureExtras(extras);
+  const parsedScriptureExtras = isObs
+    ? {}
+    : parseScriptureExtras(extras, { editorMode: options.editorMode === true });
   const bibles = isObs ? [] : getBibleColumns(extras);
   const obsData = isObs ? findObsExtra(extras) : null;
 
