@@ -15,7 +15,8 @@ jest.unstable_mockModule('tsv-quote-converters', () => ({ addGLQuoteCols: addGLQ
 jest.unstable_mockModule('../twlQuoteTrimming.js', () => ({ applyTwlQuoteTrimming: jest.fn() }));
 
 const { extractRcTsvData } = await import('../tsvHelpers.js');
-const { fetchContent, clearFetchCache, setFetchCacheTtl } = await import('../dcsApi.js');
+const { fetchContent, fetchLicense, clearFetchCache, setFetchCacheTtl, fetchCacheSize } =
+  await import('../dcsApi.js');
 
 // --- fixtures --------------------------------------------------------------
 const API = 'https://git.door43.org/api/v1';
@@ -187,11 +188,12 @@ describe('extractRcTsvData download accounting', () => {
     }
     const result = await run;
 
-    // Some round had requests for both extras in flight at the same time.
+    // Some round had requests for both extras in flight at the same time. Only
+    // the extras ask for these repos' licenses (the quote preload does not).
     const together = concurrentSets.some(
       (urls) =>
-        urls.some((u) => u.includes('/en_ult/')) &&
-        urls.some((u) => u.includes('/el-x-koine_ugnt/'))
+        urls.some((u) => u.includes('/en_ult/contents/LICENSE')) &&
+        urls.some((u) => u.includes('/el-x-koine_ugnt/contents/LICENSE'))
     );
     expect(together).toBe(true);
     expect(Object.keys(result.extras)).toEqual(['ugnt', 'ult']);
@@ -228,5 +230,46 @@ describe('dcsApi fetch cache', () => {
       fetchContent('unfoldingWord', 'en_ult', 'v91', 'missing.usfm', API)
     ).rejects.toThrow('404');
     expect(axiosGetMock).toHaveBeenCalledTimes(2);
+  });
+
+  test('TTL 0 still shares an in-flight request, then drops it', async () => {
+    setFetchCacheTtl(0);
+    const a = fetchContent('unfoldingWord', 'en_ult', 'v91', '57-TIT.usfm', API);
+    const b = fetchContent('unfoldingWord', 'en_ult', 'v91', '57-TIT.usfm', API);
+    await Promise.all([a, b]);
+    expect(axiosGetMock).toHaveBeenCalledTimes(1);
+    expect(fetchCacheSize()).toBe(0);
+  });
+
+  test('expired entries are released even if never requested again', async () => {
+    setFetchCacheTtl(1);
+    await fetchContent('unfoldingWord', 'en_ult', 'v91', '57-TIT.usfm', API);
+    expect(fetchCacheSize()).toBe(1);
+    await new Promise((r) => setTimeout(r, 5));
+    await fetchContent('unfoldingWord', 'en_tn', 'v91', 'tn_TIT.tsv', API);
+    expect(fetchCacheSize()).toBe(1);
+  });
+
+  test('a license outage is not remembered as "no license"', async () => {
+    axiosGetMock.mockImplementation(async () => {
+      const err = new Error('503');
+      err.response = { status: 503 };
+      throw err;
+    });
+    expect(await fetchLicense('unfoldingWord', 'en_ult', 'v91', API)).toBe('');
+    axiosGetMock.mockImplementation(async (url) => respond(url));
+    expect(await fetchLicense('unfoldingWord', 'en_ult', 'v91', API)).toBe(LICENSE);
+    expect(axiosGetMock).toHaveBeenCalledTimes(4);
+  });
+
+  test('a confirmed missing license (all 404) is cached', async () => {
+    axiosGetMock.mockImplementation(async (url) => {
+      const err = new Error(`404 ${url}`);
+      err.response = { status: 404 };
+      throw err;
+    });
+    expect(await fetchLicense('unfoldingWord', 'en_ult', 'v91', API)).toBe('');
+    expect(await fetchLicense('unfoldingWord', 'en_ult', 'v91', API)).toBe('');
+    expect(axiosGetMock).toHaveBeenCalledTimes(3);
   });
 });

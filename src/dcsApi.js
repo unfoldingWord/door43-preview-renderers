@@ -27,25 +27,49 @@ export function clearFetchCache() {
   fetchCache.clear();
 }
 
+/** Number of entries currently held (for tests). */
+export function fetchCacheSize() {
+  return fetchCache.size;
+}
+
 /**
- * GET a URL once per TTL window. Failures are not cached: a rejected request
- * is evicted so the next caller retries.
+ * Run `start(forget)` once per key per TTL window. A pending entry never
+ * expires, so in-flight work is shared even at TTL 0; the TTL counts from when
+ * it settles. A rejection is evicted so the next caller retries, and `start`
+ * may call `forget()` to keep a resolved value out of the cache. Expired
+ * entries are swept on every miss so a key nobody asks for again is released.
  */
-function cachedGet(url) {
+function remember(key, start) {
   const now = Date.now();
-  const hit = fetchCache.get(url);
+  const hit = fetchCache.get(key);
   if (hit && hit.expires > now) {
     return hit.promise;
   }
-  const promise = axios.get(url).then(
-    (response) => response.data,
+  for (const [k, e] of fetchCache) {
+    if (e.expires <= now) fetchCache.delete(k);
+  }
+  const entry = { promise: null, expires: Infinity };
+  const forget = () => {
+    if (fetchCache.get(key) === entry) fetchCache.delete(key);
+  };
+  entry.promise = new Promise((resolve) => resolve(start(forget))).then(
+    (value) => {
+      entry.expires = Date.now() + fetchCacheTtlMs;
+      if (fetchCacheTtlMs === 0) forget();
+      return value;
+    },
     (error) => {
-      if (fetchCache.get(url)?.promise === promise) fetchCache.delete(url);
+      forget();
       throw error;
     }
   );
-  fetchCache.set(url, { promise, expires: now + fetchCacheTtlMs });
-  return promise;
+  fetchCache.set(key, entry);
+  return entry.promise;
+}
+
+/** GET a URL once per TTL window; failures are not cached. */
+function cachedGet(url) {
+  return remember(url, () => axios.get(url).then((response) => response.data));
 }
 
 /**
@@ -78,9 +102,10 @@ export async function fetchContent(owner, repo, ref, filePath, dcs_api_url) {
  * Fetch a repository's license file from DCS.
  *
  * Tries the common license filenames in order and returns the first that
- * exists (trimmed). Returns an empty string if none are found. The outcome
- * (including "no license") is cached per repo/ref for the TTL, so the main
- * resource and its extras share one lookup.
+ * exists (trimmed). Returns an empty string if none are found. The outcome is
+ * cached per repo/ref for the TTL, so the main resource and its extras share
+ * one lookup. "No license" is cached only when every candidate was a 404; an
+ * empty result caused by a 5xx or network error is not, so the next call retries.
  *
  * @param {string} owner - Repository owner
  * @param {string} repo - Repository name
@@ -90,28 +115,23 @@ export async function fetchContent(owner, repo, ref, filePath, dcs_api_url) {
  */
 export async function fetchLicense(owner, repo, ref, dcs_api_url) {
   const key = `license:${dcs_api_url}/repos/${owner}/${repo}?ref=${ref}`;
-  const now = Date.now();
-  const hit = fetchCache.get(key);
-  if (hit && hit.expires > now) {
-    return hit.promise;
-  }
-
-  const promise = (async () => {
+  return remember(key, async (forget) => {
     const licensePaths = ['LICENSE.md', 'LICENSE', 'LICENSE.txt'];
+    let transient = false;
     for (const licensePath of licensePaths) {
       try {
         const license = await fetchContent(owner, repo, ref, licensePath, dcs_api_url);
         if (license) {
           return license.trim();
         }
-      } catch {
-        // Try next candidate path.
+      } catch (e) {
+        // A 404 confirms absence; anything else may heal. Try the next path.
+        if (e?.response?.status !== 404) transient = true;
       }
     }
+    if (transient) forget();
     return '';
-  })();
-  fetchCache.set(key, { promise, expires: now + fetchCacheTtlMs });
-  return promise;
+  });
 }
 
 /**
