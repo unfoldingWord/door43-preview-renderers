@@ -1,23 +1,26 @@
 import { useState } from 'react';
 import { getResourceData } from './getResourceData';
+import { EN_RELEASE, exampleBooks } from './demoExamples';
+import ExamplePicker from './ExamplePicker';
 
 /**
  * Demo component for getResourceData function
  */
 export default function GetResourceDataDemo() {
   const [owner, setOwner] = useState('unfoldingWord');
-  const [repo, setRepo] = useState('en_obs');
-  const [ref, setRef] = useState('v9');
-  const [books, setBooks] = useState([]);
+  const [repo, setRepo] = useState('en_ult');
+  const [ref, setRef] = useState(EN_RELEASE);
+  const [books, setBooks] = useState(['tit']);
   const [options, setOptions] = useState('');
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const loadExample = (exampleOwner, exampleRepo, exampleRef) => {
-    setOwner(exampleOwner);
-    setRepo(exampleRepo);
-    setRef(exampleRef);
+  const loadExample = (example) => {
+    setOwner(example.owner);
+    setRepo(example.repo);
+    setRef(example.ref);
+    setBooks(exampleBooks(example));
   };
 
   const handleSubmit = async (e) => {
@@ -52,203 +55,7 @@ export default function GetResourceDataDemo() {
     <div style={{ padding: '20px', fontFamily: 'sans-serif' }}>
       <h2>getResourceData() Demo</h2>
 
-      <div
-        style={{
-          marginBottom: '20px',
-          padding: '15px',
-          backgroundColor: '#f0f0f0',
-          borderRadius: '4px',
-        }}
-      >
-        <strong>Quick Examples:</strong>
-        <div style={{ marginTop: '10px' }}>
-          <div style={{ marginBottom: '10px' }}>
-            <strong>OBS:</strong>
-            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '5px' }}>
-              <button
-                type="button"
-                onClick={() => {
-                  loadExample('unfoldingWord', 'en_obs', 'v9');
-                  setBooks([]);
-                }}
-                style={{ padding: '5px 10px', fontSize: '14px', cursor: 'pointer' }}
-              >
-                RC: unfoldingWord/en_obs/v9
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  loadExample('Tot', 'mdg_obs_text_obs', 'master');
-                  setBooks([]);
-                }}
-                style={{ padding: '5px 10px', fontSize: '14px', cursor: 'pointer' }}
-              >
-                TS: Tot/mdg_obs_text_obs/master
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  loadExample('shower', 'zhs_obs', 'master');
-                  setBooks([]);
-                }}
-                style={{ padding: '5px 10px', fontSize: '14px', cursor: 'pointer' }}
-              >
-                SB: shower/zhs_obs/master
-              </button>
-            </div>
-          </div>
-          <div>
-            <strong>TSV (Translation Notes/Questions/TWLs):</strong>
-            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '5px' }}>
-              <button
-                type="button"
-                onClick={() => {
-                  loadExample('unfoldingWord', 'en_tn', 'v89');
-                  setBooks(['gen']);
-                }}
-                style={{ padding: '5px 10px', fontSize: '14px', cursor: 'pointer' }}
-              >
-                TN v89: unfoldingWord/en_tn/v89 (gen)
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  loadExample('unfoldingWord', 'en_tn', 'v66');
-                  setBooks(['gen']);
-                }}
-                style={{ padding: '5px 10px', fontSize: '14px', cursor: 'pointer' }}
-              >
-                TN v66: unfoldingWord/en_tn/v66 (gen)
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  loadExample('unfoldingWord', 'en_twl', 'v89');
-                  setBooks(['gen']);
-                }}
-                style={{ padding: '5px 10px', fontSize: '14px', cursor: 'pointer' }}
-              >
-                TWL: unfoldingWord/en_twl/v89 (gen)
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  loadExample('unfoldingWord', 'en_tq', 'v89');
-                  setBooks(['gen']);
-                }}
-                style={{ padding: '5px 10px', fontSize: '14px', cursor: 'pointer' }}
-              >
-                TQ: unfoldingWord/en_tq/v89 (gen)
-              </button>
-            </div>
-          </div>
-          <div>
-            <strong>Translation Words:</strong>
-            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '5px' }}>
-              <button
-                type="button"
-                onClick={() => {
-                  loadExample('unfoldingWord', 'en_tw', 'v89');
-                  setBooks([]);
-                }}
-                style={{ padding: '5px 10px', fontSize: '14px', cursor: 'pointer' }}
-              >
-                unfoldingWord/en_tw/v89
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  loadExample('es-419_gl', 'es-419_tw', 'v37');
-                  setBooks([]);
-                }}
-                style={{ padding: '5px 10px', fontSize: '14px', cursor: 'pointer' }}
-              >
-                es-419_gl/es-419_tw/v37
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  loadExample('BSOJ', 'ar_tw', 'master');
-                  setBooks([]);
-                }}
-                style={{ padding: '5px 10px', fontSize: '14px', cursor: 'pointer' }}
-              >
-                BSOJ/ar_tw/master
-              </button>
-            </div>
-          </div>
-          <div>
-            <strong>Aligned Bible:</strong>
-            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '5px' }}>
-              <button
-                type="button"
-                onClick={() => {
-                  loadExample('unfoldingWord', 'en_ult', 'v88');
-                  setBooks(['tit']);
-                }}
-                style={{ padding: '5px 10px', fontSize: '14px', cursor: 'pointer' }}
-              >
-                RC: unfoldingWord/en_ult/v88 (tit)
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  loadExample('unfoldingWord', 'en_ust', 'master');
-                  setBooks(['mat', 'mrk', 'luk', 'jhn']);
-                }}
-                style={{ padding: '5px 10px', fontSize: '14px', cursor: 'pointer' }}
-              >
-                RC: unfoldingWord/en_ust/master (mat,mrk,luk,jhn)
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  loadExample('adipatealberto', 'pid_rut_text_reg', 'master');
-                  setBooks(['rut']);
-                }}
-                style={{ padding: '5px 10px', fontSize: '14px', cursor: 'pointer' }}
-              >
-                TS: adipatealberto/pid_rut_text_reg/master (rut)
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  loadExample('christopherrsmith', 'en_ust_dan_book', 'master');
-                  setBooks(['dan']);
-                }}
-                style={{ padding: '5px 10px', fontSize: '14px', cursor: 'pointer' }}
-              >
-                TC: christopherrsmith/en_ust_dan_book/master (dan)
-              </button>
-            </div>
-          </div>
-          <div>
-            <strong>Translation Academy:</strong>
-            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '5px' }}>
-              <button
-                type="button"
-                onClick={() => {
-                  loadExample('unfoldingWord', 'en_ta', 'v89');
-                  setBooks([]);
-                }}
-                style={{ padding: '5px 10px', fontSize: '14px', cursor: 'pointer' }}
-              >
-                unfoldingWord/en_ta/v89
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  loadExample('BSOJ', 'ar_ta', 'master');
-                  setBooks([]);
-                }}
-                style={{ padding: '5px 10px', fontSize: '14px', cursor: 'pointer' }}
-              >
-                BSOJ/ar_ta/master
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+      {ExamplePicker({ onPick: loadExample })}
 
       <form onSubmit={handleSubmit} style={{ marginBottom: '20px' }}>
         <div style={{ marginBottom: '15px' }}>

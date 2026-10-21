@@ -3,6 +3,8 @@ import { getResourceData } from './getResourceData';
 import { renderHtmlData } from './renderHtmlData';
 import { renderHTML } from './renderHTML';
 import { resourceDataFixtures } from './fixtures';
+import { EN_RELEASE } from './demoExamples';
+import ExamplePicker from './ExamplePicker';
 
 const card = {
   border: '1px solid #ddd',
@@ -24,7 +26,9 @@ export default function PipelineDemo() {
   const [fixtureKey, setFixtureKey] = useState(resourceDataFixtures[0].key);
   const [owner, setOwner] = useState('unfoldingWord');
   const [repo, setRepo] = useState('en_ult');
-  const [ref, setRef] = useState('master');
+  const [ref, setRef] = useState(EN_RELEASE);
+  // Render options the picked example needs (e.g. a TWL glossary layout).
+  const [liveRenderOptions, setLiveRenderOptions] = useState({});
   const [booksInput, setBooksInput] = useState('tit');
   const [view, setView] = useState('screen'); // 'screen' | 'print'
 
@@ -59,11 +63,11 @@ export default function PipelineDemo() {
   const htmlData = useMemo(() => {
     if (!resourceData) return null;
     try {
-      return renderHtmlData(resourceData);
+      return renderHtmlData(resourceData, { renderOptions: liveRenderOptions });
     } catch (e) {
       return { __error: e.message };
     }
-  }, [resourceData]);
+  }, [resourceData, liveRenderOptions]);
 
   // Stage 4 (pure): HtmlData → HTML. Re-runs instantly when you flip the view.
   const html = useMemo(() => {
@@ -103,6 +107,16 @@ export default function PipelineDemo() {
           </div>
         ) : (
           <div style={{ marginTop: 8, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+            {ExamplePicker({
+              variant: 'select',
+              onPick: (ex) => {
+                setOwner(ex.owner);
+                setRepo(ex.repo);
+                setRef(ex.ref);
+                setBooksInput(ex.books || '');
+                setLiveRenderOptions(ex.renderOptions || {});
+              },
+            })}
             <input value={owner} onChange={(e) => setOwner(e.target.value)} placeholder="owner" style={{ padding: 8 }} />
             <input value={repo} onChange={(e) => setRepo(e.target.value)} placeholder="repo" style={{ padding: 8 }} />
             <input value={ref} onChange={(e) => setRef(e.target.value)} placeholder="ref" style={{ padding: 8, width: 90 }} />

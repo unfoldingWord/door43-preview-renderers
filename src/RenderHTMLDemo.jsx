@@ -4,6 +4,8 @@ import { renderHtmlData } from './renderHtmlData';
 import { renderHTML } from './renderHTML';
 import { supportsBodyColumns } from './renderOptions';
 import { htmlDataFixtures } from './fixtures';
+import { EN_RELEASE } from './demoExamples';
+import ExamplePicker from './ExamplePicker';
 import { PAGE_SIZES } from './renderers/printDocumentAssembler';
 
 const PAGE_SIZE_OPTIONS = Object.entries(PAGE_SIZES).map(([key, size]) => ({
@@ -27,7 +29,9 @@ export default function RenderHTMLDemo() {
   const [fixtureKey, setFixtureKey] = useState(htmlDataFixtures[0].key);
   const [owner, setOwner] = useState('unfoldingWord');
   const [repo, setRepo] = useState('en_tn');
-  const [ref, setRef] = useState('master');
+  const [ref, setRef] = useState(EN_RELEASE);
+  // Render options the picked example needs (e.g. a TWL glossary layout).
+  const [liveRenderOptions, setLiveRenderOptions] = useState({});
   const [booksInput, setBooksInput] = useState('tit');
 
   const [htmlData, setHtmlData] = useState(() => htmlDataFixtures[0].data);
@@ -62,7 +66,7 @@ export default function RenderHTMLDemo() {
       if (!resourceData || resourceData.error) {
         throw new Error(resourceData?.error || 'No resource data');
       }
-      setHtmlData(renderHtmlData(resourceData, { books }));
+      setHtmlData(renderHtmlData(resourceData, { books, renderOptions: liveRenderOptions }));
       setLoadedLabel(`${owner}/${repo}@${ref}${books.length ? ` — ${books.join(', ')}` : ''}`);
     } catch (e) {
       setLoadError(e.message);
@@ -129,6 +133,16 @@ export default function RenderHTMLDemo() {
             </select>
           ) : (
             <>
+              {ExamplePicker({
+                variant: 'select',
+                onPick: (ex) => {
+                  setOwner(ex.owner);
+                  setRepo(ex.repo);
+                  setRef(ex.ref);
+                  setBooksInput(ex.books || '');
+                  setLiveRenderOptions(ex.renderOptions || {});
+                },
+              })}
               <input
                 value={owner}
                 onChange={(e) => setOwner(e.target.value)}
