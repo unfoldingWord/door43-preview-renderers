@@ -53,6 +53,16 @@ Fetches and parses a resource (and its dependencies) from DCS into a
 
 ---
 
+### Catalog selection helpers
+
+The rules `getResourceData()` applies to a book package before fetching extras are exported as pure functions, so a caller can compute the same set from a `CatalogSet` (door43-preview-app derives its cache identity from it):
+
+| Function | Description |
+|---|---|
+| `filterCatalogEntries(catalogEntries, { subject?, books? })` | Keeps the main entry (`[0]`) plus the entries whose subject `requiredSubjectsMap[subject]` lists, at most two Aligned Bibles (via `selectAlignedBibles`), and — when `books` is given — only the original-language Bible of a testament the books belong to. Returns `[main, ...alignedBibles, ...others]`: the Aligned Bible pair in preference order (literal first, then simplified), the remaining entries in blueprint order. |
+| `selectAlignedBibles(entries)` | At most two Aligned Bibles, literal (`ult`/`glt`) first and simplified (`ust`/`gst`) second when present, else the first two in blueprint order. Non-object entries are ignored. |
+| `testamentOf(bookId)` | `'old'`, `'new'`, or `undefined`. |
+
 ## `renderHtmlData(resourceData, options?)`
 
 Pure, synchronous. Turns parsed `resourceData` into reusable HTML **sections**.
@@ -78,6 +88,7 @@ renderHtmlData(resourceData, {
 | Subject | Key | Type | Description |
 |---|---|---|---|
 | Aligned Bible / Bible / Greek NT / Hebrew OT | `editorMode` | boolean | Keep implied-word brackets visible. |
+| TSV Translation Notes, TSV Questions/Study Notes, TSV Translation Words Links (scripture columns) | `editorMode` | boolean | Keep the `{…}` supplied-word braces in the ULT \| UST scripture columns. Default off: the braces are dropped, as the Aligned Bible renderer hides them. |
 | | `includeRawUsfmView` | boolean | Also produce a raw-USFM-as-HTML view in `sections.webView`. |
 | OBS-based TSV subjects (`obs-tn`, `obs-tq`, `obs-sn`, `obs-sq`) | `resolution` | `'none'` \| `'360px'` \| `'2160px'` | Whether to include the story-frame **pictures**, and at what size. Default `'none'`. The frame **text** is always rendered — the notes and questions are about it — so only the pictures are optional. Set it when producing `HtmlData`; both the HTML and the PDF built from that package then include them. Note the pictures are remote CDN URLs, so rendering with them on needs network access. |
 | TSV Translation Words Links | `layout` | `'verse'` \| `'glossary'` | `'verse'` (default) reads the book in order: each verse with its scripture columns and the table of words in it, the cited Translation Words articles collected as the `tw` appendix with back-references. `'glossary'` is the book's vocabulary: one entry per article cited, grouped Key Terms / Names / Other and sorted by title, with the article body inline and the verses (with the literal Bible's quote) where it occurs; no appendix. |

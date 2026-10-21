@@ -26,9 +26,6 @@ importers:
       proskomma-json-tools:
         specifier: 0.9.1
         version: 0.9.1(supports-color@10.2.2)
-      usfm-alignment-remover:
-        specifier: ^0.1.6
-        version: 0.1.6(debug@4.4.3(supports-color@10.2.2))(supports-color@10.2.2)
       usfm-js:
         specifier: ^3.4.3
         version: 3.5.0
@@ -7603,10 +7600,6 @@ packages:
 
   urlpattern-polyfill@8.0.2:
     resolution: {integrity: sha512-Qp95D4TPJl1kC9SKigDcqgyM2VDVO4RiJc2d4qe5GrYm+zbIQCWWKAFaJNQ4BhdFeDGwBmAxqJBwWSJDb9T3BQ==}
-
-  usfm-alignment-remover@0.1.6:
-    resolution: {integrity: sha512-aLb5RhCg3Uk7CezQ2q2OGzBXetJqpHhDVREAWRnjnBzBQy2IV8woiuBJqlge21eMPQhNJqsv5C/2DUOzSMq/bA==}
-    hasBin: true
 
   usfm-js@3.5.0:
     resolution: {integrity: sha512-gfSaqcxnWX0ZOInwZcyXUbn0qkVopQd3JWsZgEEfVjntb2yN8ojy6tyCqg+6AIv6MB6LZKwvuAT7nooexeUjDw==}
@@ -16678,16 +16671,6 @@ snapshots:
   urlpattern-polyfill@10.1.0: {}
 
   urlpattern-polyfill@8.0.2: {}
-
-  usfm-alignment-remover@0.1.6(debug@4.4.3(supports-color@10.2.2))(supports-color@10.2.2):
-    dependencies:
-      axios: 1.18.1(debug@4.4.3(supports-color@10.2.2))(supports-color@10.2.2)
-      jszip: 3.10.1
-      lodash.clonedeep: 4.5.0
-      usfm-js: 3.5.0
-    transitivePeerDependencies:
-      - debug
-      - supports-color
 
   usfm-js@3.5.0:
     dependencies:

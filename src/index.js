@@ -8,6 +8,7 @@ export { renderHtmlData } from './renderHtmlData.js';
 export { renderHTML } from './renderHTML.js';
 export { resolveComposeOptions, parseBooksOption } from './renderOptions.js';
 export { getAllCatalogEntries } from './getAllCatalogEntries.js';
+export { filterCatalogEntries, selectAlignedBibles, testamentOf } from './catalogSelection.js';
 export {
   BibleBookData,
   requiredSubjectsMap,

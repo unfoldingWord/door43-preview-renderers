@@ -420,7 +420,9 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
   const resolution = options.resolution || 'none';
   const obsData = isObs ? findObsExtra(extras) : null;
   // Parse aligned-Bible USFM once up front so per-verse scripture lookups are cheap.
-  const parsedScriptureExtras = isObs ? {} : parseScriptureExtras(extras);
+  const parsedScriptureExtras = isObs
+    ? {}
+    : parseScriptureExtras(extras, { editorMode: options.editorMode === true });
   // Ordered GL Bibles (e.g. ULT, UST) rendered as parallel columns for scripture + TWL.
   const bibles = isObs ? [] : getBibleColumns(extras);
   const toc = [];
