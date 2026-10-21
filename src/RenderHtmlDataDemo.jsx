@@ -2,67 +2,8 @@ import { useMemo, useState } from 'react';
 import { getResourceData } from './getResourceData';
 import { renderHtmlData } from './renderHtmlData';
 import { renderHTML } from './renderHTML';
-
-/**
- * Example resources covering every supported subject + metadata type, so the
- * styleguide exercises each route in renderHtmlData(). Each entry is
- * [label, owner, repo, ref, books, renderOptions?] — the optional sixth entry
- * fills the render options box for subjects whose layout is an option.
- */
-const EXAMPLE_GROUPS = [
-  {
-    group: 'Scripture (USFM)',
-    examples: [
-      ['RC: Aligned Bible — ULT — Titus (v89)', 'unfoldingWord', 'en_ult', 'v89', 'tit'],
-      ['RC: Aligned Bible — UST — Romans', 'unfoldingWord', 'en_ust', 'master', 'rom'],
-      ['RC: Hebrew Old Testament — UHB — Ruth', 'unfoldingWord', 'hbo_uhb', 'master', 'rut'],
-      [
-        'RC: Greek New Testament — UGNT — Titus',
-        'unfoldingWord',
-        'el-x-koine_ugnt',
-        'master',
-        'tit',
-      ],
-      ['TS: Bible — Ruth', 'adipatealberto', 'pid_rut_text_reg', 'master', 'rut'],
-      ['TC: Aligned Bible — Daniel', 'christopherrsmith', 'en_ust_dan_book', 'master', 'dan'],
-    ],
-  },
-  {
-    group: 'TSV Bible helps',
-    examples: [
-      ['Translation Notes — Titus (v89)', 'unfoldingWord', 'en_tn', 'v89', 'tit'],
-      ['Translation Questions — Romans (v89)', 'unfoldingWord', 'en_tq', 'v89', 'rom'],
-      ['Study Notes — Titus', 'unfoldingWord', 'en_sn', 'master', 'tit'],
-      ['Study Questions — Titus', 'unfoldingWord', 'en_sq', 'master', 'tit'],
-      ['Translation Words Links — Titus, by verse (v91)', 'unfoldingWord', 'en_twl', 'v91', 'tit'],
-      [
-        'Translation Words Links — Titus, glossary (v91)',
-        'unfoldingWord',
-        'en_twl',
-        'v91',
-        'tit',
-        { layout: 'glossary' },
-      ],
-    ],
-  },
-  {
-    group: 'Manuals (markdown)',
-    examples: [
-      ['Translation Academy', 'unfoldingWord', 'en_ta', 'master', ''],
-      ['Translation Words', 'unfoldingWord', 'en_tw', 'master', ''],
-    ],
-  },
-  {
-    group: 'Open Bible Stories',
-    examples: [
-      ['OBS', 'unfoldingWord', 'en_obs', 'master', ''],
-      ['OBS Translation Notes', 'unfoldingWord', 'en_obs-tn', 'master', ''],
-      ['OBS Translation Questions', 'unfoldingWord', 'en_obs-tq', 'master', ''],
-      ['OBS Study Notes', 'unfoldingWord', 'en_obs-sn', 'master', ''],
-      ['OBS Study Questions', 'unfoldingWord', 'en_obs-sq', 'master', ''],
-    ],
-  },
-];
+import { EN_RELEASE } from './demoExamples';
+import ExamplePicker from './ExamplePicker';
 
 const DEFAULT_RENDER_OPTIONS = { includeRawUsfmView: false, editorMode: false };
 
@@ -72,7 +13,7 @@ const DEFAULT_RENDER_OPTIONS = { includeRawUsfmView: false, editorMode: false };
 export default function RenderHtmlDataDemo() {
   const [owner, setOwner] = useState('unfoldingWord');
   const [repo, setRepo] = useState('en_ult');
-  const [ref, setRef] = useState('v88');
+  const [ref, setRef] = useState(EN_RELEASE);
   const [booksInput, setBooksInput] = useState('tit');
   const [options, setOptions] = useState(
     JSON.stringify(
@@ -129,14 +70,14 @@ export default function RenderHtmlDataDemo() {
     return fullHtml;
   }, [result]);
 
-  const loadExample = (nextOwner, nextRepo, nextRef, nextBooksInput, nextRenderOptions) => {
-    setOwner(nextOwner);
-    setRepo(nextRepo);
-    setRef(nextRef);
-    setBooksInput(nextBooksInput);
+  const loadExample = (example) => {
+    setOwner(example.owner);
+    setRepo(example.repo);
+    setRef(example.ref);
+    setBooksInput(example.books || '');
     // Always reset the box, so an example without options does not inherit the
     // previous example's (e.g. "by verse" after "glossary").
-    setRenderOptions(JSON.stringify(nextRenderOptions || DEFAULT_RENDER_OPTIONS, null, 2));
+    setRenderOptions(JSON.stringify(example.renderOptions || DEFAULT_RENDER_OPTIONS, null, 2));
   };
 
   const handleSubmit = async (e) => {
@@ -189,36 +130,7 @@ export default function RenderHtmlDataDemo() {
     <div style={{ fontFamily: 'sans-serif', width: '100%', maxWidth: '100vw' }}>
       <h2>renderHtmlData() Demo</h2>
 
-      <div
-        style={{
-          marginBottom: '20px',
-          padding: '15px',
-          backgroundColor: '#f5f5f5',
-          borderRadius: '4px',
-        }}
-      >
-        <strong>Quick Examples (every supported subject &amp; metadata type):</strong>
-        <div style={{ marginTop: '10px' }}>
-          {EXAMPLE_GROUPS.map(({ group, examples }) => (
-            <div key={group} style={{ marginBottom: '8px' }}>
-              <strong style={{ fontSize: '13px' }}>{group}</strong>
-              <div style={{ marginTop: '6px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                {examples.map(([label, exOwner, exRepo, exRef, exBooks, exRenderOptions]) => (
-                  <button
-                    key={label}
-                    type="button"
-                    onClick={() => loadExample(exOwner, exRepo, exRef, exBooks, exRenderOptions)}
-                    title={`${exOwner}/${exRepo}/${exRef}${exBooks ? ` (${exBooks})` : ''}`}
-                    style={{ padding: '6px 10px', cursor: 'pointer' }}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+      {ExamplePicker({ onPick: loadExample })}
 
       <form onSubmit={handleSubmit} style={{ marginBottom: '20px' }}>
         <div

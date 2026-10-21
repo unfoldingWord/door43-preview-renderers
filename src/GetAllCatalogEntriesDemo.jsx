@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { getAllCatalogEntries } from './getAllCatalogEntries';
+import { EN_RELEASE } from './demoExamples';
+import ExamplePicker from './ExamplePicker';
 
 /**
  * Demo component for getAllCatalogEntries function
@@ -10,8 +12,8 @@ import { getAllCatalogEntries } from './getAllCatalogEntries';
 export default function GetAllCatalogEntriesDemo() {
   const [owner, setOwner] = useState('unfoldingWord');
   const [repo, setRepo] = useState('en_tn');
-  const [ref, setRef] = useState('v89');
-  const [books, setBooks] = useState('1th');
+  const [ref, setRef] = useState(EN_RELEASE);
+  const [books, setBooks] = useState('tit');
   const [options, setOptions] = useState('');
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -66,83 +68,7 @@ export default function GetAllCatalogEntriesDemo() {
     <div style={{ padding: '20px', fontFamily: 'sans-serif' }}>
       <h2>getAllCatalogEntries() Demo</h2>
 
-      <div
-        style={{
-          marginBottom: '20px',
-          padding: '15px',
-          backgroundColor: '#f0f0f0',
-          borderRadius: '4px',
-        }}
-      >
-        <h3>Quick Examples</h3>
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-          <button
-            onClick={() => loadExample('unfoldingWord', 'en_tn', 'v89', '1th')}
-            style={{
-              padding: '8px 16px',
-              backgroundColor: '#0366d6',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-            }}
-          >
-            unfoldingWord/en_tn/v89 [1th]
-          </button>
-          <button
-            onClick={() => loadExample('BSOJ', 'ar_tn', 'master', 'tit')}
-            style={{
-              padding: '8px 16px',
-              backgroundColor: '#0366d6',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-            }}
-          >
-            BSOJ/ar_tn/master [tit]
-          </button>
-          <button
-            onClick={() => loadExample('unfoldingWord', 'en_tn', 'v66', 'mat,mrk')}
-            style={{
-              padding: '8px 16px',
-              backgroundColor: '#0366d6',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-            }}
-          >
-            unfoldingWord/en_tn/v66 [mat,mrk]
-          </button>
-          <button
-            onClick={() => loadExample('unfoldingWord', 'en_tn', 'v89', 'rut,tit')}
-            style={{
-              padding: '8px 16px',
-              backgroundColor: '#0366d6',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-            }}
-          >
-            unfoldingWord/en_tn/v89 [rut,tit - Mixed OT/NT]
-          </button>
-          <button
-            onClick={() => loadExample('unfoldingWord', 'en_obs-tn', 'v11', '')}
-            style={{
-              padding: '8px 16px',
-              backgroundColor: '#0366d6',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-            }}
-          >
-            unfoldingWord/en_obs-tn/v11
-          </button>
-        </div>
-      </div>
+      {ExamplePicker({ onPick: (ex) => loadExample(ex.owner, ex.repo, ex.ref, ex.books) })}
 
       <form onSubmit={handleSubmit} style={{ marginBottom: '20px' }}>
         <div style={{ marginBottom: '10px' }}>
