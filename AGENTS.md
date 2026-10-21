@@ -21,7 +21,8 @@ Rules: every stage is `stage(input, options)` with a discriminated input object 
 - Extractors behind stage 2: `src/rcAlignedBibleHelpers.js`, `src/tsBibleHelpers.js`, `src/tsvHelpers.js` (TSV + GL quotes + extras), `src/obsHelpers.js`, `src/taHelpers.js`, `src/twHelpers.js`; `src/dcsApi.js` does the DCS fetching with request-level caching.
 - Subject renderers in `src/renderers/`: `alignedBibleRenderer.js` (Proskomma/sofria), `obsRenderer.js`, `translationNotesRenderer.js`, `tsvQuestionsRenderer.js`, `translationWordsLinksRenderer.js`, `translationAcademyRenderer.js`, `translationWordsRenderer.js` (both via `manualResourceRenderer.js`).
 - Shared renderer helpers: `scriptureColumns.js` (ULT | UST columns, GL-quote headers), `rcAppendices.js` (rc:// resolution, TA/TW appendices), `twlTable.js` (per-verse Translation Words table), `obsFrames.js` (OBS frame panels), `anchors.js` (`nav-` → `<abbr>-` rewrite), `printDocumentAssembler.js` (cover, TOC, appendices, print CSS, `PAGE_SIZES`).
-- Constants: `src/constants.js` (`BibleBookData`, `requiredSubjectsMap`, `subjectIdentifierMap`, `alignedBibleSubjects`).
+- Constants: `src/constants.js` (`BibleBookData`, `requiredSubjectsMap`, `subjectIdentifierMap`, `alignedBibleSubjects`); the pure blueprint filtering in `src/catalogSelection.js` (`filterCatalogEntries`, `selectAlignedBibles`, `testamentOf`, exported).
+- Known stubs: `TSV OBS Translation Words Links` and Scripture Burrito scripture in `getResourceData.js` return metadata only (#21, #22).
 - CLI: `src/cli.js` imports from `dist/`, so `pnpm build` first.
 
 ## Renderer contract

@@ -160,7 +160,7 @@ The shape depends on `type` (`usfm`, `tsv`, `obs`, `ta`, `tw`); TSV resources ca
 Stage 3. Renders subject-specific HTML **sections** from ResourceData. Pure and synchronous, no network.
 
 - `options.renderOptions`: renderer-specific options (e.g. `showChaptersInToc`, `editorMode`, `includeRawUsfmView`, `resolution`, `layout`)
-- `options.books`: book ordering/selection; an array of ids, or `{ id: range }` for per-book reference ranges
+- `options.books`: for the USFM subjects, an array of ids selects and orders the books to render (the TSV, OBS and manual renderers render every book in the data, in catalog `sort` order); the object form `{ id: range }` applies per-book reference ranges (TSV and USFM) without dropping other books
 
 Supported subjects:
 
@@ -169,7 +169,7 @@ Supported subjects:
 - `Open Bible Stories`
 - `TSV Translation Notes` / `TSV OBS Translation Notes`
 - `TSV Translation Questions` / `Study Questions` / `Study Notes` (+ OBS variants)
-- `TSV Translation Words Links` / `TSV OBS Translation Words Links` (by verse, or as a glossary with `renderOptions.layout: 'glossary'`)
+- `TSV Translation Words Links` (by verse, or as a glossary with `renderOptions.layout: 'glossary'`); `TSV OBS Translation Words Links` is routed here but its data extraction is still a stub ([#21](https://github.com/unfoldingWord/door43-preview-renderers/issues/21))
 
 Returns an **HtmlData** package:
 
@@ -214,7 +214,7 @@ Stage 5. Composes the print document and renders it with WeasyPrint: the local `
 
 ### Also exported
 
-Subject renderers (`renderAlignedBibleHtml`, `renderObsHtml`, `renderTranslationNotesHtml`, `renderTsvQuestionsHtml`, `renderTranslationWordsLinksHtml`, `renderTranslationAcademyHtml`, `renderTranslationWordsHtml`), the print assembler pieces (`assemblePrintDocument`, `generateTocHtml`, `generateTocFromHtml`, `buildAppendicesToc`, `renderAppendicesHtml`, `buildCoverPage`, `coverCss`, `getPrintCss`, `PAGE_SIZES`, `resolvePageSize`), the PDF back ends (`generatePdf`, `generatePdfFromAssembled`, `generatePdfViaService`), option helpers (`resolveComposeOptions`, `parseBooksOption`, `supportsBodyColumns`, `runningHeaderModeFor`), Markdown helpers (`convertMarkdown`, `convertNoteFromMD2HTML`), `getCatalogEntry`, `fetchResource`, and the constants `BibleBookData`, `requiredSubjectsMap`, `subjectIdentifierMap`, `alignedBibleSubjects`. See [`docs/introduction.md`](docs/introduction.md).
+Subject renderers (`renderAlignedBibleHtml`, `renderObsHtml`, `renderTranslationNotesHtml`, `renderTsvQuestionsHtml`, `renderTranslationWordsLinksHtml`, `renderTranslationAcademyHtml`, `renderTranslationWordsHtml`), the print assembler pieces (`assemblePrintDocument`, `generateTocHtml`, `generateTocFromHtml`, `buildAppendicesToc`, `renderAppendicesHtml`, `buildCoverPage`, `coverCss`, `getPrintCss`, `PAGE_SIZES`, `resolvePageSize`), the PDF back ends (`generatePdf`, `generatePdfFromAssembled`, `generatePdfViaService`), option helpers (`resolveComposeOptions`, `parseBooksOption`, `supportsBodyColumns`, `runningHeaderModeFor`), Markdown helpers (`convertMarkdown`, `convertNoteFromMD2HTML`), the blueprint filtering `getResourceData()` applies (`filterCatalogEntries`, `selectAlignedBibles`, `testamentOf`), `getCatalogEntry`, `fetchResource`, and the constants `BibleBookData`, `requiredSubjectsMap`, `subjectIdentifierMap`, `alignedBibleSubjects`. See [`docs/introduction.md`](docs/introduction.md).
 
 ## Development
 

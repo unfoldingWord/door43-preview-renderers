@@ -66,9 +66,9 @@ resource data.
 | Option | Type | Default | Status | Description |
 |---|---|---|---|---|
 | `renderOptions` | object | `{}` | ✅ | Subject-specific knobs passed to the renderer (see below). |
-| `books` | string[] **or** `{ id: range }` | `[]` | ✅ | Book ordering/selection. Array form selects/orders whole books; object form additionally applies a per-book **reference range** (the value). Works for TSV (TN/TQ/Study) and USFM (Aligned Bible). |
+| `books` | string[] **or** `{ id: range }` | `[]` | ✅ | Array form: for the USFM subjects (Aligned Bible, Bible, Greek NT, Hebrew OT) selects and orders the books to render; the TSV, OBS and manual renderers render every book in the data, in catalog `sort` order. Object form: additionally applies a per-book **reference range** (the value) — TSV and USFM — without dropping the other books. |
 
-**`books` object form** (ranges) — ✅ active for TSV and USFM resources:
+**`books` object form** (ranges) — ✅ active for TSV and USFM resources (narrows the listed books; others render whole):
 
 ```js
 renderHtmlData(resourceData, {

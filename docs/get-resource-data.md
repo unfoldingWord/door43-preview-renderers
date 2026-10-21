@@ -28,7 +28,21 @@ getResourceData(input, options?)
 `books` selects which books to fetch (e.g. `['tit']`); an empty list means every
 book the resource has. Book-scoped supporting resources are fetched for the same
 books, and a testament mismatch (a New Testament book requested from the Hebrew Old
-Testament, or the reverse) is skipped rather than treated as an error.
+Testament, or the reverse) is skipped rather than treated as an error. The list
+is not recorded on the result: the renderers work from whatever `books` the data
+holds (see `renderHtmlData()` for ordering).
+
+## Catalog selection helpers
+
+The pure filtering `getResourceData()` applies to a blueprint is exported, so a
+caller can compute the same set (for a cache key, for instance) without fetching:
+
+- `filterCatalogEntries(catalogEntries, { subject?, books? })` — main entry first,
+  only the subjects in `requiredSubjectsMap`, at most two Aligned Bibles (literal
+  then simplified), the original-language Bible for the books' testament when
+  every book is known
+- `selectAlignedBibles(entries)` — the Aligned Bible pair rule on its own
+- `testamentOf(bookId)` — `'old'`, `'new'`, or `undefined`
 
 ## Returns
 
@@ -39,7 +53,7 @@ by `type`:
 | `type` | Subjects | Content |
 |---|---|---|
 | `usfm` | Aligned Bible, Bible, Greek New Testament, Hebrew Old Testament | `books: { [bookId]: usfmString }` (alignment markers removed) |
-| `tsv` | TSV Translation Notes / Questions / Study Notes / Study Questions / Translation Words Links, and their OBS variants | `books: { [bookId]: { title, chapters: { [ch]: { verses: { [v]: [row, …] } } } } }` plus `extras` (the supporting resources, keyed by short identifier such as `ult`, `ust`, `ta`, `tw`, `twl`, `ugnt`) |
+| `tsv` | TSV Translation Notes / Questions / Study Notes / Study Questions / Translation Words Links, and the OBS variants of Notes, Questions, Study Notes and Study Questions | `books: { [bookId]: { title, chapters: { [ch]: { verses: { [v]: [row, …] } } } } }` plus `extras` (the supporting resources, keyed by short identifier such as `ult`, `ust`, `ta`, `tw`, `twl`, `ugnt`) |
 | `obs` | Open Bible Stories | `stories: { [num]: { title, reference, frames: { [n]: { text, img } } } }`, `front`, `back` |
 | `ta` | Translation Academy | `manuals: { [manualId]: { title, toc, articles: { [articleId]: { title, text } } } }` |
 | `tw` | Translation Words | `articles: { kt: {…}, names: {…}, other: {…} }` |
@@ -47,6 +61,12 @@ by `type`:
 TSV rows with an original-language `Quote` also carry `GLQuotes`, keyed by the
 aligned Bible repository (e.g. `en_ult`), with the Gateway Language quote and
 occurrence for that Bible.
+
+Not extracted yet: **`TSV OBS Translation Words Links`**. `getResourceData()`
+returns only its catalog metadata (no `type`, `books`, or `extras`), so it cannot
+be rendered, and the OBS Translation Notes renderer does not get a words list from
+it. Tracked in [#21](https://github.com/unfoldingWord/door43-preview-renderers/issues/21).
+The scripture flavor of Scripture Burrito (`sb`) is a stub for the same reason.
 
 ## Usage
 

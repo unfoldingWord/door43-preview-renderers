@@ -84,7 +84,7 @@ const data = await getResourceData({ owner: 'adipatealberto', repo: 'pid_rut_tex
 | Open Bible Stories | `renderObsHtml` |
 | TSV Translation Notes, TSV OBS Translation Notes | `renderTranslationNotesHtml` |
 | TSV Translation Questions, TSV Study Notes, TSV Study Questions, TSV OBS Translation Questions, TSV OBS Study Notes, TSV OBS Study Questions | `renderTsvQuestionsHtml` |
-| TSV Translation Words Links, TSV OBS Translation Words Links | `renderTranslationWordsLinksHtml` (by verse, or as a glossary) |
+| TSV Translation Words Links, TSV OBS Translation Words Links | `renderTranslationWordsLinksHtml` (by verse, or as a glossary) (`TSV OBS Translation Words Links` is routed here too, but its data extraction is still a stub — see [#21](https://github.com/unfoldingWord/door43-preview-renderers/issues/21)) |
 | Translation Academy | `renderTranslationAcademyHtml` |
 | Translation Words | `renderTranslationWordsHtml` |
 
@@ -97,6 +97,7 @@ const data = await getResourceData({ owner: 'adipatealberto', repo: 'pid_rut_tex
 - **`getAllCatalogEntries()`** — all catalog entries for a Book Package, in one call. [Learn more →](get-all-catalog-entries.md)
 - **`getResourceData()`** — fetch and parse one resource into normalized data. [Learn more →](get-resource-data.md)
 - **`getCatalogEntry()`** — fetch a single catalog entry's metadata.
+- **`filterCatalogEntries()`**, **`selectAlignedBibles()`**, **`testamentOf()`** — the pure blueprint filtering `getResourceData()` applies, exported for callers that need the same set. [Learn more →](get-resource-data.md)
 
 ### Rendering
 
@@ -123,7 +124,7 @@ const data = await getResourceData({ owner: 'adipatealberto', repo: 'pid_rut_tex
 ## Architecture
 
 - **src/getAllCatalogEntries.js** — stage 1: the Book Package catalog (one `/catalog/bp/` call)
-- **src/getResourceData.js** — stage 2: fetch and parse (rc / sb / ts / tc), filtering the blueprint to what the subject needs
+- **src/getResourceData.js** — stage 2: fetch and parse (rc / sb / ts / tc), filtering the blueprint to what the subject needs via **src/catalogSelection.js**
 - **src/\*Helpers.js** (`rcAlignedBibleHelpers`, `tsBibleHelpers`, `tsvHelpers`, `obsHelpers`, `taHelpers`, `twHelpers`, `bibleHelpers`) — the per-format extractors behind stage 2; `twlQuoteTrimming.js` / `twQuoteTrim.js` narrow Translation Words Links quotes to the term
 - **src/dcsApi.js** — DCS content and license fetching, with request-level caching
 - **src/renderHtmlData.js** — stage 3: the subject router; **src/rangeFilter.js** applies per-book reference ranges

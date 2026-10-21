@@ -17,8 +17,12 @@ renderHtmlData(resourceData, options?)
 - **resourceData** (object): output of `getResourceData()`
 - **options** (object, optional):
   - **renderOptions** (object): subject-specific knobs, passed straight to the renderer
-  - **books** (array | object): book selection and order; the object form
-    `{ tit: '1:1-2:5' }` also applies a per-book reference range
+  - **books** (array | object): for the USFM subjects (Aligned Bible, Bible,
+    Greek New Testament, Hebrew Old Testament) the array selects and orders the
+    books to render; the TSV, OBS and manual renderers always render every book
+    in the data, in catalog `sort` order. The object form `{ tit: '1:1-2:5' }`
+    applies a per-book **reference range** (TSV and USFM) without dropping the
+    other books.
 
 See [Rendering options](./options.md) for every option by subject.
 
@@ -44,7 +48,7 @@ const htmlData = renderHtmlData(resourceData, {
 | Open Bible Stories | `renderObsHtml` |
 | TSV Translation Notes, TSV OBS Translation Notes | `renderTranslationNotesHtml` |
 | TSV Translation Questions, TSV Study Questions, TSV Study Notes, TSV OBS Translation Questions, TSV OBS Study Notes, TSV OBS Study Questions | `renderTsvQuestionsHtml` |
-| TSV Translation Words Links, TSV OBS Translation Words Links | `renderTranslationWordsLinksHtml` — the Translation Words for a book, by verse (scripture columns and the words in each verse, articles as an appendix) or as a glossary (`renderOptions.layout: 'glossary'`: one entry per article, grouped Key Terms / Names / Other, article body inline, references listed) |
+| TSV Translation Words Links, TSV OBS Translation Words Links | `renderTranslationWordsLinksHtml` — the Translation Words for a book, by verse (scripture columns and the words in each verse, articles as an appendix) or as a glossary (`renderOptions.layout: 'glossary'`: one entry per article, grouped Key Terms / Names / Other, article body inline, references listed) (`TSV OBS Translation Words Links` is routed here too, but its data extraction is still a stub — see [#21](https://github.com/unfoldingWord/door43-preview-renderers/issues/21)) |
 
 Any other subject throws `HTML rendering is not implemented yet for subject …`.
 
@@ -90,8 +94,9 @@ import { renderTranslationNotesHtml } from '@unfoldingword/door43-preview-render
 const { sections } = renderTranslationNotesHtml(resourceData, { showChaptersInToc: false });
 ```
 
-Going through `renderHtmlData()` is preferable: it applies the `books` selection,
-the reference ranges, and the anchor prefix, and promotes the identity fields.
+Going through `renderHtmlData()` is preferable: it applies the `books` selection
+(USFM subjects), the reference ranges, and the anchor prefix, and promotes the
+identity fields.
 
 ## Shared renderer helpers (`src/renderers/`)
 
