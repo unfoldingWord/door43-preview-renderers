@@ -205,7 +205,7 @@ export function getGlQuote({ quote, occurrence = 1, reference, source, target })
   const glGroups = [];
   let current = '';
   let between = '';
-  let firstWordOccurrence = 0;
+  let firstToken = null;
   let firstGroupWords = [];
   let inFirstGroup = true;
   for (const token of targetTokens) {
@@ -214,7 +214,7 @@ export function getGlQuote({ quote, occurrence = 1, reference, source, target })
       continue;
     }
     if (isAlignedTo(token, matched)) {
-      if (!current && glGroups.length === 0) firstWordOccurrence = token.occurrence;
+      if (!current && glGroups.length === 0) firstToken = token;
       // Whatever sat between two aligned words comes along, with runs of
       // whitespace (a poetry line break, a marker's trailing space) collapsed.
       if (current) current += between.replace(/\s+/g, ' ');
@@ -232,6 +232,14 @@ export function getGlQuote({ quote, occurrence = 1, reference, source, target })
   if (!glGroups.length) return null;
 
   const targetWords = targetTokens.filter((t) => t.type === 'word');
+  // A token's own `occurrence` is per verse; over a range, count the first
+  // word's position across every verse of the reference, as phraseOccurrence
+  // does.
+  let firstWordOccurrence = 0;
+  for (const t of targetWords) {
+    if (t.norm === firstToken.norm) firstWordOccurrence++;
+    if (t === firstToken) break;
+  }
   const glOccurrence = phraseOccurrence(
     targetWords,
     firstGroupWords.map((t) => t.norm),

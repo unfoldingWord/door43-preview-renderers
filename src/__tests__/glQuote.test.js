@@ -113,6 +113,14 @@ describe('getGlQuote', () => {
     expect(parseReference('3:front')).toEqual(['3:front']);
   });
 
+  test('over a range, the GL occurrence counts every verse of the range', () => {
+    // 1:1-2 holds three "of God"; the third (in verse 2) is the one aligned
+    // to the third Θεοῦ, so it is occurrence 3 of the range, not 1 of verse 2.
+    expect(lookup('Θεοῦ', 3, '1:1-2')).toEqual({ quote: 'of God', occurrence: 3 });
+    expect(lookup('χάρις Θεοῦ', 1, '1:1-2')).toEqual({ quote: 'Grace of God', occurrence: 1 });
+    expect(lookup('Θεοῦ', 2, '1:1-2')).toEqual({ quote: 'of God', occurrence: 2 });
+  });
+
   test('misses are null, not guesses', () => {
     expect(lookup('Θεοῦ', 3)).toBeNull(); // only two in the verse
     expect(lookup('οὐκ')).toBeNull(); // not in the verse
