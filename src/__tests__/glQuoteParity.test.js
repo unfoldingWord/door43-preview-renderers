@@ -17,7 +17,9 @@ import { addGlQuotes } from '../quotes/addGlQuotes.js';
  * quote. The aligned USFM beside the TSVs is what both were run against.
  *
  * Regenerate with scripts/gen-glquote-fixtures.mjs (instructions in its header)
- * only when the converter's behaviour is meant to change.
+ * only when the converter's behaviour is meant to change; the generator slices
+ * Genesis and Psalms before both writing and scoring, so these files are the
+ * bytes the oracle saw. 3,540 quotes in all.
  */
 
 const DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'fixtures', 'glquotes');
@@ -30,6 +32,19 @@ const BOOKS = [
   { id: 'psa', ol: 'uhb', label: 'Psalms 1–3 (poetry lines, superscriptions)' },
 ];
 const BIBLES = ['en_ult', 'en_ust'];
+
+// GL quotes compared per file (rows with a Quote × two Bibles), pinned so a
+// fixture that shrinks or loses columns cannot pass by comparing less.
+const COMPARED = {
+  tn_tit: 404,
+  twl_tit: 364,
+  tn_rut: 576,
+  twl_rut: 594,
+  tn_gen: 738,
+  twl_gen: 534,
+  tn_psa: 158,
+  twl_psa: 172,
+};
 
 function parseTsv(tsv) {
   const [header, ...lines] = tsv.split('\n').filter(Boolean);
@@ -81,7 +96,7 @@ describe.each(BOOKS)('GL quote parity with tsv-quote-converters: $label', ({ id,
       }
     });
 
-    expect(compared).toBeGreaterThan(100);
+    expect(compared).toBe(COMPARED[`${resource}_${id}`]);
     expect(mismatches).toEqual([]);
   });
 });

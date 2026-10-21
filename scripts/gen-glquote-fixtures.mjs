@@ -7,11 +7,17 @@
  * ULT/UST v91 and the blueprint-pinned UGNT v0.34 / UHB v3.0.0. The parity test
  * (src/__tests__/glQuoteParity.test.js) holds src/quotes/ to that output.
  *
- * Run only when the converter's behaviour is meant to change:
+ * The converter is scored on exactly the bytes written beside the TSVs: for
+ * Genesis and Psalms the books are sliced to their first three chapters
+ * BEFORE both the write and the conversion, so the parity test indexes the
+ * same USFM the oracle saw.
  *
- *   npm install --no-save tsv-quote-converters@1.2.0
- *   node scripts/gen-glquote-fixtures.mjs
- *   git checkout package.json pnpm-lock.yaml   # if the install touched them
+ * Run only when the converter's behaviour is meant to change. The converter is
+ * not a dependency any more, so give it a throwaway home (the repo's tmp/ is
+ * gitignored) and run the copy from there so its bare import resolves:
+ *
+ *   mkdir -p tmp && cd tmp && npm init -y >/dev/null && npm i tsv-quote-converters@1.2.0 && cd ..
+ *   cp scripts/gen-glquote-fixtures.mjs tmp/ && node tmp/gen-glquote-fixtures.mjs
  */
 import fs from 'fs';
 import { addGLQuoteCols } from 'tsv-quote-converters';
@@ -37,14 +43,18 @@ const sliceTsv = (tsv, chapters) => {
 };
 for (const b of books) {
   const B = b.usfm.split('-')[1];
-  const [ult, ust, ol] = await Promise.all([
-    raw('unfoldingWord', 'en_ult', `${b.usfm}.usfm`, 'v91'),
-    raw('unfoldingWord', 'en_ust', `${b.usfm}.usfm`, 'v91'),
-    raw('unfoldingWord', b.ol[0], `${b.usfm}.usfm`, b.ol[1]),
-  ]);
-  fs.writeFileSync(`${OUT}/usfm/${b.id}.ult.usfm`, sliceUsfm(ult, b.chapters));
-  fs.writeFileSync(`${OUT}/usfm/${b.id}.ust.usfm`, sliceUsfm(ust, b.chapters));
-  fs.writeFileSync(`${OUT}/usfm/${b.id}.${b.ol[0] === 'hbo_uhb' ? 'uhb' : 'ugnt'}.usfm`, sliceUsfm(ol, b.chapters));
+  // Slice first: the bytes written to disk and the bytes the converter scores
+  // are the same strings.
+  const [ult, ust, ol] = (
+    await Promise.all([
+      raw('unfoldingWord', 'en_ult', `${b.usfm}.usfm`, 'v91'),
+      raw('unfoldingWord', 'en_ust', `${b.usfm}.usfm`, 'v91'),
+      raw('unfoldingWord', b.ol[0], `${b.usfm}.usfm`, b.ol[1]),
+    ])
+  ).map((usfm) => sliceUsfm(usfm, b.chapters));
+  fs.writeFileSync(`${OUT}/usfm/${b.id}.ult.usfm`, ult);
+  fs.writeFileSync(`${OUT}/usfm/${b.id}.ust.usfm`, ust);
+  fs.writeFileSync(`${OUT}/usfm/${b.id}.${b.ol[0] === 'hbo_uhb' ? 'uhb' : 'ugnt'}.usfm`, ol);
   for (const res of ['tn', 'twl']) {
     const tsv = sliceTsv(await raw('unfoldingWord', `en_${res}`, `${res}_${B}.tsv`, 'v91'), b.chapters);
     const t0 = Date.now();
