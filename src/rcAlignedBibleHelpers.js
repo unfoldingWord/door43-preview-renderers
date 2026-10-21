@@ -1,4 +1,4 @@
-import { removeAlignments } from 'usfm-alignment-remover';
+import { removeAlignments } from './usfm/removeAlignments.js';
 import { fetchContent, fetchLicense } from './dcsApi.js';
 import { BibleBookData } from './constants.js';
 
