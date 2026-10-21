@@ -42,6 +42,7 @@ function buildResourceData() {
                 row('trr8', 'Παῦλος', 'names/paul', 'Paul', 'I, Paul'),
                 row('pmq8', 'Θεοῦ', 'kt/god', 'God', 'God'),
                 row('zfgc', 'δοῦλος', 'other/servant', 'servant', 'serve'),
+                row('pmq9', 'Θεοῦ', 'kt/god', 'God', 'God'),
               ],
               '3': [row('x1', 'Θεοῦ', 'kt/god', 'God', 'God')],
             },
@@ -120,6 +121,13 @@ describe('renderTranslationWordsLinksHtml — verse layout (default)', () => {
     expect(body).toContain('Titus 1:1</a></h4>');
   });
 
+  test('emits each verse id once (the header), not again on the word table', () => {
+    const ids = [...body.matchAll(/\bid="([^"]+)"/g)].map((m) => m[1]);
+    expect(ids.filter((id) => id === 'nav-tit-1-1')).toHaveLength(1);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(body).not.toContain('id="twl-tit-1-1"');
+  });
+
   test('shows the verse as ULT | UST scripture columns, not the Greek source', () => {
     expect(body).toContain('twl-scripture-cols');
     expect(body).toContain('Paul, a servant of God');
@@ -143,8 +151,13 @@ describe('renderTranslationWordsLinksHtml — verse layout (default)', () => {
     expect(Object.keys(tw).sort()).toEqual(['kt/god', 'names/paul', 'other/servant']);
     expect(tw['names/paul'].id).toBe('nav-tit--tw-names-paul');
     expect(tw['names/paul'].html).toContain('Paul was an apostle.');
-    // God occurs in 1:1, 1:3 and 2:1 — three back-references.
+    // God occurs in 1:1 (twice), 1:3 and 2:1 — one back-reference per verse.
     expect(tw['kt/god'].html).toContain('Titus References:');
+    expect(tw['kt/god'].html.match(/href="#nav-tit-\d+-\d+"/g)).toEqual([
+      'href="#nav-tit-1-1"',
+      'href="#nav-tit-1-3"',
+      'href="#nav-tit-2-1"',
+    ]);
     expect(tw['kt/god'].html).toContain('href="#nav-tit-1-1"');
     expect(tw['kt/god'].html).toContain('href="#nav-tit-1-3"');
     expect(tw['kt/god'].html).toContain('href="#nav-tit-2-1"');

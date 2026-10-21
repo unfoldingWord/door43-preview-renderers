@@ -360,6 +360,8 @@ function renderVerseLayout(resourceData, ctx) {
           // The tw appendix is emitted once, under the first book.
           anchorBookId: ctx.bookIds[0],
           heading: '',
+          // The verse header above already carries this verse's id.
+          id: false,
           classes: {
             wrapper: 'twl-verse-words',
             header: 'twl-verse-header-label',
@@ -376,7 +378,12 @@ function renderVerseLayout(resourceData, ctx) {
           onArticle: (key) => {
             allRcLinks.tw.add(key);
             if (!backRefs.tw[key]) backRefs.tw[key] = [];
-            backRefs.tw[key].push({ anchor: verseAnchor, label: verseLabel });
+            // One back-reference per verse, however many rows cite the article
+            // there — the glossary lists references the same way.
+            const refs = backRefs.tw[key];
+            if (!refs.length || refs[refs.length - 1].anchor !== verseAnchor) {
+              refs.push({ anchor: verseAnchor, label: verseLabel });
+            }
           },
         });
         // Every word in the verse was already listed earlier in the scope.

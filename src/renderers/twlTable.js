@@ -22,6 +22,7 @@ import { twKey } from './rcAppendices.js';
  * @param {function} [opts.onArticle] - Called with each row's TW article key
  *   (`category/slug`) so the caller can collect appendix articles / back-references
  * @param {function} [opts.skip] - Called with (row, key); return true to leave the row out
+ * @param {boolean} [opts.id=true] - Emit the `twl-<book>-<ch>-<v>` id on the wrapper
  * @returns {string} HTML, or '' when no row is rendered
  */
 export function renderTwlTable(rows, opts = {}) {
@@ -67,7 +68,11 @@ export function renderTwlTable(rows, opts = {}) {
   }
   if (bodyRows.length === 0) return '';
 
-  let html = `<div class="${classes.wrapper}" id="twl-${bookId}-${chapterKey}-${verseKey}">\n`;
+  // The wrapper id is optional: a renderer whose verse header already carries
+  // `<abbr>-<book>-<ch>-<v>` (the Translation Words Links renderer, abbr `twl`)
+  // would otherwise emit the same id twice on one verse.
+  const idAttr = opts.id === false ? '' : ` id="twl-${bookId}-${chapterKey}-${verseKey}"`;
+  let html = `<div class="${classes.wrapper}"${idAttr}>\n`;
   if (heading) html += `  <h4 class="${classes.header}">${escapeHtml(heading)}</h4>\n`;
   html += `  <table class="${classes.table}">\n    <thead><tr>${head}</tr></thead>\n    <tbody>\n`;
   html += bodyRows.join('');
