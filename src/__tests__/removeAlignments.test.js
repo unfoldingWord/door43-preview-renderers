@@ -117,8 +117,14 @@ describe('removeAlignments — nested character formatting without structuredClo
   beforeEach(() => {
     saved = globalThis.structuredClone;
     delete globalThis.structuredClone;
+    // Pin the precondition: on a host where the global is non-configurable the
+    // delete would fail quietly and these tests would exercise nothing.
+    expect(globalThis.structuredClone).toBeUndefined();
   });
   afterEach(() => {
+    globalThis.structuredClone = saved;
+  });
+  afterAll(() => {
     globalThis.structuredClone = saved;
   });
 

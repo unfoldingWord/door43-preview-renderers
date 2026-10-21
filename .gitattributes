@@ -1,0 +1,4 @@
+# Generated test fixtures (DCS snapshots, converter outputs): large and
+# machine-produced. Keep them out of diffs so a patch shows the code that
+# changed, not megabytes of USFM and TSV; GitHub also folds them as generated.
+src/fixtures/** -diff linguist-generated=true
