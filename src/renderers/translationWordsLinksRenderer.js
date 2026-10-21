@@ -357,6 +357,8 @@ function renderVerseLayout(resourceData, ctx) {
           bookId,
           chapterKey,
           verseKey,
+          // The tw appendix is emitted once, under the first book.
+          anchorBookId: ctx.bookIds[0],
           heading: '',
           classes: {
             wrapper: 'twl-verse-words',
@@ -474,11 +476,18 @@ function renderGlossaryLayout(resourceData, ctx) {
 
   // Every cited article across the books is known before any entry is
   // rendered, so cross-links between entries resolve whichever book they are in.
+  // An article cited in several books has an entry in each; a link to it goes
+  // to the entry in the linking book if there is one, else the first book's.
   const termsByBook = {};
+  const twHome = {};
   for (const bookId of ctx.bookIds) {
     termsByBook[bookId] = collectBookTerms(resourceData.books[bookId], bookId, ctx);
-    for (const key of Object.keys(termsByBook[bookId])) allRcLinks.tw.add(key);
+    for (const key of Object.keys(termsByBook[bookId])) {
+      allRcLinks.tw.add(key);
+      if (!twHome[key]) twHome[key] = bookId;
+    }
   }
+  ctx.twBookFor = (key) => twHome[key];
 
   const { body, toc } = renderBooks(resourceData, ctx, (b) => {
     const { bookId, bookTitle, bookToc, hasBookHeading, bodyParts } = b;
@@ -521,7 +530,10 @@ function renderGlossaryLayout(resourceData, ctx) {
             allRcLinks,
             ctx.extras,
             ctx.bookIdSet,
-            { twCategory: term.category }
+            {
+              twCategory: term.category,
+              twBookFor: (key) => (terms[key] ? bookId : twHome[key]),
+            }
           );
           html += `  <div class="twl-term-body">${articleHtml}</div>\n`;
         }
@@ -610,7 +622,9 @@ export function renderTranslationWordsLinksHtml(resourceData, options = {}) {
       : {};
   const appendixTitles = { tw: extras.tw?.title };
 
-  let body = resolveRcLinks(rendered.body, firstBook, rendered.allRcLinks, extras, bookIdSet);
+  let body = resolveRcLinks(rendered.body, firstBook, rendered.allRcLinks, extras, bookIdSet, {
+    twBookFor: ctx.twBookFor,
+  });
   for (const kind of Object.keys(appendices)) {
     for (const id of Object.keys(appendices[kind])) {
       appendices[kind][id].html = resolveRcLinks(
@@ -686,7 +700,8 @@ function neutralizeDanglingAnchors(body, appendices) {
     for (const id of Object.keys(appendices[kind])) collect(appendices[kind][id].html);
   }
   const fix = (html) =>
-    String(html || '').replace(/href="#(nav-[^"]+)"/g, (m, id) =>
+    // The link's own class (internal-link) goes too, so it carries one class attribute.
+    String(html || '').replace(/href="#(nav-[^"]+)"(?: class="[^"]*")?/g, (m, id) =>
       ids.has(id) ? m : 'href="#" class="external-ref"'
     );
   const out = {};

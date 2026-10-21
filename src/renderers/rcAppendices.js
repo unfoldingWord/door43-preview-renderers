@@ -144,10 +144,13 @@ export function findTwArticle(twResource, articlePath) {
  *   - double-bracket refs:  [[rc://*\/ta/man/translate/figs-x]]   (becomes a titled link)
  *   - bare references:      rc://*\/ta/man/translate/figs-x        (e.g. SupportReference)
  * Bracket/bare forms are replaced with a link whose text is the article title.
+ * `opts.twBookFor(key)` names the book whose anchor holds a TW article when it is
+ * not `bookId` (e.g. a glossary entry that only another book has).
  */
 export function resolveRcLinks(html, bookId, rcLinks, extras, bookIdSet = new Set(), opts = {}) {
   const taAnchor = (path) => `nav-${bookId}--ta-${path.replace(/\//g, '-')}`;
-  const twAnchor = (key) => `nav-${bookId}--tw-${key.replace(/\//g, '-')}`;
+  const twAnchor = (key) =>
+    `nav-${(opts.twBookFor && opts.twBookFor(key)) || bookId}--tw-${key.replace(/\//g, '-')}`;
   const twHref = (key) =>
     rcLinks.tw.has(key) ? `href="#${twAnchor(key)}" class="internal-link"` : 'href="#" class="unresolved-link"';
 

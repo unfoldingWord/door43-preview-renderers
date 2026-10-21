@@ -180,6 +180,9 @@ describe('renderTranslationWordsLinksHtml — verse layout options', () => {
     });
     expect(sections.appendices).toEqual({});
     expect(sections.body).toContain('twl-verse-table');
+    // No appendix, so the words must not link to article anchors that were never emitted.
+    expect(sections.body).not.toContain('--tw-');
+    expect(sections.body).toContain('<a href="#" class="external-ref">Paul</a>');
   });
 
   test("dedupe: 'chapter' lists a word once per chapter, dropping verses left empty", () => {
@@ -258,6 +261,68 @@ describe('renderTranslationWordsLinksHtml — glossary layout', () => {
     const book = sections.toc[0].sections[0];
     expect(book.sections.map((s) => s.title)).toEqual(['Key Terms', 'Names', 'Other']);
     expect(book.sections[0].id).toBe('nav-tit-kt');
+  });
+});
+
+/**
+ * Titus + Philemon: God is cited in both books, Onesimus only in Philemon and
+ * servant only in Titus; the God article links to both.
+ */
+function buildTwoBookData() {
+  const data = buildResourceData();
+  const row = (ID, Quote, link, ult) => ({
+    ID,
+    Reference: '',
+    Tags: '',
+    Quote,
+    Occurrence: '1',
+    TWLink: `rc://*/tw/dict/bible/${link}`,
+    GLQuotes: { en_ult: { Quote: ult, Occurrence: 1 } },
+  });
+  data.books.phm = {
+    title: 'Philemon',
+    identifier: 'phm',
+    sort: 58,
+    chapters: {
+      '1': {
+        verses: {
+          '4': [row('p1', 'Θεῷ', 'kt/god', 'God')],
+          '10': [row('p2', 'Ὀνήσιμον', 'names/onesimus', 'Onesimus')],
+        },
+      },
+    },
+  };
+  data.extras.tw.articles.names.onesimus = {
+    title: 'Onesimus',
+    text: '# Onesimus\n\n## Facts:\n\nOnesimus served Philemon.',
+  };
+  data.extras.tw.articles.kt.god.text += ' See [Onesimus](../names/onesimus.md).';
+  return data;
+}
+
+describe('renderTranslationWordsLinksHtml — several books', () => {
+  test('verse layout: every book links to the one emitted tw appendix article', () => {
+    const { sections } = renderTranslationWordsLinksHtml(buildTwoBookData());
+    const tw = sections.appendices.tw;
+    expect(tw['names/onesimus'].id).toBe('nav-tit--tw-names-onesimus');
+    // Philemon's word table points at the appendix that exists, not a dead anchor.
+    expect(sections.body).toContain('<a href="#nav-tit--tw-names-onesimus" class="internal-link">Onesimus</a>');
+    expect(sections.body).toContain('<a href="#nav-tit--tw-kt-god" class="internal-link">God</a>');
+    expect(sections.body).not.toContain('nav-phm--tw-');
+    expect(sections.body).not.toContain('class="external-ref"');
+    expect(tw['kt/god'].html).toContain('href="#nav-tit--tw-names-onesimus"');
+    expect(tw['kt/god'].html).toContain('href="#nav-phm-1-4"');
+  });
+
+  test('glossary: cross-links reach the entry in whichever book holds it', () => {
+    const { body } = renderTranslationWordsLinksHtml(buildTwoBookData(), { layout: 'glossary' }).sections;
+    expect(body).toContain('<article class="twl-term" id="nav-phm--tw-names-onesimus">');
+    // Titus's God entry → Onesimus, an entry only Philemon has.
+    expect(body).toContain('href="#nav-phm--tw-names-onesimus" class="internal-link"');
+    // Philemon's God entry → servant, an entry only Titus has; its own book's
+    // God entry still links within the book.
+    expect(body).toContain('href="#nav-tit--tw-other-servant" class="internal-link"');
+    expect(body).not.toContain('class="external-ref"');
   });
 });
 

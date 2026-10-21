@@ -15,6 +15,8 @@ import { twKey } from './rcAppendices.js';
  * @param {string} opts.bookId
  * @param {string} opts.chapterKey
  * @param {string} opts.verseKey
+ * @param {string} [opts.anchorBookId=bookId] - Book whose `tw` appendix holds the
+ *   articles (a multi-book document emits one appendix, under its first book)
  * @param {Object} [opts.classes] - { wrapper, header, table, label, cell } CSS class names
  * @param {string} [opts.heading='Translation Words'] - Table heading; '' omits it
  * @param {function} [opts.onArticle] - Called with each row's TW article key
@@ -28,6 +30,7 @@ export function renderTwlTable(rows, opts = {}) {
     bookId,
     chapterKey,
     verseKey,
+    anchorBookId = bookId,
     heading = 'Translation Words',
     onArticle,
     skip,
@@ -50,7 +53,7 @@ export function renderTwlTable(rows, opts = {}) {
     const key = twKey(row.TWLink || row.SupportReference || '');
     if (skip && skip(row, key)) continue;
     if (key && onArticle) onArticle(key, row);
-    const twAnchor = key ? `nav-${bookId}--tw-${key.replace(/\//g, '-')}` : '';
+    const twAnchor = key ? `nav-${anchorBookId}--tw-${key.replace(/\//g, '-')}` : '';
     const cells = cols
       .map((b) => {
         const q = quoteForDisplay((b.id && glQuoteForBibleId(row.GLQuotes, b.id)) || row.Quote || '');

@@ -64,6 +64,8 @@ const EXAMPLE_GROUPS = [
   },
 ];
 
+const DEFAULT_RENDER_OPTIONS = { includeRawUsfmView: false, editorMode: false };
+
 /**
  * Demo component for renderHtmlData function.
  */
@@ -82,14 +84,7 @@ export default function RenderHtmlDataDemo() {
     )
   );
   const [renderOptions, setRenderOptions] = useState(
-    JSON.stringify(
-      {
-        includeRawUsfmView: false,
-        editorMode: false,
-      },
-      null,
-      2
-    )
+    JSON.stringify(DEFAULT_RENDER_OPTIONS, null, 2)
   );
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -139,7 +134,9 @@ export default function RenderHtmlDataDemo() {
     setRepo(nextRepo);
     setRef(nextRef);
     setBooksInput(nextBooksInput);
-    if (nextRenderOptions) setRenderOptions(JSON.stringify(nextRenderOptions, null, 2));
+    // Always reset the box, so an example without options does not inherit the
+    // previous example's (e.g. "by verse" after "glossary").
+    setRenderOptions(JSON.stringify(nextRenderOptions || DEFAULT_RENDER_OPTIONS, null, 2));
   };
 
   const handleSubmit = async (e) => {
