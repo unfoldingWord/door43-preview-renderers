@@ -121,6 +121,19 @@ describe('getGlQuote', () => {
     expect(lookup('Θεοῦ', 2, '1:1-2')).toEqual({ quote: 'of God', occurrence: 2 });
   });
 
+  test('GL words that differ only by internal punctuation are counted apart', () => {
+    // "son’s" and "sons" share a punctuation-free norm; the highlighter
+    // (locateQuoteInVerse) treats them as different words, so must the count.
+    const src = indexUsfmBook(['\\id TIT', '\\c 1', '\\p', '\\v 1 \\w υἱοί\\w* \\w υἱοῦ\\w*', ''].join('\n'));
+    const tgt = indexUsfmBook(
+      ['\\id TIT', '\\c 1', '\\p', `\\v 1 ${zaln('υἱοί', 1, 1, w('sons'))} ${zaln('υἱοῦ', 1, 1, w('son’s'))}`, ''].join('\n')
+    );
+    expect(getGlQuote({ quote: 'υἱοῦ', occurrence: 1, reference: '1:1', source: src, target: tgt })).toEqual({
+      quote: 'son’s',
+      occurrence: 1,
+    });
+  });
+
   test('misses are null, not guesses', () => {
     expect(lookup('Θεοῦ', 3)).toBeNull(); // only two in the verse
     expect(lookup('οὐκ')).toBeNull(); // not in the verse

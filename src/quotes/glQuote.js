@@ -151,6 +151,20 @@ export function dropUnbalancedBraces(text) {
 }
 
 /**
+ * A GL word's identity for counting its occurrences: NFC, no word joiner,
+ * punctuation trimmed from its ends only. Internal punctuation stays, so
+ * "son’s" and "sons" are different words, as they are to the quote matcher
+ * that later highlights the GL quote (twQuoteTrim.js locateQuoteInVerse).
+ */
+function glWordKey(token) {
+  return String(token.text || '')
+    .normalize('NFC')
+    .replace(/⁠/g, '')
+    .trim()
+    .replace(/^\p{P}+|\p{P}+$/gu, '');
+}
+
+/**
  * Which occurrence of the first group's words, as a phrase, the match is in
  * the target verse(s): counted over the GL word sequence, by the occurrence
  * of the phrase's first word.
@@ -161,10 +175,10 @@ function phraseOccurrence(targetWords, phraseWords, firstWordOccurrence) {
   let phrases = 0;
   const byStart = {};
   for (let i = 0; i < targetWords.length; i++) {
-    if (targetWords[i].norm === phraseWords[0]) starts++;
+    if (glWordKey(targetWords[i]) === phraseWords[0]) starts++;
     let ok = i + phraseWords.length <= targetWords.length;
     for (let k = 0; ok && k < phraseWords.length; k++) {
-      if (targetWords[i + k].norm !== phraseWords[k]) ok = false;
+      if (glWordKey(targetWords[i + k]) !== phraseWords[k]) ok = false;
     }
     if (ok) {
       phrases++;
@@ -234,15 +248,16 @@ export function getGlQuote({ quote, occurrence = 1, reference, source, target })
   const targetWords = targetTokens.filter((t) => t.type === 'word');
   // A token's own `occurrence` is per verse; over a range, count the first
   // word's position across every verse of the reference, as phraseOccurrence
-  // does.
+  // does. Words are told apart by glWordKey, not the punctuation-free norm.
+  const firstKey = glWordKey(firstToken);
   let firstWordOccurrence = 0;
   for (const t of targetWords) {
-    if (t.norm === firstToken.norm) firstWordOccurrence++;
+    if (glWordKey(t) === firstKey) firstWordOccurrence++;
     if (t === firstToken) break;
   }
   const glOccurrence = phraseOccurrence(
     targetWords,
-    firstGroupWords.map((t) => t.norm),
+    firstGroupWords.map(glWordKey),
     firstWordOccurrence
   );
 
