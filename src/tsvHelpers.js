@@ -197,10 +197,11 @@ async function addGLQuotes(tsvContent, bookCode, bibleEntries, options = {}) {
     dcsUrl,
     quiet,
     // Honoured by tsv-quote-converters >= 1.2.0; older versions ignore these
-    // and download the Bibles themselves.
+    // and download the Bibles themselves. The original-language link travels
+    // only with its content: if the preload failed, the converter is left to
+    // its own resolution rather than being pointed at a ref it cannot read.
     bibleContents,
-    olBibleLink: olEntry ? entryLink(olEntry) : undefined,
-    olBibleContent,
+    ...(olBibleContent != null ? { olBibleLink: entryLink(olEntry), olBibleContent } : {}),
   });
 
   if (result.errors && result.errors.length > 0 && !quiet) {
@@ -212,8 +213,8 @@ async function addGLQuotes(tsvContent, bookCode, bibleEntries, options = {}) {
 
 /** Whether any row carries an original-language quote worth converting. */
 function hasQuotes(rows) {
-  return rows.some((row) =>
-    String(row.Quote || row.OrigQuote || row.OrigWords || row.OrigWord || '').trim()
+  return rows.some(
+    (row) => String(row.Quote || row.OrigQuote || row.OrigWords || row.OrigWord || '').trim() !== ''
   );
 }
 

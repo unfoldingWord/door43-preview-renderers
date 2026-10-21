@@ -132,6 +132,31 @@ describe('extractRcTsvData download accounting', () => {
     expect(result.extras.ult.license).toBe(LICENSE);
   });
 
+  test('a failed original-language preload leaves the converter to its own resolution', async () => {
+    axiosGetMock.mockImplementation(async (url) => {
+      if (url === URLS.ugnt) {
+        const err = new Error(`404 ${url}`);
+        err.response = { status: 404 };
+        throw err;
+      }
+      return respond(url);
+    });
+    const result = await extractRcTsvData(tnEntry, ['tit'], { dcs_api_url: API, quiet: true }, [
+      tnEntry,
+      ultEntry,
+      ugntEntry,
+    ]);
+    expect(addGLQuoteColsMock).toHaveBeenCalledTimes(1);
+    const args = addGLQuoteColsMock.mock.calls[0][0];
+    expect(args.bibleContents).toEqual({ 'unfoldingWord/en_ult/v91': ULT_USFM });
+    // Neither the link nor the content: the converter falls back to resolving
+    // the original-language Bible itself, as it did before preloading.
+    expect(args).not.toHaveProperty('olBibleLink');
+    expect(args).not.toHaveProperty('olBibleContent');
+    // The unreadable extra is skipped, the rest of the render stands.
+    expect(Object.keys(result.extras)).toEqual(['ult']);
+  });
+
   test('Translation Questions with no Quote never call the quote converter', async () => {
     const result = await extractRcTsvData(tqEntry, ['tit'], { dcs_api_url: API, quiet: true }, [
       tqEntry,
@@ -229,6 +254,16 @@ describe('dcsApi fetch cache', () => {
     await expect(
       fetchContent('unfoldingWord', 'en_ult', 'v91', 'missing.usfm', API)
     ).rejects.toThrow('404');
+    expect(axiosGetMock).toHaveBeenCalledTimes(2);
+  });
+
+  test('a 200 without a usable body is not cached', async () => {
+    axiosGetMock.mockImplementationOnce(async () => ({ data: { message: 'not a file' } }));
+    await expect(
+      fetchContent('unfoldingWord', 'en_ult', 'v91', '57-TIT.usfm', API)
+    ).rejects.toThrow('No file content');
+    expect(fetchCacheSize()).toBe(0);
+    expect(await fetchContent('unfoldingWord', 'en_ult', 'v91', '57-TIT.usfm', API)).toBe(ULT_USFM);
     expect(axiosGetMock).toHaveBeenCalledTimes(2);
   });
 

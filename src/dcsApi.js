@@ -67,35 +67,41 @@ function remember(key, start) {
   return entry.promise;
 }
 
-/** GET a URL once per TTL window; failures are not cached. */
-function cachedGet(url) {
-  return remember(url, () => axios.get(url).then((response) => response.data));
-}
-
-/**
- * Fetch and decode base64 file content from DCS
- */
-export async function fetchContent(owner, repo, ref, filePath, dcs_api_url) {
-  const url = `${dcs_api_url}/repos/${owner}/${repo}/contents/${filePath}?ref=${ref}`;
-  const data = await cachedGet(url);
-  const base64Content = data.content;
-
-  // Decode base64 - works in both browser and Node.js
-  let decodedContent;
+/** Decode a base64 body - works in both browser and Node.js. */
+function decodeBase64(base64Content) {
   if (typeof window !== 'undefined' && window.atob) {
     // Browser environment
-    decodedContent = decodeURIComponent(
+    return decodeURIComponent(
       atob(base64Content)
         .split('')
         .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
         .join('')
     );
-  } else {
-    // Node.js environment
-    decodedContent = Buffer.from(base64Content, 'base64').toString('utf-8');
   }
+  // Node.js environment
+  return Buffer.from(base64Content, 'base64').toString('utf-8');
+}
 
-  return decodedContent;
+/**
+ * Fetch and decode base64 file content from DCS.
+ *
+ * The body is validated and decoded inside the remembered work, so a
+ * response that is not a usable contents record (no `content` string, e.g.
+ * a directory listing or an error page served as 200) is forgotten and
+ * rejected rather than cached for the TTL.
+ */
+export async function fetchContent(owner, repo, ref, filePath, dcs_api_url) {
+  const url = `${dcs_api_url}/repos/${owner}/${repo}/contents/${filePath}?ref=${ref}`;
+  return remember(url, (forget) =>
+    axios.get(url).then((response) => {
+      const base64Content = response?.data?.content;
+      if (typeof base64Content !== 'string') {
+        forget();
+        throw new Error(`No file content in response from ${url}`);
+      }
+      return decodeBase64(base64Content);
+    })
+  );
 }
 
 /**
