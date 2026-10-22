@@ -1,7 +1,13 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { removeAlignments, removeMilestonesAndWordMarkers } from '../usfm/removeAlignments.js';
+import { jest } from '@jest/globals';
+import usfmjs from 'usfm-js';
+import {
+  removeAlignments,
+  removeMilestonesAndWordMarkers,
+  getUsfmForVerseContent,
+} from '../usfm/removeAlignments.js';
 
 /**
  * removeAlignments() was inlined from usfm-alignment-remover 0.1.6 (issue #45).
@@ -147,5 +153,34 @@ describe('removeAlignments — nested character formatting without structuredClo
     expect(removeAlignments(usfm)).toBe(
       '\\id TIT\n\n\\c 1\n\\p\n\\v 1 Paul \\add a servant\\add* of God.\n'
     );
+  });
+});
+
+/**
+ * #55: upstream cut the serialised verse with `split('\\v 1')`, keeping only
+ * the piece after the first marker, and returned '' when there was none.
+ */
+describe('removeAlignments — the verse marker is cut off exactly once (#55)', () => {
+  test('a verse whose text contains "\\v 1" or "\\v 10" keeps all of it', () => {
+    for (const text of ['see \\v 1 here', 'up to \\v 10 and on']) {
+      expect(getUsfmForVerseContent({ verseObjects: [{ type: 'text', text }] })).toBe(text);
+    }
+  });
+
+  test('an empty verse is empty, and the verses after it are kept', () => {
+    expect(getUsfmForVerseContent({ verseObjects: [] })).toBe('');
+    const out = removeAlignments(`\\id TIT\n\\c 1\n\\p\n\\v 1\n\\v 2 ${W('Paul')}.\n`);
+    expect(out).toMatch(/\\v 1 *\n?\\v 2 Paul\./);
+  });
+
+  test('a serialised verse without its marker throws instead of vanishing', () => {
+    const spy = jest.spyOn(usfmjs, 'toUSFM').mockReturnValue('Paul, a servant');
+    try {
+      expect(() => getUsfmForVerseContent({ verseObjects: [{ type: 'text', text: 'x' }] })).toThrow(
+        'expected "\\v 1" at the start'
+      );
+    } finally {
+      spy.mockRestore();
+    }
   });
 });
