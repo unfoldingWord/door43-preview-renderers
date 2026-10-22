@@ -407,6 +407,23 @@ describe('renderTranslationNotesHtml — OBS', () => {
     };
   }
 
+  test("shows a frame's OBS Translation Questions after its notes; Bible questions are ignored", () => {
+    const data = buildObsData();
+    const tq = (subject, Question) => ({
+      type: 'tsv',
+      subject,
+      books: {
+        obs: { chapters: { 1: { verses: { 1: [{ ID: 'x', Question, Response: 'Yes.' }] } } } },
+      },
+    });
+    data.extras['obs-tq'] = tq('TSV OBS Translation Questions', 'Who made everything?');
+    data.extras.tq = tq('TSV Translation Questions', 'A Bible question?');
+    const { body } = renderTranslationNotesHtml(data).sections;
+    expect(body.indexOf('Who made everything?')).toBeGreaterThan(body.indexOf('A note about it.'));
+    expect(body).toContain('id="nav-obs-1-1-tq-x"');
+    expect(body).not.toContain('A Bible question?');
+  });
+
   test('shows the frame text the notes are about', () => {
     const { sections } = renderTranslationNotesHtml(buildObsData());
     expect(sections.body).toContain('tn-frame-text');
@@ -585,5 +602,98 @@ describe('renderTranslationNotesHtml — OBS', () => {
     const on = renderTranslationNotesHtml(buildObsData(), { resolution: '360px' });
     expect(on.sections.body).toContain('tn-frame-image');
     expect(on.sections.body).toContain('obs-en-01-01.jpg');
+  });
+});
+
+describe('renderTranslationNotesHtml — Translation Questions (#23)', () => {
+  // Notes on 1:1 only; questions on 1:1, on 1:1-2 (ends on a verse without
+  // notes), and on 1:3 (no notes at all).
+  function withQuestions() {
+    const data = buildResourceData();
+    data.extras.tq = {
+      type: 'tsv',
+      subject: 'TSV Translation Questions',
+      books: {
+        tit: {
+          chapters: {
+            1: {
+              verses: {
+                1: [{ ID: 'q1', Question: 'Who wrote this letter?', Response: 'Paul.' }],
+                '1-2': [{ ID: 'q2', Question: 'What did God promise?', Response: 'Life.' }],
+                3: [{ ID: 'q3', Question: 'How was the word revealed?', Response: 'Preaching.' }],
+              },
+            },
+          },
+        },
+      },
+    };
+    return data;
+  }
+
+  test("shows a verse's questions after its notes and words, by default", () => {
+    const { body } = renderTranslationNotesHtml(withQuestions()).sections;
+    const note = body.indexOf('id="nav-tit-1-1-abc1"');
+    const words = body.indexOf('tn-verse-twls');
+    const questions = body.indexOf('<div class="tn-verse-questions">');
+    expect(note).toBeGreaterThan(-1);
+    expect(questions).toBeGreaterThan(words);
+    expect(words).toBeGreaterThan(note);
+    expect(body).toContain('<h4 class="tn-verse-questions-header">Translation Questions</h4>');
+    expect(body).toContain(
+      '<h5 class="tq-entry-question"><a href="#nav-tit-1-1-tq-q1" class="header-link">Who wrote this letter?</a></h5>'
+    );
+    expect(body).toContain('<div class="tq-entry-response"><p>Paul.</p>');
+  });
+
+  test('a question on verses without notes gets its own verse block, labelled', () => {
+    const { body } = renderTranslationNotesHtml(withQuestions()).sections;
+    // 1:1-2 ends on a verse without notes: its own block after 1:1.
+    expect(body).toContain('<h4 class="tn-verse-header" id="nav-tit-1-1-2">');
+    expect(body).toContain('<h4 class="tn-verse-header" id="nav-tit-1-3">');
+    const order = ['id="nav-tit-1-1"', 'id="nav-tit-1-1-2"', 'id="nav-tit-1-3"'].map((s) =>
+      body.indexOf(s)
+    );
+    expect(order).toEqual([...order].sort((a, b) => a - b));
+    for (const id of ['nav-tit-1-1-tq-q1', 'nav-tit-1-1-2-tq-q2', 'nav-tit-1-3-tq-q3']) {
+      expect(body.match(new RegExp(`id="${id}"`, 'g'))).toHaveLength(1);
+    }
+  });
+
+  test('a range placed under a verse with notes says which verses it asks about', () => {
+    const data = withQuestions();
+    // Notes on 1:2 as well: the 1:1-2 question now goes under them, labelled.
+    data.books.tit.chapters[1].verses[2] = [{ ID: 'n2', Reference: '1:2', Note: 'A note.' }];
+    const { body } = renderTranslationNotesHtml(data).sections;
+    expect(body).not.toContain('id="nav-tit-1-1-2"');
+    const block2 = body.slice(body.indexOf('id="nav-tit-1-2"'));
+    expect(block2).toMatch(
+      /^[^]*?<div class="tn-verse-questions-ref">Titus 1:1-2<\/div>\n<article class="tq-question" id="nav-tit-1-1-2-tq-q2">/
+    );
+  });
+
+  test('includeQuestions: false renders exactly what a render without the extra does', () => {
+    const plain = renderTranslationNotesHtml(buildResourceData()).sections;
+    const off = renderTranslationNotesHtml(withQuestions(), { includeQuestions: false }).sections;
+    expect(off.body).toBe(plain.body);
+    expect(off.css).toEqual(plain.css);
+    expect(off.toc).toEqual(plain.toc);
+  });
+
+  test('the question CSS is added only with questions: toggle on screen, answers in print', () => {
+    const plain = renderTranslationNotesHtml(buildResourceData()).sections.css;
+    const { css } = renderTranslationNotesHtml(withQuestions()).sections;
+    expect(plain.web).not.toContain('response-show-checkbox');
+    expect(css.web).toContain('.response-show-checkbox:checked ~ .tq-entry-response');
+    expect(css.print).toMatch(/\.tq-entry-response \{\s*display: block !important;/);
+    expect(css.print).toContain('.tn-verse-questions-header');
+  });
+
+  test('renderHtmlData passes includeQuestions through renderOptions', async () => {
+    const { renderHtmlData } = await import('../renderHtmlData.js');
+    const data = { ...withQuestions(), abbreviation: 'tn' };
+    expect(renderHtmlData(data).sections.body).toContain('id="tn-tit-1-1-tq-q1"');
+    expect(
+      renderHtmlData(data, { renderOptions: { includeQuestions: false } }).sections.body
+    ).not.toContain('tq-question');
   });
 });

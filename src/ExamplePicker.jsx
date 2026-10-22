@@ -54,7 +54,9 @@ export default function ExamplePicker({ onPick, variant = 'buttons', title }) {
                   onClick={() => onPick(example)}
                   title={`${example.owner}/${example.repo}/${example.ref}${
                     example.books ? ` (${example.books})` : ''
-                  }${example.renderOptions ? ` ${JSON.stringify(example.renderOptions)}` : ''}`}
+                  }${example.renderOptions ? ` ${JSON.stringify(example.renderOptions)}` : ''}${
+                    example.options ? ` ${JSON.stringify(example.options)}` : ''
+                  }`}
                   style={{ padding: '6px 10px', cursor: 'pointer' }}
                 >
                   {example.label}

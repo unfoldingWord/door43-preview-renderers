@@ -54,6 +54,10 @@ function parseArgs(args) {
       parsed.quiet = true;
       continue;
     }
+    if (arg === '--include-questions') {
+      parsed.includeQuestions = true;
+      continue;
+    }
 
     // Handle key-value pairs
     if (arg.startsWith('--')) {
@@ -112,6 +116,8 @@ Options:
   --page-size <size>      Page size for assemblePrint (A4, A5, USL, TRADE, CQ; default A4)
   --columns <n>           Number of columns for assemblePrint (default 1)
   --pdf-service-url <url> generatePdf: use a hosted weasyprint-pdf service instead of the local binary
+  --include-questions     Translation Notes: fetch the package's Translation Questions and show
+                          each verse's (or OBS frame's) questions under its notes
 
 Examples:
   # What is published for a language?
@@ -178,9 +184,18 @@ async function main() {
     process.exit(0);
   }
 
-  const { command, params, output, quiet } = parseArgs(args);
+  const { command, params, output, quiet, includeQuestions } = parseArgs(args);
 
   const dcsApiUrl = params.dcsApiUrl || 'https://git.door43.org/api/v1';
+  // getResourceData options. --include-questions asks for both questions
+  // subjects; the blueprint keeps only the one the package has.
+  const dataOptions = {
+    dcs_api_url: dcsApiUrl,
+    quiet,
+    ...(includeQuestions
+      ? { extraSubjects: ['TSV Translation Questions', 'TSV OBS Translation Questions'] }
+      : {}),
+  };
   const byLanguage = !!(params.lang && params.subject);
 
   if (command === 'findResources') {
@@ -268,7 +283,7 @@ async function main() {
         if (!quiet) {
           console.error(`Fetching resource data for ${params.owner}/${params.repo}...`);
         }
-        result = await getResourceData(set, { dcs_api_url: dcsApiUrl, quiet });
+        result = await getResourceData(set, dataOptions);
         break;
       }
 
@@ -276,7 +291,7 @@ async function main() {
         if (!quiet) {
           console.error(`Rendering HTML for ${params.owner}/${params.repo}...`);
         }
-        const resourceData = await getResourceData(set, { dcs_api_url: dcsApiUrl, quiet });
+        const resourceData = await getResourceData(set, dataOptions);
         // HtmlData package (identity + sections); the body can be large.
         result = renderHtmlData(resourceData, { books: set.source.books });
         break;
@@ -286,7 +301,7 @@ async function main() {
         if (!quiet) {
           console.error(`Assembling print document for ${params.owner}/${params.repo}...`);
         }
-        const resourceData = await getResourceData(set, { dcs_api_url: dcsApiUrl, quiet });
+        const resourceData = await getResourceData(set, dataOptions);
         const htmlData = renderHtmlData(resourceData, { books: set.source.books });
         const html = renderHTML(htmlData, {
           media: 'print',
@@ -316,7 +331,7 @@ async function main() {
         if (!quiet) {
           console.error(`Generating PDF for ${params.owner}/${params.repo}...`);
         }
-        const resourceData = await getResourceData(set, { dcs_api_url: dcsApiUrl, quiet });
+        const resourceData = await getResourceData(set, dataOptions);
         const htmlData = renderHtmlData(resourceData, { books: set.source.books });
         const pdfOutputPath = path.resolve(output);
         await renderPdf(htmlData, {

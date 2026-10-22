@@ -647,6 +647,32 @@ describe('getResourceData', () => {
     expect(result).toEqual({ type: 'tsv' });
   });
 
+  test('extraSubjects adds that blueprint entry to the ones handed to the extractor (#23)', async () => {
+    const mainEntry = {
+      title: 'Translation Notes',
+      subject: 'TSV Translation Notes',
+      ingredients: [{ identifier: 'tit' }],
+      metadata_type: 'rc',
+    };
+    const tqEntry = { subject: 'TSV Translation Questions', name: 'en_tq' };
+    const catalogSet = {
+      catalogEntries: [mainEntry, { subject: 'Aligned Bible', name: 'en_ult' }, tqEntry],
+      source: { books: ['tit'] },
+    };
+    const entriesPassed = () => extractRcTsvDataMock.mock.calls.at(-1)[3].map((e) => e.name);
+
+    extractRcTsvDataMock.mockResolvedValueOnce({ type: 'tsv' });
+    await getResourceData({ ...catalogSet }, { quiet: true });
+    expect(entriesPassed()).not.toContain('en_tq');
+
+    extractRcTsvDataMock.mockResolvedValueOnce({ type: 'tsv' });
+    await getResourceData(
+      { ...catalogSet },
+      { quiet: true, extraSubjects: ['TSV Translation Questions'] }
+    );
+    expect(entriesPassed()).toContain('en_tq');
+  });
+
   test('returns a ResourceData input unchanged (passthrough)', async () => {
     const resourceData = { type: 'tsv', subject: 'TSV Translation Notes', books: {} };
     const result = await getResourceData(resourceData, { quiet: true });

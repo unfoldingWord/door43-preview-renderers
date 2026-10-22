@@ -6,6 +6,7 @@ import { EN_RELEASE } from './demoExamples';
 import ExamplePicker from './ExamplePicker';
 
 const DEFAULT_RENDER_OPTIONS = { includeRawUsfmView: false, editorMode: false };
+const DEFAULT_OPTIONS = { dcs_api_url: 'https://git.door43.org/api/v1' };
 
 /**
  * Demo component for renderHtmlData function.
@@ -15,15 +16,7 @@ export default function RenderHtmlDataDemo() {
   const [repo, setRepo] = useState('en_ult');
   const [ref, setRef] = useState(EN_RELEASE);
   const [booksInput, setBooksInput] = useState('tit');
-  const [options, setOptions] = useState(
-    JSON.stringify(
-      {
-        dcs_api_url: 'https://git.door43.org/api/v1',
-      },
-      null,
-      2
-    )
-  );
+  const [options, setOptions] = useState(JSON.stringify(DEFAULT_OPTIONS, null, 2));
   const [renderOptions, setRenderOptions] = useState(
     JSON.stringify(DEFAULT_RENDER_OPTIONS, null, 2)
   );
@@ -78,6 +71,9 @@ export default function RenderHtmlDataDemo() {
     // Always reset the box, so an example without options does not inherit the
     // previous example's (e.g. "by verse" after "glossary").
     setRenderOptions(JSON.stringify(example.renderOptions || DEFAULT_RENDER_OPTIONS, null, 2));
+    // getResourceData options too (e.g. extraSubjects for Translation Notes with
+    // questions), reset the same way.
+    setOptions(JSON.stringify({ ...DEFAULT_OPTIONS, ...(example.options || {}) }, null, 2));
   };
 
   const handleSubmit = async (e) => {

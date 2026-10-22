@@ -177,7 +177,7 @@ The blueprint is the single source of truth for which resources and versions bel
 Stage 2. Fetches one resource, parses it, fetches the supporting resources its subject needs, and returns normalized **ResourceData**.
 
 - `input`: a descriptor `{ owner, repo, ref, books? }`, a CatalogSet (reused, no second blueprint call; this is how the language form reaches stage 2), a catalog entry object, or existing ResourceData (returned unchanged)
-- `options.dcs_api_url`, `options.quiet`, `options.books`
+- `options.dcs_api_url`, `options.quiet`, `options.books`, `options.extraSubjects` (blueprint subjects to fetch beyond the required ones, e.g. `['TSV Translation Questions']` for Translation Notes with questions)
 - `books`: the books to fetch; what an empty list means, and which subjects ignore it, is [the `books` rule](skills/door43-renderers-maintainer/references/contracts.md#books-at-stage-2)
 
 ```javascript
@@ -197,7 +197,7 @@ The shape depends on `type` (`usfm`, `tsv`, `obs`, `ta`, `tw`); TSV resources ca
 
 Stage 3. Renders subject-specific HTML **sections** from ResourceData. Pure and synchronous, no network.
 
-- `options.renderOptions`: renderer-specific options (e.g. `showChaptersInToc`, `editorMode`, `includeRawUsfmView`, `resolution`, `layout`)
+- `options.renderOptions`: renderer-specific options (e.g. `showChaptersInToc`, `editorMode`, `includeRawUsfmView`, `resolution`, `layout`, `includeQuestions`)
 - `options.books`: for the USFM subjects (Aligned Bible, Bible, Greek NT, Hebrew OT) the listed ids — array entries or object keys — select and order the books rendered, and unlisted books are omitted (`resourceData.requestedBooks` takes precedence when set); the TSV, OBS and manual renderers render every book in the data in catalog `sort` order. Object-form values add per-book reference ranges (TSV and USFM); `'*'` keeps a book whole
 
 Supported subjects:
@@ -205,7 +205,7 @@ Supported subjects:
 - `Aligned Bible`, `Bible`, `Greek New Testament`, `Hebrew Old Testament`
 - `Translation Academy`, `Translation Words`
 - `Open Bible Stories`
-- `TSV Translation Notes` / `TSV OBS Translation Notes`
+- `TSV Translation Notes` / `TSV OBS Translation Notes` (optionally with each verse's Translation Questions: `extraSubjects` when fetching)
 - `TSV Translation Questions` / `TSV Study Questions` / `TSV Study Notes` (+ their `TSV OBS …` variants)
 - `TSV Translation Words Links` / `TSV OBS Translation Words Links` (by verse or story frame, or as a glossary with `renderOptions.layout: 'glossary'`)
 

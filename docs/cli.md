@@ -54,6 +54,7 @@ Other options:
 - `--quiet`, `-q` — no progress logging; JSON only, so the output pipes cleanly into `jq`
 - `--page-size <size>` — `assemblePrint` / `generatePdf`: a short key mapped to a `PAGE_SIZES` key — `A4` → `A4_PORTRAIT` (default), `A5` → `A5_PORTRAIT`, `USL` → `US_LETTER_PORTRAIT`, `TRADE` → `TRADE`, `CQ` → `CROWN_QUARTO`; anything else falls back to `A4_PORTRAIT`
 - `--columns <n>` — `assemblePrint` / `generatePdf`: body column count (continuous-flow bodies only; see [options](./options.md))
+- `--include-questions` — Translation Notes: fetch the package's Translation Questions (or OBS Translation Questions) and show each verse's or frame's questions under its notes. The data commands pass `extraSubjects` to `getResourceData`
 - `--pdf-service-url <url>` — `generatePdf`: POST the assembled HTML to a hosted WeasyPrint service instead of running the local binary. The service receives the complete document, text and all, so use only a host you trust
 
 ## Examples
@@ -80,6 +81,9 @@ door43-renderers assemblePrint --owner unfoldingWord --repo en_obs --ref v9 --pa
 
 # A PDF, no browser (needs `weasyprint` on the PATH)
 door43-renderers generatePdf --owner unfoldingWord --repo en_tn --ref v91 --book tit --output tit_tn.pdf
+
+# Translation Notes with each verse's Translation Questions
+door43-renderers generatePdf --owner unfoldingWord --repo en_tn --ref v91 --book tit --include-questions --output tit_tn_tq.pdf
 
 # The same PDF via a hosted WeasyPrint service
 door43-renderers generatePdf --owner unfoldingWord --repo en_tn --ref v91 --book tit \

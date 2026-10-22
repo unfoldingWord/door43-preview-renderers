@@ -56,6 +56,7 @@ catalog entry object, or an existing `resourceData` (returned unchanged).
 | `options.dcs_api_url` | string | `https://git.door43.org/api/v1` | ✅ | DCS API base URL. |
 | `options.quiet` | boolean | `false` | ✅ | Suppress progress logging. |
 | `options.books` | string[] | `[]` | ✅ | Books, when `input` does not carry them (catalog-entry form). |
+| `options.extraSubjects` | string[] | `[]` | ✅ | Blueprint subjects to fetch as extras beyond the ones the subject requires. `['TSV Translation Questions']` on Translation Notes (`['TSV OBS Translation Questions']` on OBS Translation Notes) fetches the package's questions, which the notes then show under each verse or frame (`includeQuestions`). A subject the blueprint lacks is ignored. |
 
 > The local/CLI sibling `getResourceDataFromDirectory(catalogEntries, dirPath, options)`
 > (reads checked-out repos from disk instead of DCS, same output shape) is 🚧 planned.
@@ -68,7 +69,7 @@ The rules `getResourceData()` applies to a book package before fetching extras a
 
 | Function | Description |
 |---|---|
-| `filterCatalogEntries(catalogEntries, { subject?, books? })` | Keeps the main entry (`[0]`) plus the entries whose subject `requiredSubjectsMap[subject]` lists, at most two Aligned Bibles (via `selectAlignedBibles`), and — when `books` is given — only the original-language Bible of a testament the books belong to. Returns `[main, ...alignedBibles, ...others]`: the Aligned Bible pair in preference order (literal first, then simplified), the remaining entries in blueprint order. |
+| `filterCatalogEntries(catalogEntries, { subject?, books?, extraSubjects? })` | Keeps the main entry (`[0]`) plus the entries whose subject `requiredSubjectsMap[subject]` or `extraSubjects` lists, at most two Aligned Bibles (via `selectAlignedBibles`), and — when `books` is given — only the original-language Bible of a testament the books belong to. Returns `[main, ...alignedBibles, ...others]`: the Aligned Bible pair in preference order (literal first, then simplified), the remaining entries in blueprint order. |
 | `selectAlignedBibles(entries)` | At most two Aligned Bibles, literal (`ult`/`glt`) first and simplified (`ust`/`gst`) second when present, else the first two in blueprint order. Non-object entries are ignored. |
 | `testamentOf(bookId)` | `'old'`, `'new'`, or `undefined`. |
 
@@ -99,6 +100,7 @@ renderHtmlData(resourceData, {
 | Aligned Bible / Bible / Greek NT / Hebrew OT | `editorMode` | boolean | Keep implied-word brackets visible. |
 | TSV Translation Notes, TSV Questions/Study Notes, TSV Translation Words Links (scripture columns) | `editorMode` | boolean | Keep the `{…}` supplied-word braces in the ULT \| UST scripture columns. Default off: the braces are dropped, as the Aligned Bible renderer hides them. |
 | | `includeRawUsfmView` | boolean | Also produce a raw-USFM-as-HTML view in `sections.webView`. |
+| TSV Translation Notes, TSV OBS Translation Notes | `includeQuestions` | boolean | Show each verse's (or frame's) Translation Questions after its notes and words, answers behind a toggle on screen and printed in full. Needs the questions in the data: `getResourceData(…, { extraSubjects: ['TSV Translation Questions'] })`, or the OBS subject. **Default: on when the data carries them**, so `false` is only needed to leave fetched questions out. A question on a verse range goes after the verse that ends it, labelled with its range; a question on a verse without notes gets a verse block of its own; a chapter-level one goes after the chapter's last verse. |
 | OBS-based TSV subjects (`obs-tn`, `obs-tq`, `obs-sn`, `obs-sq`) | `resolution` | `'none'` \| `'360px'` \| `'2160px'` | Whether to include the story-frame **pictures**, and at what size. Default `'none'`. The frame **text** is always rendered — the notes and questions are about it — so only the pictures are optional. Set it when producing `HtmlData`; both the HTML and the PDF built from that package then include them. Note the pictures are remote CDN URLs, so rendering with them on needs network access. |
 | TSV Translation Words Links, TSV OBS Translation Words Links | `layout` | `'verse'` \| `'glossary'` | `'verse'` (default) reads the book in order: each verse with its scripture columns and the table of words in it, the cited Translation Words articles collected as the `tw` appendix with back-references. `'glossary'` is the book's vocabulary: one entry per article cited, grouped Key Terms / Names / Other and sorted by title, with the article body inline and the verses (with the literal Bible's quote) where it occurs; no appendix. |
 | | `includeScripture` | boolean | Verse layout: show the verse as parallel scripture columns (ULT \| UST) above its word table. Default `true`. |

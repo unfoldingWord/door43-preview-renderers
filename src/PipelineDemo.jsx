@@ -29,6 +29,8 @@ export default function PipelineDemo() {
   const [ref, setRef] = useState(EN_RELEASE);
   // Render options the picked example needs (e.g. a TWL glossary layout).
   const [liveRenderOptions, setLiveRenderOptions] = useState({});
+  // getResourceData options the picked example needs (e.g. extraSubjects).
+  const [liveDataOptions, setLiveDataOptions] = useState({});
   const [booksInput, setBooksInput] = useState('tit');
   const [view, setView] = useState('screen'); // 'screen' | 'print'
 
@@ -50,7 +52,7 @@ export default function PipelineDemo() {
         .split(',')
         .map((b) => b.trim().toLowerCase())
         .filter(Boolean);
-      const data = await getResourceData({ owner, repo, ref, books });
+      const data = await getResourceData({ owner, repo, ref, books }, liveDataOptions);
       if (!data || data.error) throw new Error(data?.error || 'No resource data');
       setResourceData(data);
     } catch (e) {
@@ -129,6 +131,7 @@ export default function PipelineDemo() {
                 setRef(ex.ref);
                 setBooksInput(ex.books || '');
                 setLiveRenderOptions(ex.renderOptions || {});
+                setLiveDataOptions(ex.options || {});
               },
             })}
             <input

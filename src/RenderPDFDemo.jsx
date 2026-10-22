@@ -51,6 +51,8 @@ export default function RenderPDFDemo() {
   const [ref, setRef] = useState(EN_RELEASE);
   // Render options the picked example needs (e.g. a TWL glossary layout).
   const [liveRenderOptions, setLiveRenderOptions] = useState({});
+  // getResourceData options the picked example needs (e.g. extraSubjects).
+  const [liveDataOptions, setLiveDataOptions] = useState({});
   const [booksInput, setBooksInput] = useState('tit');
   const [pageSize, setPageSize] = useState('A4_PORTRAIT');
   const [columns, setColumns] = useState(1);
@@ -109,7 +111,7 @@ export default function RenderPDFDemo() {
         .split(',')
         .map((b) => b.trim().toLowerCase())
         .filter(Boolean);
-      const resourceData = await getResourceData({ owner, repo, ref, books });
+      const resourceData = await getResourceData({ owner, repo, ref, books }, liveDataOptions);
       if (!resourceData || resourceData.error)
         throw new Error(resourceData?.error || 'No resource data');
       setHtmlData(renderHtmlData(resourceData, { books, renderOptions: liveRenderOptions }));
@@ -216,6 +218,7 @@ export default function RenderPDFDemo() {
                   setRef(ex.ref);
                   setBooksInput(ex.books || '');
                   setLiveRenderOptions(ex.renderOptions || {});
+                  setLiveDataOptions(ex.options || {});
                 },
               })}
               <input

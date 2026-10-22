@@ -30,7 +30,7 @@ A renderer is stage 3. It never fetches; it takes the ResourceData that stage 2 
 2. Implement or extend the renderer
 
 - Put subject renderers in `src/renderers/`. Keep React out.
-- Reuse the shared helpers: `scriptureColumns.js` (ULT | UST columns, GL-quote headers), `rcAppendices.js` (rc:// link resolution, TA/TW appendices with back-references), `twlTable.js` (per-verse Translation Words table), `obsFrames.js` (OBS frame panels), `printDocumentAssembler.js` (`buildCoverPage`, `coverCss`, `runningMarkerWebCss`).
+- Reuse the shared helpers: `scriptureColumns.js` (ULT | UST columns, GL-quote headers), `rcAppendices.js` (rc:// link resolution, TA/TW appendices with back-references), `twlTable.js` (per-verse Translation Words table), `questionEntries.js` (question + answer toggle, `placeQuestions` for TN), `obsFrames.js` (OBS frame panels), `printDocumentAssembler.js` (`buildCoverPage`, `coverCss`, `runningMarkerWebCss`).
 - Emit `nav-` anchors (`nav-<book>`, `nav-<book>-<ch>`, `nav-<book>-<ch>-<v>`, `nav-<book>-<ch>-<v>-<id>`, articles `nav-<book>--tw-<cat>-<slug>`); `renderHtmlData` rewrites the prefix to the resource abbreviation.
 - Mark running-header points with hidden `.running-title` / `.running-ref` spans; keep print rules (`break-before`, `break-inside: avoid`) in `css.print`.
 - Keep the DOM shallow: section > heading / article > div. Deep nesting breaks WeasyPrint.
