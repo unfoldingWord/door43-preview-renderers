@@ -9,7 +9,7 @@
  */
 
 import { LOGO_DATA_URIS } from '../assets/logos.generated.js';
-import { selectAppendices } from '../renderOptions.js';
+import { selectAppendices, normalizeMargins } from '../renderOptions.js';
 
 const LOGO_CDN_BASE = 'https://cdn.door43.org/assets/uw-icons';
 
@@ -467,11 +467,15 @@ export function getPrintCss(options = {}) {
   // Margins. Unset, the theme's: 1cm top and bottom, 30mm on the spine side and
   // 20mm outside. Given, they are a right-hand page's, mirrored on a left-hand
   // page (whose spine is on its right) — so the binding margin stays inside.
-  const pageMargin = margins
-    ? `${margins.top} ${margins.right} ${margins.bottom} ${margins.left}`
+  // Checked again here, where they are written into the stylesheet: this
+  // function and assemblePrintDocument are public, so a caller can skip
+  // resolveComposeOptions. normalizeMargins returns its own output unchanged.
+  const safeMargins = normalizeMargins(margins);
+  const pageMargin = safeMargins
+    ? `${safeMargins.top} ${safeMargins.right} ${safeMargins.bottom} ${safeMargins.left}`
     : '1cm';
-  const spineMargin = margins ? margins.left : '30mm';
-  const outerMargin = margins ? margins.right : '20mm';
+  const spineMargin = safeMargins ? safeMargins.left : '30mm';
+  const outerMargin = safeMargins ? safeMargins.right : '20mm';
   // Page numbers per section. The cover has none unless asked for; any other
   // section set to false is put on a named page whose number box is empty.
   const numberCover = pageNumberShow.cover === true;
@@ -479,6 +483,9 @@ export function getPrintCss(options = {}) {
   // without a cover numbers its first page as its own section says.
   const unnumberedFirstPage = hasCover && !numberCover;
   const hidden = (key) => pageNumberShow[key] === false;
+  // A named page can sit its first line a little lower (up to ~15pt measured
+  // with WeasyPrint 70) than the same page unnamed; the text on each page and
+  // the page breaks do not change.
   // The body has no wrapper of its own, so an unnumbered body names the whole
   // print container (naming its children instead fails: the running-header spans
   // among them sit in anonymous boxes that cannot carry the name, and every

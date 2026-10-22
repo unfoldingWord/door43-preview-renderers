@@ -77,10 +77,10 @@ function buildScreenDocument(htmlData, opts) {
   // Resource-level anchor (e.g. `#tn`) so the app can scroll to the whole resource.
   const resourceId = htmlData.abbreviation ? ` id="${escapeHtml(htmlData.abbreviation)}"` : '';
   const appendices = selectAppendices(sections.appendices, opts.show.appendices);
-  // Columns on screen: the same continuous-flow bodies print sets in columns.
+  // Columns on screen: the same continuous-flow bodies and the same rule as print.
   const columnsCss =
     opts.columns > 1
-      ? `\n.section.bible-book,\n.obs-frames-body {\n  columns: ${Math.floor(opts.columns)};\n  column-gap: 2em;\n}\n`
+      ? `\n.section.bible-book,\n.obs-frames-body {\n  columns: ${Math.floor(opts.columns)};\n}\n`
       : '';
   const parts = [];
 

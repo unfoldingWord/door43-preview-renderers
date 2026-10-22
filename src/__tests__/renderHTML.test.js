@@ -98,6 +98,7 @@ describe('renderHTML composition options (#33)', () => {
     }
     const none = renderHTML(withAppendices(), { media: 'print', show: { appendices: [] } });
     expect(none).not.toMatch(/TA_BODY|TW_BODY/);
+    expect(none).not.toMatch(/>Translation (Academy|Words)</); // nor in the TOC
   });
 
   test('print.margins are a right-hand page, mirrored on a left-hand page', () => {
@@ -121,6 +122,24 @@ describe('renderHTML composition options (#33)', () => {
     expect(html).not.toContain('page: toc-page');
     expect(html).not.toContain('page: body-page');
     expect(html).not.toContain('page: appendix-page');
+    // The other pages keep the counter.
+    expect(html).toMatch(/@bottom-center \{\s*content: counter\(page\);/);
+  });
+
+  test('a partial pageNumber.show merges with the defaults', () => {
+    const html = renderHTML(withAppendices(), {
+      media: 'print',
+      print: { pageNumber: { show: { body: false } } },
+    });
+    // copyright was not given: still unnumbered by default.
+    expect(html).toMatch(/@page copyright-page \{\s*@bottom-center \{ content: none; \}/);
+  });
+
+  test('margins passed straight to the assembler are checked where they are written', async () => {
+    const { getPrintCss } = await import('../renderers/printDocumentAssembler.js');
+    const css = getPrintCss({ margins: { top: '1cm; } body { color: #f00', left: '25mm' } });
+    expect(css).not.toContain('color: #f00');
+    expect(css).toContain('margin: 1cm 20mm 1cm 25mm;');
   });
 
   test('print.pageNumber.show: an unnumbered body names the container, and every other section', () => {
@@ -152,7 +171,7 @@ describe('renderHTML composition options (#33)', () => {
 
   test('columns apply on screen too, to the continuous-flow bodies only', () => {
     expect(renderHTML(sampleHtmlData(), { columns: 2 })).toMatch(
-      /\.section\.bible-book,\s*\.obs-frames-body \{\s*columns: 2;/
+      /\.section\.bible-book,\s*\.obs-frames-body \{\s*columns: 2;\s*\}/
     );
     expect(renderHTML(sampleHtmlData())).not.toContain('.obs-frames-body {');
   });
