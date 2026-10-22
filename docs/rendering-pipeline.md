@@ -1,6 +1,6 @@
 # Rendering Pipeline Architecture
 
-**Status:** Implemented: stages 1–5 and the options schema. Still planned: `getResourceDataFromDirectory` (stage 2′) and the `renderPreview` orchestrator. Stage 0, finding a resource from a language ([Find Resources](./find-resources.md)), came later.
+**Status:** Implemented: stages 1–5, the options schema and the `renderPreview` orchestrator. Still planned: `getResourceDataFromDirectory` (stage 2′). Stage 0, finding a resource from a language ([Find Resources](./find-resources.md)), came later.
 This page is the design record. For how the pipeline works today, see [Full Pipeline](./pipeline.md) and [Rendering Options](./options.md).
 **Decision:** Clean break to a staged API (drop the old positional `owner, repo, ref, books, options` signatures; update all callers in the same pass — no back-compat aliases).
 

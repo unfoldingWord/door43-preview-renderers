@@ -13,6 +13,7 @@ getResourceData(input, opts)         → ResourceData    src/getResourceData.js 
 renderHtmlData(resourceData, opts)   → HtmlData        src/renderHtmlData.js         (pure; routes by subject)
 renderHTML(htmlData, opts)           → HTML string     src/renderHTML.js             (pure; media 'screen' | 'print')
 renderPdf(htmlData, opts)            → PDF             src/pdf/renderPdf.js          (WeasyPrint binary or pdfServiceUrl)
+renderPreview(request)               → HTML | PDF      src/renderPreview.js          (the whole chain in one call)
 ```
 
 Rules: every stage is `stage(input, options)` with a discriminated input object (no positional type-sniffing); `renderHtmlData` and `renderHTML` do no I/O; `src/index.js` is the public surface and CI checks its export names. Option names and defaults live in `docs/options.md`. Language and direction come from the catalog entry (`withLanguage` in `getResourceData.js`) and end as `<html lang dir>` (written by `renderHTML`, `assemblePrintDocument`, and the renderers' `htmlRootAttributes`); never hardcode `lang="en"`.

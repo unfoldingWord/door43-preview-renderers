@@ -9,6 +9,8 @@
 4. `renderHTML(htmlData, options)` — pure; composes one document for `media: 'screen' | 'print'`.
 5. `renderPdf(htmlData, options)` — WeasyPrint.
 
+`renderPreview(request)` (`src/renderPreview.js`) runs 1 → 4 or 5 in one call: the request names the resource as stage 1 does (an owner/repo without a ref means the latest release) and carries every stage's options; `output: 'html' | 'pdf'`.
+
 ### `books` at stage 2
 
 This is the one statement of the rule; the README, `docs/options.md`, `docs/get-resource-data.md` and `docs/cli.md` link here. `books` (on a descriptor or CatalogSet, or `options.books`; `--book` on the CLI) selects the books `getResourceData` fetches:
