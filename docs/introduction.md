@@ -19,6 +19,7 @@ getResourceData(input, opts)         → ResourceData    (network; or a cached R
 renderHtmlData(resourceData, opts)   → HtmlData        (pure, no I/O)
 renderHTML(htmlData, opts)           → HTML string     (media: 'screen' | 'print')
 renderPdf(htmlData, opts)            → PDF             (WeasyPrint)
+renderPreview(request)               → HTML | PDF      (all of the above in one call)
 ```
 
 0. **Find** (optional) — `resolveResource()` turns a language and subject into the publisher and release to render; `getAllCatalogEntries({ lang, subject })` does it for you. [Learn more →](find-resources.md)
@@ -27,6 +28,8 @@ renderPdf(htmlData, opts)            → PDF             (WeasyPrint)
 3. **HTML sections** — `renderHtmlData()` routes that data to the renderer for its subject and returns packaged sections (cover, copyright, body, TOC, CSS, appendices). [Learn more →](renderers.md)
 4. **Document** — `renderHTML()` composes the sections into one self-contained HTML document, for the screen or for print. [Learn more →](render-html.md)
 5. **PDF** — `renderPdf()` turns the print document into a PDF with WeasyPrint. [Learn more →](render-pdf.md)
+
+`renderPreview()` runs all of it in one call, for when you only want the result. [Learn more →](pipeline.md)
 
 ## Getting started
 
@@ -130,6 +133,7 @@ const data = await getResourceData({ owner: 'adipatealberto', repo: 'pid_rut_tex
 ### Print and PDF
 
 - **`renderPdf()`** — HtmlData → PDF (local `weasyprint`, or a hosted service via `pdfServiceUrl`). [Learn more →](render-pdf.md)
+- **`renderPreview()`** — a repository or a language → HTML document or PDF, the whole pipeline in one call. [Learn more →](pipeline.md)
 - **`assemblePrintDocument()`**, **`generateTocHtml()`**, **`generateTocFromHtml()`**, **`buildAppendicesToc()`**, **`renderAppendicesHtml()`**, **`buildCoverPage()`**, **`getPrintCss()`**, **`PAGE_SIZES`**, **`resolvePageSize()`** — the pieces `renderHTML()` uses for print documents.
 - **`generatePdf()`** / **`generatePdfFromAssembled()`** / **`generatePdfViaService()`** — the WeasyPrint back ends behind `renderPdf()`.
 

@@ -24,9 +24,17 @@ getResourceData(input, opts)         → ResourceData    (network; or a cached R
 renderHtmlData(resourceData, opts)   → HtmlData        (pure, no I/O)
 renderHTML(htmlData, opts)           → HTML string     (media: 'screen' | 'print')
 renderPdf(htmlData, opts)            → PDF             (WeasyPrint)
+renderPreview(request)               → HTML | PDF      (all of the above in one call)
 ```
 
 Stage 0 is for callers that know a language rather than a repository; `getAllCatalogEntries({ lang, subject, books })` runs it and keeps the blueprint it fetched, so nothing is requested twice.
+
+When you don't need the intermediates, `renderPreview` runs the whole chain in one call:
+
+```javascript
+const html = await renderPreview({ owner: 'unfoldingWord', repo: 'en_tn', books: ['tit'] }); // latest release
+await renderPreview({ lang: 'es-419', subject: 'TSV Translation Notes', books: ['tit'], output: 'pdf', outputPath: 'tit.pdf' });
+```
 
 ## Installation
 
@@ -242,7 +250,7 @@ Returns an **HtmlData** package:
 Stage 4. Composes an HtmlData package into **one self-contained HTML document** for the screen or for print. Pure and synchronous; returns a string.
 
 - `options.media`: `'screen'` (default; continuous page, cover/copyright/toc off) or `'print'` (paged, PagedJS/WeasyPrint-ready, cover/copyright/toc on)
-- `options.show`, `options.columns`, `options.language`, `options.direction` (both default to the resource's), `options.engine`, `options.print.*` (`pageSize`, `footerHtml`, `runningHeader`, `pageNumber.position`)
+- `options.show` (`appendices` can list kinds: `['tw']`), `options.columns`, `options.language`, `options.direction` (both default to the resource's), `options.engine`, `options.print.*` (`pageSize`, `margins`, `footerHtml`, `runningHeader`, `pageNumber.position`, `pageNumber.show`)
 
 ```javascript
 const webHtml = renderHTML(htmlData);                       // continuous web page
@@ -253,7 +261,11 @@ const printHtml = renderHTML(htmlData, { media: 'print' }); // PagedJS/WeasyPrin
 
 ### `renderPdf(htmlData, options?)`
 
-Stage 5. Composes the print document and renders it with WeasyPrint: the local `weasyprint` binary, or a hosted service when `options.pdfServiceUrl` is set. Returns PDF bytes, or writes to `options.outputPath`. [More →](docs/render-pdf.md)
+Stage 5. Composes the print document (with `renderHTML(htmlData, { media: 'print' })`, so it takes the same options) and renders it with WeasyPrint: the local `weasyprint` binary, or a hosted service when `options.pdfServiceUrl` is set. Returns PDF bytes, or writes to `options.outputPath`. [More →](docs/render-pdf.md)
+
+### `renderPreview(request)`
+
+The whole pipeline in one call. The request names the resource as `getAllCatalogEntries` does (`{ owner, repo, ref?, books? }`, an owner/repo without a ref meaning the latest release, or `{ lang, subject, books?, … }`), carries every stage's options in the same object (`dcs_api_url`, `extraSubjects`, `renderOptions`, `media`, `show`, `print`, …), and says what to return: `output: 'html'` (default; screen or print per `media`) or `'pdf'`. Returns the HTML string, or the PDF bytes (the path when `outputPath` is given). [More →](docs/pipeline.md)
 
 ### Also exported
 

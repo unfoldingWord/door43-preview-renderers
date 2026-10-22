@@ -10,6 +10,8 @@
 4. `renderHTML(htmlData, options)` — pure; composes one document for `media: 'screen' | 'print'`.
 5. `renderPdf(htmlData, options)` — WeasyPrint.
 
+`renderPreview(request)` (`src/renderPreview.js`) runs 1 → 4 or 5 in one call: the request names the resource as stage 1 does (an owner/repo without a ref means the latest release) and carries every stage's options; `output: 'html' | 'pdf'`.
+
 ### `books` at stage 2
 
 This is the one statement of the rule; the README, `docs/options.md`, `docs/get-resource-data.md` and `docs/cli.md` link here. `books` (on a descriptor or CatalogSet, or `options.books`; `--book` on the CLI) selects the books `getResourceData` fetches:
@@ -44,7 +46,7 @@ A subject renderer returns:
   - `appendixTitles`: optional `{ ta, tw }`
   - `webView`: optional alternate view (raw USFM for Aligned Bible when `includeRawUsfmView`)
 
-`renderHtmlData` promotes `abbreviation`, `version`, `language`, `direction` onto the HtmlData (`renderHTML` and `renderPdf` write them as `<html lang dir>`; a renderer wraps every quote in `<bdi dir>` in the quote's own direction with `isolatedQuoteHtml`, so sections do not depend on the document's direction) and rewrites `nav-` anchors in every section to `<abbreviation>-`. There is no `fullHtml`; `renderHTML` composes the document.
+`renderHtmlData` promotes `abbreviation`, `version`, `language`, `direction` onto the HtmlData (`renderHTML` and `renderPdf` write them as `<html lang dir>`; a renderer wraps every quote that has a letter in `<bdi dir>` in the quote's own direction with `isolatedQuoteHtml`, so sections do not depend on the document's direction) and rewrites `nav-` anchors in every section to `<abbreviation>-`. There is no `fullHtml`; `renderHTML` composes the document.
 
 Keep errors explicit: unsupported subject or invalid input shape throws with context.
 

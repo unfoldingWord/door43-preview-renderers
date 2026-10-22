@@ -112,6 +112,54 @@ const PAGE_NUMBER_SHOW_DEFAULTS = {
   appendices: true,
 };
 
+// A CSS length a page margin may take: a number and a unit, nothing else (the
+// value is written into the print stylesheet).
+const CSS_LENGTH = /^(?:0|\d+(?:\.\d+)?(?:mm|cm|in|pt|pc|px|q))$/i;
+
+/**
+ * Normalise `print.margins` to `{ top, right, bottom, left }` CSS lengths, or
+ * undefined when none is given. `left` and `right` are a right-hand page's; a
+ * left-hand page mirrors them, so the binding margin stays on the spine. A side
+ * that is missing or not a plain length keeps the theme default (top and bottom
+ * `1cm`, the spine side `30mm`, the outer side `20mm`); a bare number is mm.
+ *
+ * @param {Object} [margins]
+ * @returns {{top: string, right: string, bottom: string, left: string}|undefined}
+ */
+export function normalizeMargins(margins) {
+  if (!margins || typeof margins !== 'object') return undefined;
+  const defaults = { top: '1cm', right: '20mm', bottom: '1cm', left: '30mm' };
+  const out = {};
+  let given = false;
+  for (const side of Object.keys(defaults)) {
+    let value = margins[side];
+    if (typeof value === 'number' && Number.isFinite(value) && value >= 0) value = `${value}mm`;
+    if (typeof value === 'string' && CSS_LENGTH.test(value.trim())) {
+      out[side] = value.trim();
+      given = true;
+    } else {
+      out[side] = defaults[side];
+    }
+  }
+  return given ? out : undefined;
+}
+
+/**
+ * The appendices to compose, per `show.appendices`: all of them (`true` or
+ * unset), none (`false` or an empty list), or only the listed kinds
+ * (`['tw']`). Returns null when nothing is left.
+ *
+ * @param {Object|null} appendices - `sections.appendices`, keyed by kind
+ * @param {boolean|Array<string>} [selection]
+ * @returns {Object|null}
+ */
+export function selectAppendices(appendices, selection) {
+  if (!appendices || typeof appendices !== 'object' || selection === false) return null;
+  if (!Array.isArray(selection)) return appendices;
+  const kinds = Object.keys(appendices).filter((kind) => selection.includes(kind));
+  return kinds.length ? Object.fromEntries(kinds.map((kind) => [kind, appendices[kind]])) : null;
+}
+
 /**
  * Resolve composition options (stage 4, renderHTML) with media-aware defaults.
  *
@@ -137,7 +185,7 @@ export function resolveComposeOptions(options = {}, htmlData = {}) {
     direction: (options.direction || htmlData.direction) === 'rtl' ? 'rtl' : 'ltr',
     print: {
       pageSize: print.pageSize || 'A4_PORTRAIT',
-      margins: print.margins,
+      margins: normalizeMargins(print.margins),
       runningHeader: print.runningHeader !== false,
       footerHtml: print.footerHtml || '',
       pageNumber: {

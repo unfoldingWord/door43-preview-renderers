@@ -154,8 +154,11 @@ export function textDirection(text) {
  */
 export function isolatedQuoteHtml(text) {
   const html = escapeHtml(text);
-  const dir = textDirection(text);
-  return dir ? `<bdi dir="${dir}">${html}</bdi>` : html;
+  const detected = textDirection(text);
+  if (!detected) return html;
+  // Only the two values reach the attribute, whatever textDirection returns.
+  const dir = detected === 'rtl' ? 'rtl' : 'ltr';
+  return `<bdi dir="${dir}">${html}</bdi>`;
 }
 
 /**

@@ -446,7 +446,9 @@ describe('renderTranslationWordsLinksHtml — several books, TOC', () => {
     for (const book of books) expect(book.sections).toEqual([]);
     expect(sections.body).toMatch(/<h3 class="twl-chapter-header" id="nav-tit-1">/);
     expect(sections.body).toMatch(/<h3 class="twl-chapter-header" id="nav-phm-1">/);
-    expect(sections.body).not.toMatch(/class="twl-chapter-header"[^>]*data-toc-title/);
+    expect(sections.body).not.toMatch(
+      /<h3\b(?=[^>]*class="twl-chapter-header")(?=[^>]*data-toc-title)[^>]*>/
+    );
   });
 
   test('verse layout: showChaptersInToc: true lists the chapters of every book', () => {
@@ -459,12 +461,16 @@ describe('renderTranslationWordsLinksHtml — several books, TOC', () => {
   });
 
   test('glossary: each book keeps its categories (the glossary has no chapters)', () => {
-    const { sections } = renderTranslationWordsLinksHtml(buildTwoBookData(), {
-      layout: 'glossary',
-    });
-    const [tit, phm] = sections.toc[0].sections;
-    expect(tit.sections.map((s) => s.title)).toEqual(['Key Terms', 'Names', 'Other']);
-    expect(phm.sections.map((s) => s.title)).toEqual(['Key Terms', 'Names']);
+    // Whatever showChaptersInToc says: the default (off for two books), on, and off.
+    for (const showChaptersInToc of [undefined, true, false]) {
+      const { sections } = renderTranslationWordsLinksHtml(buildTwoBookData(), {
+        layout: 'glossary',
+        showChaptersInToc,
+      });
+      const [tit, phm] = sections.toc[0].sections;
+      expect(tit.sections.map((s) => s.title)).toEqual(['Key Terms', 'Names', 'Other']);
+      expect(phm.sections.map((s) => s.title)).toEqual(['Key Terms', 'Names']);
+    }
   });
 });
 
