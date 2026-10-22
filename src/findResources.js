@@ -145,15 +145,30 @@ function booksMissingFrom(blueprintMain, searchEntry, books) {
   return books.filter((b) => !have.has(String(b).toLowerCase()));
 }
 
+/** Dependency subjects whose content is per Bible book, whatever their ingredient list says. */
+const BOOK_BASED_SUBJECTS = new Set([
+  'Aligned Bible',
+  'Bible',
+  'Hebrew Old Testament',
+  'Greek New Testament',
+  'TSV Translation Words Links',
+  'TSV Translation Notes',
+  'TSV Translation Questions',
+  'TSV Study Notes',
+  'TSV Study Questions',
+]);
+
 /**
- * Requested books a dependency should carry and does not. Only a row whose
- * ingredients are Bible books is judged (not Translation Academy or
- * Translation Words, nor a row with no ingredient list), only for books a
- * testament claims, and an original-language Bible only for its own testament.
+ * Requested books a dependency should carry and does not. A row is judged
+ * when its subject is book-based or its ingredients are Bible books (not
+ * Translation Academy or Translation Words); a row with no ingredient list
+ * is not judged, but an empty one carries no books. Only books a testament
+ * claims count, and an original-language Bible only for its own testament.
  */
 function booksMissingFromDependency(row, books) {
   const ids = ingredientIds(row);
-  if (!ids || !ids.some((id) => testamentOf(id))) return [];
+  if (!ids) return [];
+  if (!BOOK_BASED_SUBJECTS.has(row?.subject) && !ids.some((id) => testamentOf(id))) return [];
   const have = new Set(ids);
   return books.filter((b) => {
     const t = testamentOf(b);
@@ -206,17 +221,21 @@ function requiredSubjectsFor(subject, books) {
  * original-language Bibles needed are those of the testaments its own
  * ingredients span, and dependencies are not checked book by book.
  *
+ * With a `ref`, each candidate is judged by its blueprint at that ref, not at
+ * its current release; a candidate without that ref (404) is skipped.
+ *
  * @param {Object} query
  * @param {string} query.lang
  * @param {string} query.subject
  * @param {Array<string>} [query.books] - Books to be rendered (decides which original-language Bible is needed)
  * @param {string} [query.owner] - Preferred owner
  * @param {string} [query.stage='prod']
+ * @param {string} [query.ref] - A ref to pin instead of each candidate's current release
  * @param {Object} [options]
  * @returns {Promise<{owner: string, repo: string, ref: string, entry: Object, catalogEntries: Array}>}
  */
 export async function resolveResource(
-  { lang, subject, books = [], owner, stage = 'prod' } = {},
+  { lang, subject, books = [], owner, stage = 'prod', ref: pinnedRef = '' } = {},
   options = {}
 ) {
   if (!lang || !subject) throw new Error('resolveResource: lang and subject are required.');
@@ -231,7 +250,10 @@ export async function resolveResource(
   const bookParam = books.length === 1 ? `?book=${enc(books[0])}` : '';
   let lastReason = '';
   for (const entry of candidates) {
-    const ref = entry.branch_or_tag_name;
+    const ref = pinnedRef || entry.branch_or_tag_name;
+    // The search row describes the current release; for a pinned ref it says
+    // nothing about that ref's books.
+    const searchRow = pinnedRef ? null : entry;
     const url = `${api}/catalog/bp/${enc(entry.owner)}/${enc(entry.name)}/${enc(ref)}${bookParam}`;
     let catalogEntries;
     try {
@@ -249,8 +271,13 @@ export async function resolveResource(
     }
     // Downstream treats the first entry as the resource to render, whatever
     // order the blueprint listed its rows in.
+    // A pinned ref may be a branch or commit the row names differently, and
+    // this blueprint was fetched for that ref, so owner and name identify it.
     const mainIndex = catalogEntries.findIndex(
-      (e) => e?.owner === entry.owner && e?.name === entry.name && e?.branch_or_tag_name === ref
+      (e) =>
+        e?.owner === entry.owner &&
+        e?.name === entry.name &&
+        (pinnedRef || e?.branch_or_tag_name === ref)
     );
     if (mainIndex === -1) {
       lastReason = `${entry.owner}/${entry.name}@${ref}: blueprint does not list the resource itself`;
@@ -263,7 +290,7 @@ export async function resolveResource(
       ];
     }
     // The package must hold every book asked for, or the render comes back short.
-    const missingBooks = booksMissingFrom(catalogEntries[0], entry, books);
+    const missingBooks = booksMissingFrom(catalogEntries[0], searchRow, books);
     if (missingBooks.length) {
       lastReason = `${entry.owner}/${entry.name}@${ref}: lacks book${missingBooks.length > 1 ? 's' : ''} ${missingBooks.join(', ')}`;
       continue;
@@ -283,7 +310,7 @@ export async function resolveResource(
     }
     const required = requiredSubjectsFor(
       subject,
-      booksForTestaments(books, catalogEntries[0], entry)
+      booksForTestaments(books, catalogEntries[0], searchRow)
     );
     const filtered = filterCatalogEntries(catalogEntries, { subject, books });
     const present = new Set(filtered.map((e) => e?.subject));
@@ -317,12 +344,10 @@ export async function resolveTarget(
   options = {}
 ) {
   if (lang && subject) {
-    const found = await resolveResource({ lang, subject, books, owner, stage }, options);
-    // A ref the caller named wins; the found package belongs to the found ref,
-    // so it is not carried over to a different one.
-    return ref
-      ? { owner: found.owner, repo: found.repo, ref }
-      : { owner: found.owner, repo: found.repo, ref: found.ref, resolved: found };
+    // A ref the caller named is the one each candidate is judged at, so the
+    // found package belongs to it.
+    const found = await resolveResource({ lang, subject, books, owner, stage, ref }, options);
+    return { owner: found.owner, repo: found.repo, ref: found.ref, resolved: found };
   }
   if (!owner || !repo)
     throw new Error('resolveTarget: owner and repo, or lang and subject, are required.');

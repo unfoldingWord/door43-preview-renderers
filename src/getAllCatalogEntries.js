@@ -85,18 +85,19 @@ export async function getAllCatalogEntries(source, options = {}) {
   // blueprint fetched while choosing is the CatalogSet, so nothing is fetched twice.
   if (source.lang && source.subject && !source.repo && !source.name) {
     const books = source.books || options.books || [];
+    // A ref the caller named wins over the found release, and each candidate
+    // is judged by its blueprint at that ref, not by its current release.
     const resolved = await resolveResource(
-      { lang: source.lang, subject: source.subject, books, owner: source.owner, stage: source.stage },
+      {
+        lang: source.lang,
+        subject: source.subject,
+        books,
+        owner: source.owner,
+        stage: source.stage,
+        ref: source.ref,
+      },
       { ...options, dcs_api_url: options.dcs_api_url || source.dcs_api_url }
     );
-    // A ref the caller named wins over the found release: the publisher is
-    // kept, the blueprint is fetched for that ref like any other descriptor.
-    if (source.ref) {
-      return getAllCatalogEntries(
-        { owner: resolved.owner, repo: resolved.repo, ref: source.ref, books, dcs_api_url: source.dcs_api_url },
-        options
-      );
-    }
     // The version is the ref that was resolved, not whatever row the blueprint lists first.
     return {
       resourceVersion: resolved.ref,

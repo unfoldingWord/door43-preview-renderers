@@ -33,7 +33,7 @@ entries.map((e) => `${e.owner}/${e.name}@${e.branch_or_tag_name}`);
 | `owner` | all | Restrict to one user or organisation |
 | `stage` | `prod` | `prod` (released), `preprod`, `latest`, or `branch` |
 
-## `resolveResource({ lang, subject, books?, owner?, stage? }, options?)`
+## `resolveResource({ lang, subject, books?, owner?, stage?, ref? }, options?)`
 
 The best entry point for a language and subject: `{ owner, repo, ref, entry, catalogEntries }`.
 Several owners can publish the same subject, so candidates are tried in order
@@ -48,9 +48,13 @@ entry that lacks one is left out of `catalogEntries`, as DCS does for a
 one-book blueprint, so the Bibles chosen for the render are ones that carry
 every book. An original-language Bible is held only to the books of its own
 testament, and Translation Academy and Translation Words are not
-book-based. With no `books`, the package is judged as a whole: it needs the
+book-based. A book-based entry whose ingredient list is empty carries no
+books. With no `books`, the package is judged as a whole: it needs the
 original-language Bible of each testament its own ingredients span, and its
 dependencies are not checked book by book.
+
+With a `ref`, every candidate is judged by its blueprint at that ref rather
+than its current release, and a candidate that has no such ref is skipped.
 
 ```js static
 const { owner, repo, ref } = await resolveResource({
@@ -77,12 +81,13 @@ await resolveRef({ owner: 'someone', repo: 'xx_ult_work' });
 ## `resolveTarget({ owner?, repo?, ref?, lang?, subject?, books?, stage? }, options?)`
 
 What the CLI does with its flags, for callers that take the same mix: a
-language and subject name the publisher (a `ref` you give is kept, else the
-found release); an owner and repo without a `ref` take the latest release.
+language and subject name the publisher (a `ref` you give is kept and the
+package is judged at it, else the found release); an owner and repo without
+a `ref` take the latest release.
 
 ```js static
 await resolveTarget({ lang: 'es-419', subject: 'TSV Translation Notes', ref: 'v60' });
-// → { owner: 'es-419_gl', repo: 'es-419_tn', ref: 'v60' }
+// → { owner: 'es-419_gl', repo: 'es-419_tn', ref: 'v60', resolved: { … } }
 ```
 
 ## `listLanguages({ stage? }, options?)`

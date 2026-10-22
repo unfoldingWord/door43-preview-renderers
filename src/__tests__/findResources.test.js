@@ -564,6 +564,26 @@ describe('resolveResource: books the dependencies carry', () => {
     ).rejects.toThrow('blueprint lacks Greek New Testament');
   });
 
+  test('a Bible whose ingredient list is empty carries no books, so the next publisher wins', async () => {
+    const emptyBible = (row) => (row.subject === 'Aligned Bible' ? { ...row, ingredients: [] } : row);
+    serve({
+      [`${API}/catalog/search?`]: { ok: true, data: [TN_OBT, TN_GL] },
+      [`${API}/catalog/bp/es-419_obt/es-419_tn/v0.0.5`]: {
+        ok: true,
+        data: tnPackage(TN_OBT, ['tit'], ['tit']).map(emptyBible),
+      },
+      [`${API}/catalog/bp/es-419_gl/es-419_tn/v66`]: {
+        ok: true,
+        data: tnPackage(TN_GL, ['tit'], ['tit']),
+      },
+    });
+    const found = await resolveResource(
+      { lang: 'es-419', subject: TN, books: ['tit'] },
+      { dcs_api_url: API }
+    );
+    expect(found.owner).toBe('es-419_gl');
+  });
+
   test('no books asked for and no ingredient list: no original-language Bible is required', async () => {
     serve({
       [`${API}/catalog/search?`]: { ok: true, data: [TN_GL] },
@@ -581,17 +601,19 @@ describe('resolveTarget', () => {
   test('language + subject: the found publisher, and a given ref is kept', async () => {
     axiosGetMock.mockImplementation(async (url) => {
       if (url.startsWith(`${API}/catalog/search?`)) return { data: { ok: true, data: [TN_GL] } };
-      if (url.startsWith(`${API}/catalog/bp/es-419_gl/es-419_tn/v66`)) {
-        return { data: { ok: true, data: blueprint(TN_GL) } };
+      const bp = url.match(/\/catalog\/bp\/es-419_gl\/es-419_tn\/(v66|v60)/);
+      if (bp) {
+        return { data: { ok: true, data: blueprint({ ...TN_GL, branch_or_tag_name: bp[1] }) } };
       }
       throw new Error(`unexpected ${url}`);
     });
-    expect(
-      await resolveTarget(
-        { lang: 'es-419', subject: 'TSV Translation Notes', ref: 'v60' },
-        { dcs_api_url: API }
-      )
-    ).toEqual({ owner: 'es-419_gl', repo: 'es-419_tn', ref: 'v60' });
+    const pinned = await resolveTarget(
+      { lang: 'es-419', subject: 'TSV Translation Notes', ref: 'v60' },
+      { dcs_api_url: API }
+    );
+    expect(pinned).toMatchObject({ owner: 'es-419_gl', repo: 'es-419_tn', ref: 'v60' });
+    // The package returned is the one at the pinned ref.
+    expect(pinned.resolved.catalogEntries[0].branch_or_tag_name).toBe('v60');
 
     const found = await resolveTarget(
       { lang: 'es-419', subject: 'TSV Translation Notes' },
@@ -739,5 +761,38 @@ describe('getAllCatalogEntries with { lang, subject }', () => {
     expect(set.catalogEntries[0].name).toBe('es-419_tn');
     expect(set.catalogEntries.map((e) => e.name)).toContain('hbo_uhb');
     expect(set.resourceVersion).toBe('v66');
+  });
+
+  test('an explicit ref is judged by its own blueprint, not by the latest release', async () => {
+    const withBooks = (row, books) => ({
+      ...row,
+      ingredients: books.map((b) => ({ identifier: b, path: `./${b}.tsv` })),
+    });
+    // The latest release (v66) only has Genesis; the pinned v60 has Titus.
+    const atRef = (ref, books) =>
+      blueprint(withBooks({ ...TN_GL, branch_or_tag_name: ref }, books));
+    axiosGetMock.mockImplementation(async (url) => {
+      if (url.startsWith(`${API}/catalog/search?`)) {
+        return { data: { ok: true, data: [withBooks(TN_GL, ['gen'])] } };
+      }
+      if (url.startsWith(`${API}/catalog/bp/es-419_gl/es-419_tn/v66`)) {
+        return { data: { ok: true, data: atRef('v66', ['gen']) } };
+      }
+      if (url.startsWith(`${API}/catalog/bp/es-419_gl/es-419_tn/v60`)) {
+        return { data: { ok: true, data: atRef('v60', ['tit']) } };
+      }
+      throw new Error(`unexpected ${url}`);
+    });
+    const query = { lang: 'es-419', subject: 'TSV Translation Notes', books: ['tit'], ref: 'v60' };
+    const set = await getAllCatalogEntries(query, { dcs_api_url: API, quiet: true });
+    expect(set.source).toMatchObject({ owner: 'es-419_gl', repo: 'es-419_tn', ref: 'v60' });
+    expect(set.resourceVersion).toBe('v60');
+    expect(set.catalogEntries[0].branch_or_tag_name).toBe('v60');
+
+    const target = await resolveTarget(query, { dcs_api_url: API });
+    expect(target).toMatchObject({ owner: 'es-419_gl', repo: 'es-419_tn', ref: 'v60' });
+
+    const urls = axiosGetMock.mock.calls.map(urlOf);
+    expect(urls.some((u) => u.includes('/catalog/bp/es-419_gl/es-419_tn/v66'))).toBe(false);
   });
 });
