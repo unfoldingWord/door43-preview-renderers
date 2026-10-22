@@ -712,6 +712,49 @@ describe('renderTranslationNotesHtml — Translation Questions (#23)', () => {
     ).not.toContain('tq-question');
   });
 
+  test('a range narrows the questions even when the notes already lie inside it (#67 review)', async () => {
+    const { renderHtmlData } = await import('../renderHtmlData.js');
+    const { filterResourceDataByRanges } = await import('../rangeFilter.js');
+    // The fixture's notes are on 1:1 only, so `tit: '1:1'` leaves them as they are.
+    const data = { ...withQuestions(), abbreviation: 'tn' };
+    expect(Object.keys(data.books.tit.chapters)).toEqual(['1']);
+    expect(Object.keys(data.books.tit.chapters[1].verses)).toEqual(['1']);
+    data.extras.tq.books.tit.chapters[2] = {
+      verses: { 1: [{ ID: 'q4', Question: 'A chapter 2 question?', Response: 'Yes.' }] },
+    };
+    const body = renderHtmlData(data, { books: { tit: '1:1' } }).sections.body;
+    expect(body).toContain('Who wrote this letter?');
+    expect(body).not.toContain('How was the word revealed?'); // 1:3
+    expect(body).not.toContain('A chapter 2 question?');
+    // A range key counts by its first verse, as for notes: 1:1-2 stays under 1:1.
+    expect(body).toContain('What did God promise?');
+    // Nothing to narrow anywhere: the same content back.
+    const inRange = withQuestions();
+    delete inRange.extras.tq.books.tit.chapters[1].verses[3];
+    delete inRange.extras.tq.books.tit.chapters[1].verses['1-2'];
+    expect(filterResourceDataByRanges(inRange, { tit: '1:1' })).toEqual(inRange);
+  });
+
+  test('a book with questions and no notes is rendered too, in canonical order', () => {
+    const data = withQuestions();
+    data.extras.tq.books.phm = {
+      title: 'Philemon',
+      chapters: {
+        1: { verses: { 1: [{ ID: 'p1', Question: 'Who is Philemon?', Response: 'A friend.' }] } },
+      },
+    };
+    data.extras.tq.books.rut = { title: 'Ruth', chapters: { 1: { verses: { 1: [] } } } }; // no rows
+    const { body, toc } = renderTranslationNotesHtml(data).sections;
+    expect(body).toContain('<section id="nav-phm"');
+    expect(body).toContain('id="nav-phm-1-1-tq-p1"');
+    expect(body.indexOf('id="nav-tit"')).toBeLessThan(body.indexOf('id="nav-phm"'));
+    expect(body).not.toContain('id="nav-rut"');
+    expect(toc[0].sections.map((s) => s.title)).toEqual(['Titus', 'Philemon']);
+    expect(
+      renderTranslationNotesHtml(data, { includeQuestions: false }).sections.body
+    ).not.toContain('nav-phm');
+  });
+
   test('a reference range narrows the questions too (#67 review)', async () => {
     const { renderHtmlData } = await import('../renderHtmlData.js');
     const data = { ...withQuestions(), abbreviation: 'tn' };
