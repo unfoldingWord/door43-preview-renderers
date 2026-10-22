@@ -3,7 +3,7 @@
 ## Data pipeline
 
 0. `resolveResource({ lang, subject, books?, owner?, stage?, ref? }, options)` (`src/findResources.js`, optional) — picks the publisher and release for a language and subject and returns `{ owner, repo, ref, entry, catalogEntries }` with the chosen entry first. `getAllCatalogEntries` accepts the same language form and returns that blueprint as the CatalogSet.
-1. `getAllCatalogEntries(source, options)` — one `/catalog/bp/` call; returns a CatalogSet `{ resourceVersion, libraryVersion, catalogEntries, source }` with the requested entry first (`source` also has `lang` and `subject` for the language form).
+1. `getAllCatalogEntries(source, options)` — one `/catalog/bp/` call for a descriptor (the language form fetches each candidate it tries, and the winner is not fetched again); returns a CatalogSet `{ resourceVersion, libraryVersion, catalogEntries, source }` with the requested entry first (`source` also has `lang` and `subject` for the language form).
 2. `getResourceData(input, options)` — `input` is a descriptor `{ owner, repo, ref, books? }`, a CatalogSet, a catalog entry, or ResourceData (passthrough). Fetches and normalizes the resource, filters the blueprint by `requiredSubjectsMap` (`filterCatalogEntries` in `src/catalogSelection.js`: at most two Aligned Bibles, testament-aware originals), fetches those as `extras`, and adds `GLQuotes` to TSV rows (computed locally in `src/quotes/` from the aligned Bibles and the original-language Bible; an unmatched quote leaves that Bible out).
 3. `renderHtmlData(resourceData, options)` — pure; routes by `subject`; applies `books` (array entries or object keys) as selection/order for the USFM subjects only — unlisted books are omitted there, `resourceData.requestedBooks` taking precedence — and the object form's values as reference ranges for TSV and USFM; rewrites anchors to the abbreviation; returns HtmlData.
 4. `renderHTML(htmlData, options)` — pure; composes one document for `media: 'screen' | 'print'`.
@@ -14,7 +14,7 @@
 Common: `type`, `metadataType`, `subject`, `title`, `abbreviation`, `version`, `license`; and, when the catalog entry gives them, `language`, `languageTitle`, `direction` (`'ltr'` | `'rtl'`), `isGatewayLanguage` (copied once in `getResourceData`, for extras too).
 
 - `usfm` (Aligned Bible, Bible, Greek New Testament, Hebrew Old Testament): `books: { [bookId]: usfmString }` — alignment markers removed.
-- `tsv` (TN, TQ, SN, SQ, TWL and the OBS variants of TN/TQ/SN/SQ — OBS TWL extraction is still a stub, #21): `books: { [bookId]: { title, identifier, sort, chapters: { [ch]: { verses: { [v]: [row] } } } } }`. A row has the TSV columns normalized to `Reference`, `ID`, `Tags`, `Quote`, `Occurrence`, `Note` / `Question` / `Response`, `SupportReference` / `TWLink`, plus `GLQuotes: { [bibleRepo]: { Quote, Occurrence, FullGLQuote?, FullGLOccurrence? } }` when aligned Bibles were available. `extras: { ult, ust, ta, tw, twl, ugnt | uhb, obs }` (whatever the subject needs), each itself a ResourceData.
+- `tsv` (TN, TQ, SN, SQ, TWL and their OBS variants; OBS has one `obs` book, stories as chapters, frames as verses): `books: { [bookId]: { title, identifier, sort, chapters: { [ch]: { verses: { [v]: [row] } } } } }`. A row has the TSV columns normalized to `Reference`, `ID`, `Tags`, `Quote`, `Occurrence`, `Note` / `Question` / `Response`, `SupportReference` / `TWLink`, plus `GLQuotes: { [bibleRepo]: { Quote, Occurrence, FullGLQuote?, FullGLOccurrence? } }` when aligned Bibles were available. `extras: { ult, ust, ta, tw, twl, ugnt | uhb, obs, obs-twl }` (whatever the subject needs, keyed by repo identifier; find one by its `subject`), each itself a ResourceData.
 - `obs`: `stories: { [num]: { title, reference, frames: { [n]: { text, img } } } }`, `front`, `back`.
 - `ta`: `manuals: { [manualId]: { title, toc, articles: { [articleId]: { title, text } } } }`.
 - `tw`: `articles: { kt: { [slug]: { title, text } }, names: {…}, other: {…} }` (each category also carries a `title` meta key).
@@ -51,7 +51,7 @@ Keep errors explicit: unsupported subject or invalid input shape throws with con
 | Open Bible Stories | `src/renderers/obsRenderer.js` |
 | TSV Translation Notes, TSV OBS Translation Notes | `src/renderers/translationNotesRenderer.js` |
 | TSV Translation Questions / Study Questions / Study Notes (+ OBS variants) | `src/renderers/tsvQuestionsRenderer.js` |
-| TSV Translation Words Links (TSV OBS Translation Words Links is routed, data extraction pending #21) | `src/renderers/translationWordsLinksRenderer.js` |
+| TSV Translation Words Links, TSV OBS Translation Words Links | `src/renderers/translationWordsLinksRenderer.js` |
 | Translation Academy | `src/renderers/translationAcademyRenderer.js` |
 | Translation Words | `src/renderers/translationWordsRenderer.js` |
 

@@ -145,6 +145,19 @@ describe('renderTranslationNotesHtml', () => {
     expect(ta.html).toContain('Use a verb.');
   });
 
+  test('a TW article keeps its link to a cited verse with notes, and drops one without', () => {
+    const data = buildResourceData();
+    data.extras.tw.articles.names.paul.text =
+      '## Paul\n\n* [Titus 1:1](rc://*/tn/help/tit/01/01)\n* [Titus 3:1](rc://*/tn/help/tit/03/01)';
+    const article = renderTranslationNotesHtml(data).sections.appendices.tw['names/paul'].html;
+    // Each assertion is tied to the link's own text, in any attribute order.
+    expect(article).toMatch(/<a [^>]*href="#nav-tit-1-1"[^>]*>Titus 1:1<\/a>/);
+    expect(article).not.toContain('nav-tit-3-1');
+    expect(article).toMatch(
+      /<a (?=[^>]*href="#")(?=[^>]*class="external-ref")[^>]*>Titus 3:1<\/a>/
+    );
+  });
+
   test('collects a TW appendix (keyed by kind) from TWL references', () => {
     const tw = sections.appendices.tw['names/paul'];
     expect(tw.title).toBe('Paul, Saul');
@@ -441,7 +454,7 @@ describe('renderTranslationNotesHtml — OBS', () => {
     expect(sections.body).toContain('class="obs-frames-body"');
   });
 
-  test("lists the frame's Translation Words from the obs-twl extra, linking to the TW appendix", () => {
+  test("lists the frame's Translation Words from the OBS TWL extra, linking to the TW appendix", () => {
     const data = buildObsData();
     data.extras.tw = {
       type: 'tw',
@@ -450,8 +463,9 @@ describe('renderTranslationNotesHtml — OBS', () => {
         kt: { title: 'Key Terms', god: { title: 'God', text: '## God\n\nThe one true God.' } },
       },
     };
-    // getResourceData keys the extra by repo identifier: en_obs-twl → `obs-twl`.
-    data.extras['obs-twl'] = {
+    // Found by subject, whatever its key: getResourceData keys it `obs-twl`
+    // (the repo identifier), so a different key here pins the subject lookup.
+    data.extras['some-other-key'] = {
       type: 'tsv',
       subject: 'TSV OBS Translation Words Links',
       books: {

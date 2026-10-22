@@ -130,6 +130,9 @@ requiredSubjectsMap['TSV OBS Translation Notes']
 
 requiredSubjectsMap['TSV OBS Translation Questions']
 // ['Open Bible Stories']
+
+requiredSubjectsMap['TSV OBS Translation Words Links']
+// ['Open Bible Stories', 'Translation Words']
 ```
 
 ### Example Usage

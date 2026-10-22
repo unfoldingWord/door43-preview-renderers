@@ -26,10 +26,10 @@ getResourceData(input, options?)
   - **books** (array): book ids, when `input` does not carry them
 
 `books` selects which books to fetch (e.g. `['tit']`). For the USFM subjects an
-empty list means every book the resource lists; the TSV subjects need at least one
-book (an empty list fails with `No valid books were processed from the TSV data`);
-Open Bible Stories, Translation Academy and Translation Words ignore it and fetch
-everything. Book-scoped supporting resources are fetched for the same
+empty list means every book the resource lists; the Bible-book TSV subjects (notes,
+questions, words links) need at least one book (an empty list fails with `No valid
+books were processed from the TSV data`); Open Bible Stories and its TSV resources,
+Translation Academy and Translation Words ignore it and fetch everything. Book-scoped supporting resources are fetched for the same
 books, and a testament mismatch (a New Testament book requested from the Hebrew Old
 Testament, or the reverse) is skipped rather than treated as an error. The list
 is not recorded on the result: the renderers work from whatever `books` the data
@@ -54,7 +54,7 @@ entry gives them, `language` (e.g. `ar`), `languageTitle`, `direction` (`'ltr'` 
 | `type` | Subjects | Content |
 |---|---|---|
 | `usfm` | Aligned Bible, Bible, Greek New Testament, Hebrew Old Testament | `books: { [bookId]: usfmString }` (alignment markers removed) |
-| `tsv` | TSV Translation Notes / Questions / Study Notes / Study Questions / Translation Words Links, and the OBS variants of Notes, Questions, Study Notes and Study Questions | `books: { [bookId]: { title, chapters: { [ch]: { verses: { [v]: [row, …] } } } } }` plus `extras` (the supporting resources, keyed by short identifier such as `ult`, `ust`, `ta`, `tw`, `twl`, `ugnt`) |
+| `tsv` | TSV Translation Notes / Questions / Study Notes / Study Questions / Translation Words Links, and their OBS variants (one `obs` book; stories as chapters, frames as verses) | `books: { [bookId]: { title, chapters: { [ch]: { verses: { [v]: [row, …] } } } } }` plus `extras` (the supporting resources, keyed by repo identifier such as `ult`, `ust`, `ta`, `tw`, `twl`, `ugnt`, or `obs`, `obs-twl` for the OBS resources; find one by its `subject`, not its key) |
 | `obs` | Open Bible Stories | `stories: { [num]: { title, reference, frames: { [n]: { text, img } } } }`, `front`, `back` |
 | `ta` | Translation Academy | `manuals: { [manualId]: { title, toc, articles: { [articleId]: { title, text } } } }` |
 | `tw` | Translation Words | `articles: { kt: {…}, names: {…}, other: {…} }` |
@@ -68,11 +68,6 @@ Gateway Language words aligned to it. A quote that cannot be matched leaves that
 Bible out of the row's `GLQuotes`, and the renderers show the original-language
 quote instead; without the original-language Bible no `GLQuotes` are added. A row
 that already has a GL quote for a Bible keeps it.
-
-Not extracted yet: **`TSV OBS Translation Words Links`**. `getResourceData()`
-returns only its catalog metadata (no `type`, `books`, or `extras`), so it cannot
-be rendered, and the OBS Translation Notes renderer does not get a words list from
-it. Tracked in [#21](https://github.com/unfoldingWord/door43-preview-renderers/issues/21).
 
 ## Usage
 

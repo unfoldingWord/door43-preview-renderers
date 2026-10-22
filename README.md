@@ -154,7 +154,7 @@ For callers that know a language rather than an `owner/repo/ref`. Read-only DCS 
 
 ### `getAllCatalogEntries(source, options?)`
 
-Stage 1. Fetches the full book-package catalog (the blueprint) for a resource in one call to the DCS `/catalog/bp/` endpoint: the main entry plus every related resource at the versions that belong together.
+Stage 1. Fetches the full book-package catalog (the blueprint) for a resource in one call to the DCS `/catalog/bp/` endpoint: the main entry plus every related resource at the versions that belong together. (The language form fetches the blueprint of each publisher it tries, and returns the chosen one without fetching it again.)
 
 - `source`: a descriptor `{ owner, repo, ref, books? }`; the language form `{ lang, subject, books?, owner?, stage?, ref? }` (stage 0 first, then its blueprint is the result); a catalog entry object (its `url` gives the DCS API base); or an existing CatalogSet (returned unchanged)
 - `options.dcs_api_url` (default `https://git.door43.org/api/v1`), `options.quiet`, `options.books` (with the catalog-entry form)
@@ -178,7 +178,7 @@ Stage 2. Fetches one resource, parses it, fetches the supporting resources its s
 
 - `input`: a descriptor `{ owner, repo, ref, books? }`, a CatalogSet (reused, no second blueprint call; this is how the language form reaches stage 2), a catalog entry object, or existing ResourceData (returned unchanged)
 - `options.dcs_api_url`, `options.quiet`, `options.books`
-- `books`: for the USFM subjects an empty list means every book; the TSV subjects need at least one book; OBS, Translation Academy and Translation Words ignore it
+- `books`: for the USFM subjects an empty list means every book; the Bible-book TSV subjects (notes, questions, words links) need at least one book; Open Bible Stories and its TSV resources, Translation Academy and Translation Words ignore it
 
 ```javascript
 const resourceData = await getResourceData(
@@ -207,7 +207,7 @@ Supported subjects:
 - `Open Bible Stories`
 - `TSV Translation Notes` / `TSV OBS Translation Notes`
 - `TSV Translation Questions` / `TSV Study Questions` / `TSV Study Notes` (+ their `TSV OBS …` variants)
-- `TSV Translation Words Links` (by verse, or as a glossary with `renderOptions.layout: 'glossary'`); `TSV OBS Translation Words Links` is routed here but its data extraction is still a stub ([#21](https://github.com/unfoldingWord/door43-preview-renderers/issues/21))
+- `TSV Translation Words Links` / `TSV OBS Translation Words Links` (by verse or story frame, or as a glossary with `renderOptions.layout: 'glossary'`)
 
 Returns an **HtmlData** package:
 
