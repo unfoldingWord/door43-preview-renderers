@@ -106,7 +106,7 @@ door43-renderers getAllCatalogEntries --owner BSOJ --repo ar_twl --ref v5 --book
 ```json
 {
   "resourceVersion": "v91",
-  "libraryVersion": "1.6.0",
+  "libraryVersion": "1.7.0",
   "catalogEntries": [ { "name": "en_tn", "owner": "unfoldingWord", "subject": "TSV Translation Notes", "...": "..." } ],
   "source": { "owner": "unfoldingWord", "repo": "en_tn", "ref": "v91", "books": ["tit"], "dcsApiUrl": "https://git.door43.org/api/v1" }
 }
