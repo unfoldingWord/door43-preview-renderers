@@ -565,7 +565,8 @@ describe('resolveResource: books the dependencies carry', () => {
   });
 
   test('a Bible whose ingredient list is empty carries no books, so the next publisher wins', async () => {
-    const emptyBible = (row) => (row.subject === 'Aligned Bible' ? { ...row, ingredients: [] } : row);
+    const emptyBible = (row) =>
+      row.subject === 'Aligned Bible' ? { ...row, ingredients: [] } : row;
     serve({
       [`${API}/catalog/search?`]: { ok: true, data: [TN_OBT, TN_GL] },
       [`${API}/catalog/bp/es-419_obt/es-419_tn/v0.0.5`]: {
