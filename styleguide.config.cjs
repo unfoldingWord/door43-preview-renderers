@@ -93,8 +93,9 @@ module.exports = {
   styleguideDir: 'styleguide',
   pagePerSection: true,
   // Sections are ordered to mirror the rendering pipeline:
-  //   getAllCatalogEntries → getResourceData → renderHtmlData → renderHTML → renderPdf
-  // followed by reference material.
+  //   findResources → getAllCatalogEntries → getResourceData → renderHtmlData → renderHTML → renderPdf
+  // followed by reference material and the design records. Every page in docs/
+  // belongs in one of these sections (and in the README's documentation list).
   sections: [
     {
       name: 'Introduction',
@@ -108,6 +109,10 @@ module.exports = {
     {
       name: 'The pipeline',
       sections: [
+        {
+          name: '0 · Find Resources',
+          content: 'docs/find-resources.md',
+        },
         {
           name: '1 · Get All Catalog Entries',
           content: 'docs/get-all-catalog-entries.md',
@@ -157,6 +162,19 @@ module.exports = {
         {
           name: 'API Client',
           content: 'docs/api.md',
+        },
+      ],
+    },
+    {
+      name: 'Design records',
+      sections: [
+        {
+          name: 'Rendering Pipeline Design',
+          content: 'docs/rendering-pipeline.md',
+        },
+        {
+          name: 'PDF Service & App Integration Plan',
+          content: 'docs/pdf-service-and-app-integration.md',
         },
       ],
     },

@@ -28,6 +28,11 @@ const webHtml   = renderHTML(htmlData);            const printHtml = renderHTML(
 const pdf = await renderPdf(htmlData, { pageSize: 'A4_PORTRAIT', outputPath: 'titus.pdf' });
 ```
 
+Know a language rather than a repository? Call
+`getAllCatalogEntries({ lang, subject, books })` first and pass the CatalogSet to
+`getResourceData()`; `getResourceData()` itself needs `{ owner, repo, ref }`, a
+CatalogSet, or a catalog entry. See [Find Resources](./find-resources.md).
+
 Each option below is marked:
 
 - ✅ **Active** — implemented and honored today.
@@ -47,7 +52,7 @@ catalog entry object, or an existing `resourceData` (returned unchanged).
 | `input.owner` | string | — | ✅ | Repository owner (e.g. `unfoldingWord`). |
 | `input.repo` | string | — | ✅ | Repository name (e.g. `en_tn`). |
 | `input.ref` | string | — | ✅ | Tag, branch, or commit (e.g. `v91`, `master`). |
-| `input.books` | string[] | `[]` | ✅ | Book ids to fetch (e.g. `['tit','rom']`). Empty = all books. |
+| `input.books` | string[] | `[]` | ✅ | Book ids to fetch (e.g. `['tit','rom']`). Empty = every book for the USFM subjects; the TSV subjects need at least one; OBS, TA and TW ignore it. |
 | `options.dcs_api_url` | string | `https://git.door43.org/api/v1` | ✅ | DCS API base URL. |
 | `options.quiet` | boolean | `false` | ✅ | Suppress progress logging. |
 | `options.books` | string[] | `[]` | ✅ | Books, when `input` does not carry them (catalog-entry form). |

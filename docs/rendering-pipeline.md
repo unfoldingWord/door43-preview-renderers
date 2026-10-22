@@ -1,6 +1,7 @@
 # Rendering Pipeline Architecture
 
-**Status:** Proposed (design doc — not yet implemented)
+**Status:** Implemented: stages 1–5 and the options schema. Still planned: `getResourceDataFromDirectory` (stage 2′) and the `renderPreview` orchestrator. Stage 0, finding a resource from a language ([Find Resources](./find-resources.md)), came later.
+This page is the design record. For how the pipeline works today, see [Full Pipeline](./pipeline.md) and [Rendering Options](./options.md).
 **Decision:** Clean break to a staged API (drop the old positional `owner, repo, ref, books, options` signatures; update all callers in the same pass — no back-compat aliases).
 
 ---
@@ -83,7 +84,7 @@ Freeze these. They are the API.
 
 ### 4.1 `CatalogSet` — output of stage 1
 
-```js
+```js static
 {
   resourceVersion: string,     // e.g. "v89" — from catalogEntry.branch_or_tag_name / release.tag_name
   libraryVersion:  string,     // npm package version of this renderer lib (was mislabeled `version`)
@@ -101,7 +102,7 @@ Self-describing, so downstream needs **nothing else**. Subject payload shapes ar
 unchanged from today (see the `uw-book-packages` skill); the contract promotes
 cover/identity fields and `requestedBooks` to **required**:
 
-```js
+```js static
 {
   type: 'usfm' | 'tsv' | 'obs' | 'ta' | 'tw',
   subject: string,             // routes the renderer
@@ -117,7 +118,7 @@ cover/identity fields and `requestedBooks` to **required**:
 
 ### 4.3 `HtmlData` — output of stage 3
 
-```js
+```js static
 {
   subject: string,
   title: string,
@@ -170,7 +171,7 @@ Two rules govern every signature:
 
 ### Stage 1 — `getAllCatalogEntries(source, options) → CatalogSet`  *(online)*
 
-```js
+```js static
 // source = { owner, repo, ref, books? }   |   catalogEntry   |   CatalogSet (passthrough)
 export async function getAllCatalogEntries(source, options = {}) {
   if (source.catalogEntries) return source;           // already a CatalogSet
@@ -185,7 +186,7 @@ export async function getAllCatalogEntries(source, options = {}) {
 
 ### Stage 2 — `getResourceData(input, options) → ResourceData`  *(online)*
 
-```js
+```js static
 // input = CatalogSet   |   { owner, repo, ref, books? }   |   ResourceData (passthrough)
 export async function getResourceData(input, options = {}) {
   if (isResourceData(input)) return input;            // already done
@@ -204,7 +205,7 @@ export async function getResourceData(input, options = {}) {
 The local twin of stage 2 — same output shape, content read from disk instead of
 DCS. Per your spec:
 
-```js
+```js static
 // catalogEntries: FULL catalogEntry objects (the parsed manifest — subject, title,
 //                 metadata_type, ingredients[]). [0] is the main resource.
 // dirPath:        directory containing one subdir per repo, named by repo.name.
@@ -232,7 +233,7 @@ export async function getResourceDataFromDirectory(catalogEntries, dirPath, opti
 
 ### Stage 3 — `renderHtmlData(resourceData, options) → HtmlData`  *(pure)*
 
-```js
+```js static
 export function renderHtmlData(resourceData, options = {}) {   // no async, no network
   // route by resourceData.subject → subject renderer (renderers themselves unchanged)
   // read resourceData.requestedBooks (drop the `books` positional)
@@ -247,7 +248,7 @@ call (`renderHtmlData.js:42-45`).
 **One** composition function. There is no separate web/print function — `options`
 (§6) decides which sections to include, which CSS, and the layout:
 
-```js
+```js static
 export function renderHTML(htmlData, options = {}) {
   const opts = withDefaults(options, htmlData);   // media-aware defaults (§6.2)
   // include sections.cover/copyright/toc/body/appendices per opts.show
@@ -264,7 +265,7 @@ export function renderHTML(htmlData, options = {}) {
 
 ### Stage 5 — `renderPdf(input, options) → Buffer | path`  *(I/O)*
 
-```js
+```js static
 // input = HtmlData (renders the print HTML internally via renderHTML)
 //       | print HTML string (already composed) → straight to WeasyPrint
 export async function renderPdf(input, options = {}) { … }   // forces media:'print'
@@ -276,7 +277,7 @@ renderPdf(htmlString)` doesn't double-assemble.
 
 ### Orchestrator — `renderPreview(request) → string | Buffer | path`
 
-```js
+```js static
 // request spreads the §6 options plus { owner, repo, ref, books?, output: 'html'|'pdf' }
 export async function renderPreview(request) {
   const catalogSet   = await getAllCatalogEntries(request, request);
@@ -296,7 +297,7 @@ by concern. **All keys optional**; defaults shown.
 
 ### 6.1 Shape
 
-```js
+```js static
 {
   // ── Source / infrastructure (stages 1–2) ──────────────────────────────
   dcsApiUrl: 'https://git.door43.org/api/v1',

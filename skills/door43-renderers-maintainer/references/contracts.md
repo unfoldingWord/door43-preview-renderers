@@ -2,8 +2,9 @@
 
 ## Data pipeline
 
-1. `getAllCatalogEntries(source, options)` — one `/catalog/bp/` call; returns a CatalogSet `{ resourceVersion, libraryVersion, catalogEntries, source }` with the requested entry first.
-2. `getResourceData(input, options)` — `input` is a descriptor `{ owner, repo, ref, books? }`, a CatalogSet, a catalog entry, or ResourceData (passthrough). Fetches and normalizes the resource, filters the blueprint by `requiredSubjectsMap` (`filterCatalogEntries` in `src/catalogSelection.js`: at most two Aligned Bibles, testament-aware originals), fetches those as `extras`, and adds `GLQuotes` to TSV rows.
+0. `resolveResource({ lang, subject, books?, owner?, stage?, ref? }, options)` (`src/findResources.js`, optional) — picks the publisher and release for a language and subject and returns `{ owner, repo, ref, entry, catalogEntries }` with the chosen entry first. `getAllCatalogEntries` accepts the same language form and returns that blueprint as the CatalogSet.
+1. `getAllCatalogEntries(source, options)` — one `/catalog/bp/` call; returns a CatalogSet `{ resourceVersion, libraryVersion, catalogEntries, source }` with the requested entry first (`source` also has `lang` and `subject` for the language form).
+2. `getResourceData(input, options)` — `input` is a descriptor `{ owner, repo, ref, books? }`, a CatalogSet, a catalog entry, or ResourceData (passthrough). Fetches and normalizes the resource, filters the blueprint by `requiredSubjectsMap` (`filterCatalogEntries` in `src/catalogSelection.js`: at most two Aligned Bibles, testament-aware originals), fetches those as `extras`, and adds `GLQuotes` to TSV rows (computed locally in `src/quotes/` from the aligned Bibles and the original-language Bible; an unmatched quote leaves that Bible out).
 3. `renderHtmlData(resourceData, options)` — pure; routes by `subject`; applies `books` (array entries or object keys) as selection/order for the USFM subjects only — unlisted books are omitted there, `resourceData.requestedBooks` taking precedence — and the object form's values as reference ranges for TSV and USFM; rewrites anchors to the abbreviation; returns HtmlData.
 4. `renderHTML(htmlData, options)` — pure; composes one document for `media: 'screen' | 'print'`.
 5. `renderPdf(htmlData, options)` — WeasyPrint.

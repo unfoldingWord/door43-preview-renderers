@@ -15,6 +15,12 @@ getAllCatalogEntries(source, options?)
 
 - **source** (object): one of
   - a **descriptor** `{ owner, repo, ref, books? }`
+  - a **language form** `{ lang, subject, books?, owner?, stage?, ref? }`: the
+    publisher and release are chosen first ([stage 0](./find-resources.md)), and the
+    blueprint of the chosen package is returned, so it is not fetched a second time
+    (a candidate that does not fit costs one `/catalog/bp/` call of its own).
+    `owner` is a preference, `stage` defaults to `prod`, and `ref` pins a release
+    (each publisher's package is checked at that ref)
   - an existing **catalog entry** (its `url` is used to infer the DCS API base)
   - an existing **CatalogSet** (returned unchanged — passthrough)
 - **options** (object, optional):
@@ -34,7 +40,7 @@ A Promise resolving to a **CatalogSet**:
     {...},                   // [0] the requested resource
     {...},                   // [1..n] dependencies (Aligned Bible, TA, TW, original languages, …)
   ],
-  source: { owner, repo, ref, books, dcsApiUrl }
+  source: { owner, repo, ref, books, dcsApiUrl }   // + lang, subject for the language form
 }
 ```
 
@@ -65,6 +71,10 @@ console.log(set.resourceVersion, set.catalogEntries.length);
 // Reuse it downstream — no second /catalog/bp/ call
 import { getResourceData } from '@unfoldingword/door43-preview-renderers';
 const data = await getResourceData(set);
+
+// From a language: the publisher and its latest release are found for you
+const es = await getAllCatalogEntries({ lang: 'es-419', subject: 'TSV Translation Notes', books: ['tit'] });
+es.source; // → { owner: 'es-419_gl', repo: 'es-419_tn', ref: 'v66', books: ['tit'], lang: 'es-419', … }
 ```
 
 ## Interactive Demo

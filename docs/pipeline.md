@@ -6,12 +6,15 @@ checked-out repositories from disk, `getResourceDataFromDirectory`, is still pla
 see [Rendering Options](./options.md)):
 
 ```
+resolveResource(query, opts)         → owner/repo/ref  (network; stage 0, optional: language + subject → publisher + release)
 getAllCatalogEntries(source, opts)   → CatalogSet      (network)
 getResourceData(input, opts)         → ResourceData    (network; or a cached ResourceData passed through)
 renderHtmlData(resourceData, opts)   → HtmlData        (pure, no I/O)
 renderHTML(htmlData, opts)           → HTML string     (media: 'screen' | 'print')
 renderPdf(htmlData, opts)            → PDF             (WeasyPrint)
 ```
+
+Stage 0 is for callers that know a language rather than a repository: `getAllCatalogEntries({ lang, subject, books })` runs it for you and keeps the blueprint it fetched as the CatalogSet. See [Find Resources](./find-resources.md).
 
 The demo below loads a **cached `ResourceData` fixture** (instant — no DCS round-trip
 and no in-browser Proskomma) or fetches **live from DCS**, then runs

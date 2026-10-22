@@ -13,6 +13,7 @@ Door43 is unfoldingWord's platform for Bible translation and related resources. 
 The library is a chain of stages. Each stage takes the previous stage's output, so you can run the whole chain or resume from any intermediate you already have:
 
 ```
+resolveResource(query, opts)         → owner/repo/ref  (network; optional stage 0)
 getAllCatalogEntries(source, opts)   → CatalogSet      (network)
 getResourceData(input, opts)         → ResourceData    (network; or a cached ResourceData passed through)
 renderHtmlData(resourceData, opts)   → HtmlData        (pure, no I/O)
@@ -20,6 +21,7 @@ renderHTML(htmlData, opts)           → HTML string     (media: 'screen' | 'pri
 renderPdf(htmlData, opts)            → PDF             (WeasyPrint)
 ```
 
+0. **Find** (optional) — `resolveResource()` turns a language and subject into the publisher and release to render; `getAllCatalogEntries({ lang, subject })` does it for you. [Learn more →](find-resources.md)
 1. **Catalog** — `getAllCatalogEntries()` calls the DCS Book Package endpoint once and returns every related resource at the versions that belong together. [Learn more →](get-all-catalog-entries.md)
 2. **Data** — `getResourceData()` fetches and parses one resource into a normalized object (USFM, TSV, Markdown, or OBS), pulling in the supporting resources it needs. [Learn more →](get-resource-data.md)
 3. **HTML sections** — `renderHtmlData()` routes that data to the renderer for its subject and returns packaged sections (cover, copyright, body, TOC, CSS, appendices). [Learn more →](renderers.md)
@@ -56,6 +58,15 @@ const pdf = await renderPdf(htmlData, { pageSize: 'A4_PORTRAIT' });
 
 See [Rendering options](./options.md) for every option each stage accepts.
 
+If you know a language rather than a repository, start from stage 0. The publisher and its latest release are found for you, and the blueprint fetched while choosing is reused:
+
+```js static
+import { getAllCatalogEntries, getResourceData } from '@unfoldingword/door43-preview-renderers';
+
+const set = await getAllCatalogEntries({ lang: 'es-419', subject: 'TSV Translation Notes', books: ['tit'] });
+const resourceData = await getResourceData(set); // no second blueprint call
+```
+
 If you only want the raw parsed data (no HTML), stop after `getResourceData()`:
 
 ```js static
@@ -72,7 +83,7 @@ const data = await getResourceData({ owner: 'adipatealberto', repo: 'pid_rut_tex
 | Metadata type | Description |
 |---|---|
 | `rc` | Resource Container (the unfoldingWord standard) |
-| `sb` | Scripture Burrito (OBS; the scripture flavor is not implemented yet) |
+| `sb` | Scripture Burrito (Bibles of the `textTranslation` flavor, and OBS) |
 | `ts` | translationStudio projects (single-book Bibles, OBS) |
 | `tc` | translationCore projects (aligned Bibles with an exported USFM) |
 
@@ -91,6 +102,16 @@ const data = await getResourceData({ owner: 'adipatealberto', repo: 'pid_rut_tex
 `getResourceData()` also fetches the supporting resources each of these needs (aligned Bibles, Translation Academy, Translation Words, Translation Words Links, the original-language Bibles) and hands them to the renderer as `extras`.
 
 ## Core functions
+
+### Finding resources
+
+- **`findResources()`** — every published catalog entry for a language, optionally one subject or owner.
+- **`resolveResource()`** — the best publisher and release for a language and subject, with its blueprint.
+- **`resolveRef()`** — a given ref, else the latest release, else the default branch.
+- **`resolveTarget()`** — what the CLI does with `--lang`/`--subject` or `--owner`/`--repo`.
+- **`listLanguages()`** — the languages that have published content.
+
+[Learn more →](find-resources.md)
 
 ### Catalog and data
 
@@ -123,9 +144,11 @@ const data = await getResourceData({ owner: 'adipatealberto', repo: 'pid_rut_tex
 
 ## Architecture
 
+- **src/findResources.js** — stage 0: from a language and subject to `{ owner, repo, ref }`
 - **src/getAllCatalogEntries.js** — stage 1: the Book Package catalog (one `/catalog/bp/` call)
 - **src/getResourceData.js** — stage 2: fetch and parse (rc / sb / ts / tc), filtering the blueprint to what the subject needs via **src/catalogSelection.js**
 - **src/\*Helpers.js** (`rcAlignedBibleHelpers`, `tsBibleHelpers`, `tsvHelpers`, `obsHelpers`, `taHelpers`, `twHelpers`, `bibleHelpers`) — the per-format extractors behind stage 2; `twlQuoteTrimming.js` / `twQuoteTrim.js` narrow Translation Words Links quotes to the term
+- **src/quotes/** — the original-language → Gateway Language quote lookup that fills TSV rows' `GLQuotes` (`usfmBookIndex.js`, `glQuote.js`, `addGlQuotes.js`)
 - **src/dcsApi.js** — DCS content and license fetching, with request-level caching
 - **src/renderHtmlData.js** — stage 3: the subject router; **src/rangeFilter.js** applies per-book reference ranges
 - **src/renderers/** — per-subject renderers, shared helpers, and the print document assembler
