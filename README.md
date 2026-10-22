@@ -338,7 +338,7 @@ pnpm run styleguide:build  # style guide → styleguide/
 pnpm run fetch-logos       # refresh src/assets/logos.generated.js from the CDN
 ```
 
-The cover logos are bundled as data URIs in `src/assets/logos.generated.js`, which is committed; `prebuild` only fetches them when that file is missing. Only `dist/index.esm.js` and `src/cli.js` are published.
+The build leaves the dependencies (`axios`, `jszip`, `markdown-it`, `usfm-js`, `js-yaml`, Proskomma) as imports for your package manager to install, so an app that uses them too doesn't carry two copies. The cover logos are bundled as data URIs in `src/assets/logos.generated.js`, which is committed; `pnpm fetch-logos` regenerates it, and the build stops if it is missing rather than fetching. `pnpm install` doesn't build; `npm publish` does (`prepublishOnly`). Only `dist/index.esm.js` and `src/cli.js` are published. Node 20 or later.
 
 ### Checks
 

@@ -20,7 +20,7 @@
   ],
   "scripts": {
     "fetch-logos": "node scripts/fetch-logos.mjs",
-    "prebuild": "node -e \"const f='src/assets/logos.generated.js';require('fs').existsSync(f)||require('child_process').execSync('node scripts/fetch-logos.mjs',{stdio:'inherit'})\"",
+    "prebuild": "node -e \"require('fs').existsSync('src/assets/logos.generated.js')||(console.error('src/assets/logos.generated.js is missing: run pnpm fetch-logos'),process.exit(1))\"",
     "build": "rollup -c",
     "dev": "rollup -c -w",
     "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js",
@@ -33,7 +33,7 @@
     "styleguide": "styleguidist server --config styleguide.config.cjs",
     "styleguide:dev": "styleguidist server --config styleguide.config.cjs",
     "styleguide:build": "pnpm run build && styleguidist build --config styleguide.config.cjs",
-    "prepare": "pnpm run build"
+    "prepublishOnly": "pnpm run build"
   },
   "keywords": [
     "door43",
@@ -84,12 +84,8 @@
     "proskomma-json-tools": "0.9.1",
     "usfm-js": "^3.4.3"
   },
-  "peerDependencies": {
-    "react": "^16.8.0 || ^17.0.0 || ^18.0.0",
-    "react-dom": "^16.8.0 || ^17.0.0 || ^18.0.0"
-  },
   "engines": {
-    "node": ">=16.0.0",
+    "node": ">=20.0.0",
     "pnpm": ">=8.0.0"
   }
 }
