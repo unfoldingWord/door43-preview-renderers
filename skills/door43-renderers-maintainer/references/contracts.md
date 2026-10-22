@@ -9,6 +9,14 @@
 4. `renderHTML(htmlData, options)` — pure; composes one document for `media: 'screen' | 'print'`.
 5. `renderPdf(htmlData, options)` — WeasyPrint.
 
+### `books` at stage 2
+
+This is the one statement of the rule; the README, `docs/options.md`, `docs/get-resource-data.md` and `docs/cli.md` link here. `books` (on a descriptor or CatalogSet, or `options.books`; `--book` on the CLI) selects the books `getResourceData` fetches:
+
+- **USFM subjects** (Aligned Bible, Bible, Greek New Testament, Hebrew Old Testament): the listed books; an empty list means every book the resource lists.
+- **Bible-book TSV subjects** (notes, questions, words links): the listed books, and at least one is needed; an empty list fails with `No valid books were processed from the TSV data`.
+- **Open Bible Stories and its TSV resources** (`obs-tn`, `obs-tq`, `obs-twl`, …), **Translation Academy** and **Translation Words**: ignored; everything is fetched.
+
 ## ResourceData shapes (stage 2 output, renderer input)
 
 Common: `type`, `metadataType`, `subject`, `title`, `abbreviation`, `version`, `license`; and, when the catalog entry gives them, `language`, `languageTitle`, `direction` (`'ltr'` | `'rtl'`), `isGatewayLanguage` (copied once in `getResourceData`, for extras too).

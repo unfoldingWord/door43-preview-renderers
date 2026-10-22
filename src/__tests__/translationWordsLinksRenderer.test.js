@@ -426,6 +426,69 @@ describe('renderTranslationWordsLinksHtml — several books', () => {
   });
 });
 
+describe('renderTranslationWordsLinksHtml — several books, TOC', () => {
+  test('verse layout: the TOC lists the books only, and the chapters keep their anchors', () => {
+    const { sections } = renderTranslationWordsLinksHtml(buildTwoBookData());
+    const books = sections.toc[0].sections;
+    expect(books.map((b) => b.title)).toEqual(['Titus', 'Philemon']);
+    for (const book of books) expect(book.sections).toEqual([]);
+    expect(sections.body).toMatch(/<h3 class="twl-chapter-header" id="nav-tit-1">/);
+    expect(sections.body).toMatch(/<h3 class="twl-chapter-header" id="nav-phm-1">/);
+    expect(sections.body).not.toMatch(/class="twl-chapter-header"[^>]*data-toc-title/);
+  });
+
+  test('verse layout: showChaptersInToc: true lists the chapters of every book', () => {
+    const { sections } = renderTranslationWordsLinksHtml(buildTwoBookData(), {
+      showChaptersInToc: true,
+    });
+    const [tit, phm] = sections.toc[0].sections;
+    expect(tit.sections.map((s) => s.title)).toEqual(['Titus 1', 'Titus 2']);
+    expect(phm.sections.map((s) => s.title)).toEqual(['Philemon 1']);
+  });
+
+  test('glossary: each book keeps its categories (the glossary has no chapters)', () => {
+    const { sections } = renderTranslationWordsLinksHtml(buildTwoBookData(), {
+      layout: 'glossary',
+    });
+    const [tit, phm] = sections.toc[0].sections;
+    expect(tit.sections.map((s) => s.title)).toEqual(['Key Terms', 'Names', 'Other']);
+    expect(phm.sections.map((s) => s.title)).toEqual(['Key Terms', 'Names']);
+  });
+});
+
+describe('renderTranslationWordsLinksHtml — escaping', () => {
+  // A quote and an article title carrying HTML metacharacters, and an article
+  // whose markdown links to a javascript: URL (markdown-it refuses that link,
+  // as it does in Translation Notes).
+  function hostileData() {
+    const data = buildResourceData();
+    data.books.tit.chapters[1].verses[1][0].GLQuotes.en_ult.Quote = 'a <b>&"c"';
+    data.extras.tw.articles.names.paul.title = 'Paul <Saul> & "Co"';
+    data.extras.tw.articles.names.paul.text += '\n\n[click](javascript:alert(1))';
+    return data;
+  }
+  const html = (sections) =>
+    sections.body +
+    Object.values(sections.appendices?.tw || {})
+      .map((a) => a.html)
+      .join('');
+
+  for (const layout of ['verse', 'glossary']) {
+    test(`${layout} layout escapes the quote and the title, and drops the javascript: link`, () => {
+      const out = html(renderTranslationWordsLinksHtml(hostileData(), { layout }).sections);
+      // (An unspaced & is not a discontiguous-quote separator, so it stays.)
+      expect(out).toContain('a &lt;b&gt;&amp;&quot;c&quot;');
+      expect(out).not.toContain('a <b>');
+      expect(out).toContain('Paul &lt;Saul&gt; &amp; &quot;Co&quot;');
+      expect(out).not.toContain('<Saul>');
+      expect(out).toContain('Paul was an apostle.');
+      // The article reached the output, its link left as literal text.
+      expect(out).toContain('[click](javascript:alert(1))');
+      expect(out).not.toMatch(/href="javascript:/i);
+    });
+  }
+});
+
 describe('renderHtmlData dispatch for Translation Words Links', () => {
   test('applies the resource anchor prefix across body, toc and appendices', () => {
     const htmlData = renderHtmlData(buildResourceData());

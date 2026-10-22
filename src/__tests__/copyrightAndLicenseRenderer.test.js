@@ -151,7 +151,7 @@ describe('generateCopyrightAndLicenseHtml', () => {
     });
 
     expect(html).toContain(
-      '<a href="https://preview.door43.org/?a=1&amp;b=2" target="_blank">Door43 Preview</a>'
+      '<a href="https://preview.door43.org/?a=1&amp;b=2" target="_blank" rel="noopener noreferrer">Door43 Preview</a>'
     );
     expect(html).toContain('<span class="built-with-label">Version:</span> 2.0.0</span>');
     expect(html).toContain(`<span class="built-with-label">Date:</span> ${today}</span>`);

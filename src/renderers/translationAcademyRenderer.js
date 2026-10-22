@@ -21,7 +21,7 @@ function convertTaMarkdownToHtml(markdown = '') {
       )}"`
   );
 
-  html = html.replace(/(href="https?:\/\/[^"]+")/g, '$1 target="_blank"');
+  html = html.replace(/(href="https?:\/\/[^"]+")/g, '$1 target="_blank" rel="noopener noreferrer"');
 
   return html;
 }

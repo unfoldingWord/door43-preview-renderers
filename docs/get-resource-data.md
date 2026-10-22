@@ -25,11 +25,8 @@ getResourceData(input, options?)
   - **quiet** (boolean): suppress progress logging (default `false`)
   - **books** (array): book ids, when `input` does not carry them
 
-`books` selects which books to fetch (e.g. `['tit']`). For the USFM subjects an
-empty list means every book the resource lists; the Bible-book TSV subjects (notes,
-questions, words links) need at least one book (an empty list fails with `No valid
-books were processed from the TSV data`); Open Bible Stories and its TSV resources,
-Translation Academy and Translation Words ignore it and fetch everything. Book-scoped supporting resources are fetched for the same
+`books` selects which books to fetch (e.g. `['tit']`); what an empty list means, and
+which subjects ignore it, is [the `books` rule](https://github.com/unfoldingWord/door43-preview-renderers/blob/main/skills/door43-renderers-maintainer/references/contracts.md#books-at-stage-2). Book-scoped supporting resources are fetched for the same
 books, and a testament mismatch (a New Testament book requested from the Hebrew Old
 Testament, or the reverse) is skipped rather than treated as an error. The list
 is not recorded on the result: the renderers work from whatever `books` the data

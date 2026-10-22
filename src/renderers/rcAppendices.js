@@ -242,10 +242,13 @@ export function neutralizeDanglingAnchors(body, appendices) {
     for (const id of Object.keys(appendices[kind])) collect(appendices[kind][id].html);
   }
   const fix = (html) =>
-    // The link's own class (internal-link) goes too, so it carries one class attribute.
-    String(html || '').replace(/href="#(nav-[^"]+)"(?: class="[^"]*")?/g, (m, id) =>
-      ids.has(id) ? m : 'href="#" class="external-ref"'
-    );
+    String(html || '').replace(/<a\b[^>]*>/g, (tag) => {
+      const href = tag.match(/\shref="#(nav-[^"]+)"/);
+      if (!href || ids.has(href[1])) return tag;
+      // The link's own class (internal-link) goes too, wherever it stands in the
+      // tag, so the link carries one class attribute.
+      return tag.replace(/\sclass="[^"]*"/, '').replace(href[0], ' href="#" class="external-ref"');
+    });
   const out = {};
   for (const kind of Object.keys(appendices)) {
     out[kind] = {};

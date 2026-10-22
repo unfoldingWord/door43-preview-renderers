@@ -598,8 +598,9 @@ function renderGlossaryLayout(resourceData, ctx) {
  *   article bodies: as the `tw` appendix (verse layout) or inline (glossary)
  * @param {'none'|'chapter'|'book'} [options.dedupe='none'] - Verse layout: list a
  *   word only the first time it occurs in the chapter / the book
- * @param {boolean} [options.showChaptersInToc] - Force chapter entries in the TOC
- *   (default: on for a single-book document)
+ * @param {boolean} [options.showChaptersInToc] - Verse layout: force chapter entries
+ *   in the TOC (default: on for a single-book document). The glossary lists each
+ *   book's categories either way
  * @param {string} [options.resolution='none'] - OBS frame picture resolution
  * @returns {Object} Rendered HTML package
  */
