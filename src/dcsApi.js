@@ -105,6 +105,23 @@ export async function fetchContent(owner, repo, ref, filePath, dcs_api_url) {
 }
 
 /**
+ * GET a JSON endpoint (catalog search, blueprint, repo metadata) once per TTL
+ * window; the parsed body is returned. A non-object body is not cached.
+ */
+export async function fetchJson(url) {
+  return remember(url, (forget) =>
+    axios.get(url).then((response) => {
+      const body = response?.data;
+      if (body === null || typeof body !== 'object') {
+        forget();
+        throw new Error(`Unexpected response from ${url}`);
+      }
+      return body;
+    })
+  );
+}
+
+/**
  * Fetch a repository's license file from DCS.
  *
  * Tries the common license filenames in order and returns the first that

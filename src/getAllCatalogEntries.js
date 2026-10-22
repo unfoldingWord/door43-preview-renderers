@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { resolveResource } from './findResources.js';
 
 // The npm package version of this renderer library (distinct from the *resource*
 // version, e.g. 'v89', which is carried separately on the CatalogSet).
@@ -57,7 +58,9 @@ function resolveDescriptor(source, options) {
  * CatalogSet. Accepts a discriminated `source` so callers can fetch fresh or
  * pass an already-resolved set straight through:
  *
- * @param {Object} source - `{ owner, repo, ref, books? }` | a catalog entry | a CatalogSet (returned as-is)
+ * @param {Object} source - `{ owner, repo, ref, books? }` | `{ lang, subject, books?, owner?, stage?, ref? }`
+ *   (the preferred publisher is found first, see findResources.js; its current
+ *   release is used unless `ref` names one) | a catalog entry | a CatalogSet (returned as-is)
  * @param {Object} [options]
  * @param {string} [options.dcs_api_url] - DCS API base URL
  * @param {boolean} [options.quiet] - Suppress logging
@@ -78,6 +81,40 @@ export async function getAllCatalogEntries(source, options = {}) {
     return source;
   }
 
+  // Language + subject: find the publisher and release first (stage 0). The
+  // blueprint fetched while choosing is the CatalogSet, so nothing is fetched twice.
+  if (source.lang && source.subject && !source.repo && !source.name) {
+    const books = source.books || options.books || [];
+    // A ref the caller named wins over the found release, and each candidate
+    // is judged by its blueprint at that ref, not by its current release.
+    const resolved = await resolveResource(
+      {
+        lang: source.lang,
+        subject: source.subject,
+        books,
+        owner: source.owner,
+        stage: source.stage,
+        ref: source.ref,
+      },
+      { ...options, dcs_api_url: options.dcs_api_url || source.dcs_api_url }
+    );
+    // The version is the ref that was resolved, not whatever row the blueprint lists first.
+    return {
+      resourceVersion: resolved.ref,
+      libraryVersion,
+      catalogEntries: resolved.catalogEntries,
+      source: {
+        owner: resolved.owner,
+        repo: resolved.repo,
+        ref: resolved.ref,
+        books,
+        dcsApiUrl: options.dcs_api_url || source.dcs_api_url || 'https://git.door43.org/api/v1',
+        lang: source.lang,
+        subject: source.subject,
+      },
+    };
+  }
+
   const { owner, repo, ref, books, dcsApiUrl } = resolveDescriptor(source, options);
   if (!owner || !repo || !ref) {
     throw new Error('Owner, repo, and ref are required.');
@@ -93,13 +130,21 @@ export async function getAllCatalogEntries(source, options = {}) {
       throw new Error('Invalid response from /catalog/bp endpoint');
     }
 
-    const catalogEntries = response.data.data;
+    let catalogEntries = response.data.data;
     if (!Array.isArray(catalogEntries) || catalogEntries.length === 0) {
       throw new Error('No catalog entries returned from /catalog/bp endpoint');
     }
 
+    // Downstream treats the first entry as the resource to render. DCS lists
+    // the queried repo first; should a blueprint ever not, put it there.
+    const mainIndex = catalogEntries.findIndex(
+      (e) => e?.owner === owner && e?.name === repo && (!e.branch_or_tag_name || e.branch_or_tag_name === ref)
+    );
+    if (mainIndex > 0) {
+      catalogEntries = [catalogEntries[mainIndex], ...catalogEntries.filter((_, i) => i !== mainIndex)];
+    }
     const main = catalogEntries[0] || {};
-    const resourceVersion = main.branch_or_tag_name || main.release?.tag_name || ref;
+    const resourceVersion = mainIndex === -1 ? ref : main.branch_or_tag_name || main.release?.tag_name || ref;
 
     return {
       resourceVersion,

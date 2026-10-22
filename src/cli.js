@@ -10,16 +10,21 @@
 
 import fs from 'fs';
 import path from 'path';
-// Import from the built package entry, not src siblings: only dist/index.esm.js
-// and this file are published, so the installed `door43-renderers` bin must
-// resolve against dist. (Running from source therefore requires `pnpm build`.)
-import {
+// Import from the built package entry: only dist/index.esm.js and this file
+// are published, so the installed `door43-renderers` bin resolves against
+// dist. A checkout without a build (CI's test job, a fresh clone) falls back
+// to the source entry so the CLI still runs. Only a missing build falls back;
+// a build that fails to load reports its own error.
+const distEntry = new URL('../dist/index.esm.js', import.meta.url);
+const {
   getAllCatalogEntries,
   getResourceData,
   renderHtmlData,
   renderHTML,
   renderPdf,
-} from '../dist/index.esm.js';
+  findResources,
+  resolveRef,
+} = await import(fs.existsSync(distEntry) ? distEntry.href : './index.js');
 
 // Map the CLI's short page-size keys to PAGE_SIZES keys understood by renderHTML/renderPdf.
 function resolveCliPageSize(shortKey) {
@@ -65,6 +70,8 @@ function parseArgs(args) {
         parsed.params.pageSize = value;
       } else if (key === 'columns') {
         parsed.params.columns = parseInt(value, 10) || 1;
+      } else if (key === 'stage') {
+        parsed.params.stage = value;
       } else {
         parsed.params[key] = value;
       }
@@ -84,6 +91,7 @@ Usage:
   cli.js <command> [options]
 
 Commands:
+  findResources           List what is published for a language (optionally one subject/owner)
   getAllCatalogEntries    Get all catalog entries for rendering
   getResourceData        Get resource data for a specific book
   renderHtml             Fetch resource data and render to HTML sections (JSON)
@@ -91,9 +99,12 @@ Commands:
   generatePdf            Fetch, render, assemble, and render a PDF via WeasyPrint (requires the weasyprint binary)
 
 Options:
-  --owner <owner>         Repository owner (required)
-  --repo <repo>           Repository name (required)
-  --ref <ref>             Git reference (branch/tag/commit)
+  --owner <owner>         Repository owner (required unless --lang/--subject are given)
+  --repo <repo>           Repository name (required unless --lang/--subject are given)
+  --lang <code>           Language code, e.g. en, es-419 (with --subject: find the publisher)
+  --subject <subject>     Catalog subject, e.g. "TSV Translation Notes"
+  --stage <stage>         Catalog stage for --lang lookups: prod (default), preprod, latest, branch
+  --ref <ref>             Branch, tag or commit; omitted = the latest release
   --book <bookId>         Book ID (e.g., gen, exo, mat, 1ti)
   --dcs-api-url <url>     Custom DCS API URL (optional)
   --output <file>         Output file path (optional, defaults to stdout)
@@ -103,6 +114,16 @@ Options:
   --pdf-service-url <url> generatePdf: use a hosted weasyprint-pdf service instead of the local binary
 
 Examples:
+  # What is published for a language?
+  node src/cli.js findResources --lang es-419
+  node src/cli.js findResources --lang es-419 --subject "TSV Translation Notes" --quiet
+
+  # Render by language + subject: the publisher and release are found for you
+  node src/cli.js renderHtml --lang es-419 --subject "TSV Translation Notes" --book tit --quiet
+
+  # Omit --ref to use the latest release
+  node src/cli.js getResourceData --owner unfoldingWord --repo en_tn --book tit --quiet
+
   # Get catalog entries and output to stdout
   node src/cli.js getAllCatalogEntries --owner unfoldingWord --repo en_tn --ref v80 --book gen
 
@@ -159,9 +180,18 @@ async function main() {
 
   const { command, params, output, quiet } = parseArgs(args);
 
-  // Validate required parameters
-  if (!params.owner || !params.repo) {
-    console.error('Error: --owner and --repo are required');
+  const dcsApiUrl = params.dcsApiUrl || 'https://git.door43.org/api/v1';
+  const byLanguage = !!(params.lang && params.subject);
+
+  if (command === 'findResources') {
+    if (!params.lang) {
+      console.error(
+        'Error: findResources needs --lang (and optionally --subject, --owner, --stage)'
+      );
+      process.exit(1);
+    }
+  } else if (!byLanguage && (!params.owner || !params.repo)) {
+    console.error('Error: --owner and --repo are required (or --lang with --subject)');
     console.error('Use --help for usage information');
     process.exit(1);
   }
@@ -169,16 +199,68 @@ async function main() {
   try {
     let result;
 
-    switch (command) {
-      case 'getAllCatalogEntries': {
-        if (!quiet) {
-          console.error(`Fetching catalog entries for ${params.owner}/${params.repo}...`);
-        }
-        const books = params.bookId ? [params.bookId] : [];
-        result = await getAllCatalogEntries(
-          { owner: params.owner, repo: params.repo, ref: params.ref, books },
-          { dcs_api_url: params.dcsApiUrl || 'https://git.door43.org/api/v1', quiet }
+    // Stages 0-1, once: the CatalogSet every command starts from. A language
+    // + subject names the publisher (a --ref given with them is kept); a
+    // missing --ref on an owner/repo means the latest release. The set is
+    // handed on as-is, so the selected resource stays first and the version
+    // is the one resolved.
+    let set;
+    if (command !== 'findResources') {
+      const books = params.bookId ? [params.bookId] : [];
+      let descriptor;
+      if (byLanguage) {
+        if (!quiet) console.error(`Finding ${params.subject} for ${params.lang}...`);
+        descriptor = {
+          lang: params.lang,
+          subject: params.subject,
+          books,
+          owner: params.owner,
+          stage: params.stage,
+          ref: params.ref,
+        };
+      } else {
+        const ref =
+          params.ref ||
+          (await resolveRef({ owner: params.owner, repo: params.repo }, { dcs_api_url: dcsApiUrl }))
+            .ref;
+        descriptor = { owner: params.owner, repo: params.repo, ref, books };
+      }
+      set = await getAllCatalogEntries(descriptor, { dcs_api_url: dcsApiUrl, quiet });
+      // A requested owner is a preference: when its package was incomplete the
+      // next publisher is used, and that substitution is said even when quiet.
+      if (byLanguage && params.owner && params.owner !== set.source.owner) {
+        console.error(
+          `Note: ${params.owner} has no complete ${params.subject} package for ${params.lang}; using ${set.source.owner}/${set.source.repo}@${set.source.ref}`
         );
+      }
+      params.owner = set.source.owner;
+      params.repo = set.source.repo;
+      params.ref = set.source.ref;
+      if (!quiet) console.error(`Using ${params.owner}/${params.repo}@${params.ref}`);
+    }
+
+    switch (command) {
+      case 'findResources': {
+        if (!quiet) console.error(`Searching the catalog for ${params.lang}...`);
+        const entries = await findResources(
+          { lang: params.lang, subject: params.subject, owner: params.owner, stage: params.stage },
+          { dcs_api_url: dcsApiUrl, quiet }
+        );
+        result = entries.map((e) => ({
+          owner: e.owner,
+          repo: e.name,
+          ref: e.branch_or_tag_name,
+          subject: e.subject,
+          title: e.title,
+          released: e.released,
+          language_is_gl: e.language_is_gl,
+          language_direction: e.language_direction,
+        }));
+        break;
+      }
+
+      case 'getAllCatalogEntries': {
+        result = set;
         break;
       }
 
@@ -186,11 +268,7 @@ async function main() {
         if (!quiet) {
           console.error(`Fetching resource data for ${params.owner}/${params.repo}...`);
         }
-        const resourceBooks = params.bookId ? [params.bookId] : [];
-        result = await getResourceData(
-          { owner: params.owner, repo: params.repo, ref: params.ref, books: resourceBooks },
-          { dcs_api_url: params.dcsApiUrl || 'https://git.door43.org/api/v1', quiet }
-        );
+        result = await getResourceData(set, { dcs_api_url: dcsApiUrl, quiet });
         break;
       }
 
@@ -198,13 +276,9 @@ async function main() {
         if (!quiet) {
           console.error(`Rendering HTML for ${params.owner}/${params.repo}...`);
         }
-        const renderBooks = params.bookId ? [params.bookId] : [];
-        const resourceData = await getResourceData(
-          { owner: params.owner, repo: params.repo, ref: params.ref, books: renderBooks },
-          { dcs_api_url: params.dcsApiUrl || 'https://git.door43.org/api/v1', quiet }
-        );
+        const resourceData = await getResourceData(set, { dcs_api_url: dcsApiUrl, quiet });
         // HtmlData package (identity + sections); the body can be large.
-        result = renderHtmlData(resourceData, { books: renderBooks });
+        result = renderHtmlData(resourceData, { books: set.source.books });
         break;
       }
 
@@ -212,12 +286,8 @@ async function main() {
         if (!quiet) {
           console.error(`Assembling print document for ${params.owner}/${params.repo}...`);
         }
-        const printBooks = params.bookId ? [params.bookId] : [];
-        const resourceData = await getResourceData(
-          { owner: params.owner, repo: params.repo, ref: params.ref, books: printBooks },
-          { dcs_api_url: params.dcsApiUrl || 'https://git.door43.org/api/v1', quiet }
-        );
-        const htmlData = renderHtmlData(resourceData, { books: printBooks });
+        const resourceData = await getResourceData(set, { dcs_api_url: dcsApiUrl, quiet });
+        const htmlData = renderHtmlData(resourceData, { books: set.source.books });
         const html = renderHTML(htmlData, {
           media: 'print',
           columns: params.columns || 1,
@@ -246,12 +316,8 @@ async function main() {
         if (!quiet) {
           console.error(`Generating PDF for ${params.owner}/${params.repo}...`);
         }
-        const pdfBooks = params.bookId ? [params.bookId] : [];
-        const resourceData = await getResourceData(
-          { owner: params.owner, repo: params.repo, ref: params.ref, books: pdfBooks },
-          { dcs_api_url: params.dcsApiUrl || 'https://git.door43.org/api/v1', quiet }
-        );
-        const htmlData = renderHtmlData(resourceData, { books: pdfBooks });
+        const resourceData = await getResourceData(set, { dcs_api_url: dcsApiUrl, quiet });
+        const htmlData = renderHtmlData(resourceData, { books: set.source.books });
         const pdfOutputPath = path.resolve(output);
         await renderPdf(htmlData, {
           pageSize: resolveCliPageSize(params.pageSize),
@@ -269,7 +335,7 @@ async function main() {
       default:
         console.error(`Error: Unknown command "${command}"`);
         console.error(
-          'Valid commands: getAllCatalogEntries, getResourceData, renderHtml, assemblePrint, generatePdf'
+          'Valid commands: findResources, getAllCatalogEntries, getResourceData, renderHtml, assemblePrint, generatePdf'
         );
         process.exit(1);
     }
