@@ -130,3 +130,21 @@ describe("renderPdf takes renderHTML's composition options (#33)", () => {
     expect(out).toContain('<title>Other Title - v1</title>');
   });
 });
+
+describe('renderPdf: show.body and a missing cover (#68 review)', () => {
+  test('show.body: false leaves the body out of the PDF document', async () => {
+    const out = await renderPdf(sampleRenderResult(), {
+      weasyprintPath: 'cat',
+      show: { body: false },
+    });
+    expect(out.toString('utf8')).not.toContain('SENTINEL_BODY_TEXT');
+  });
+
+  test('without a cover, page 1 is not left unnumbered', async () => {
+    const out = await renderPdf(sampleRenderResult(), {
+      weasyprintPath: 'cat',
+      show: { cover: false },
+    });
+    expect(out.toString('utf8')).not.toMatch(/@page :first \{/);
+  });
+});

@@ -93,7 +93,8 @@ function buildScreenDocument(htmlData, opts) {
   if (opts.show.toc && Array.isArray(sections.toc) && sections.toc.length) {
     // Appendices are composed here rather than carried in sections.body, so their
     // TOC entries are appended only when the appendices are actually shown.
-    const tocEntries = [...sections.toc, ...buildAppendicesToc(appendices)];
+    // The body's entries only when the body is shown.
+    const tocEntries = [...(opts.show.body ? sections.toc : []), ...buildAppendicesToc(appendices)];
     parts.push(`<div class="section toc-page" id="toc">${generateTocHtml(tocEntries)}</div>`);
   }
   if (opts.show.body && sections.body) {

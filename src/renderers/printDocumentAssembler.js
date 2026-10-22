@@ -412,6 +412,8 @@ export const coverCss = `
  * @param {Object} [options.pageNumberShow] - Which sections get a page number:
  *   `{ cover, copyright, toc, body, appendices }`; a section set to false gets a
  *   named page with no number. Default: every section but the cover numbered
+ * @param {boolean} [options.hasCover=true] - Whether the document opens with a
+ *   cover; only then is the first page's number left off for it
  * @returns {string} Complete print CSS string
  */
 export function getPrintCss(options = {}) {
@@ -425,6 +427,7 @@ export function getPrintCss(options = {}) {
     runningHeader = true,
     margins,
     pageNumberShow = {},
+    hasCover = true,
   } = options;
 
   const isRtl = direction === 'rtl';
@@ -472,6 +475,9 @@ export function getPrintCss(options = {}) {
   // Page numbers per section. The cover has none unless asked for; any other
   // section set to false is put on a named page whose number box is empty.
   const numberCover = pageNumberShow.cover === true;
+  // The first page goes unnumbered for the cover's sake only: a document
+  // without a cover numbers its first page as its own section says.
+  const unnumberedFirstPage = hasCover && !numberCover;
   const hidden = (key) => pageNumberShow[key] === false;
   // The body has no wrapper of its own, so an unnumbered body names the whole
   // print container (naming its children instead fails: the running-header spans
@@ -525,7 +531,7 @@ ${
 }
 
 ${
-  numberCover
+  !unnumberedFirstPage
     ? ''
     : `@page :first {
   ${pnBox} { content: none; }
@@ -872,6 +878,7 @@ export function assemblePrintDocument(sections, options = {}) {
   const showCover = show.cover !== false;
   const showCopyright = show.copyright !== false;
   const showToc = show.toc !== false;
+  const showBody = show.body !== false;
 
   const {
     cover: coverSnippet = '',
@@ -890,9 +897,12 @@ export function assemblePrintDocument(sections, options = {}) {
 
   // Build TOC. The body entries come from the renderer; the appendix entries are
   // derived here because the appendices themselves are assembled here.
+  // A body left out (`show.body: false`) leaves its entries out too.
   const appendicesToc = buildAppendicesToc(appendices);
   let tocHtml;
-  if (Array.isArray(tocData) && tocData.length > 0) {
+  if (!showBody) {
+    tocHtml = generateTocHtml(appendicesToc);
+  } else if (Array.isArray(tocData) && tocData.length > 0) {
     tocHtml = generateTocHtml([...tocData, ...appendicesToc]);
   } else {
     // Fallback: extract from body HTML
@@ -911,6 +921,7 @@ export function assemblePrintDocument(sections, options = {}) {
     runningHeader,
     margins,
     pageNumberShow,
+    hasCover: showCover,
     extraCss: `${rendererWebCss}\n\n${rendererPrintCss}`,
   });
 
@@ -925,7 +936,7 @@ export function assemblePrintDocument(sections, options = {}) {
   const appendicesHtml = renderAppendicesHtml(appendices, { titles: sections.appendixTitles });
 
   const htmlStr = `<div id="pagedjs-print" style="direction: ${direction}" data-direction="${direction}">
-${coverHtml}${copyrightHtml}${tocHtmlBlock}  ${body}
+${coverHtml}${copyrightHtml}${tocHtmlBlock}  ${showBody ? body : ''}
   ${appendicesHtml}
 </div>`;
 

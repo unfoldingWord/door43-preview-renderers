@@ -157,3 +157,29 @@ describe('renderHTML composition options (#33)', () => {
     expect(renderHTML(sampleHtmlData())).not.toContain('.obs-frames-body {');
   });
 });
+
+describe('renderHTML: a document without a cover, or without a body (#68 review)', () => {
+  test('without a cover, the first page is numbered as its own section says', () => {
+    const noCover = renderHTML(sampleHtmlData(), {
+      media: 'print',
+      show: { cover: false, copyright: false, toc: false },
+    });
+    expect(noCover).not.toMatch(/@page :first \{/);
+    // With a cover, its page stays unnumbered.
+    expect(renderHTML(sampleHtmlData(), { media: 'print' })).toMatch(
+      /@page :first \{\s*@bottom-center \{ content: none; \}/
+    );
+  });
+
+  test('show.body: false leaves the body and its TOC entries out, in print and on screen', () => {
+    for (const media of ['print', 'screen']) {
+      const html = renderHTML(sampleHtmlData(), {
+        media,
+        show: { body: false, toc: true },
+      });
+      expect(html).not.toContain('SENTINEL_BODY');
+      expect(html).not.toContain('Notes - Titus'); // the body's TOC entry
+      expect(html).toContain('id="toc"');
+    }
+  });
+});
