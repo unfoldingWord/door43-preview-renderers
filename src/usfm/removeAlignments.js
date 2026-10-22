@@ -9,7 +9,9 @@ import usfmjs from 'usfm-js';
  * fetching, zip handling or verse-span conversion, and inlining the one pure
  * function removes four dependencies and a release cycle (issue #45). Behaviour
  * is kept byte-identical; `src/__tests__/removeAlignments.test.js` pins it
- * against output recorded from the original package.
+ * against output recorded from the original package. One deliberate departure
+ * (issue #55): a verse is cut off its serialised `\v 1` marker by an anchored
+ * match instead of `split('\v 1')`, so a verse containing that text keeps it.
  *
  * What it does: parse the USFM with usfm-js, replace every `\w …\w*` word and
  * `\zaln-s …\zaln-e*` milestone with its plain text (keeping the original
@@ -148,8 +150,15 @@ export function removeMilestonesAndWordMarkers(verseData) {
 
 /**
  * Serialise a verse's verse objects to USFM (the content after `\v N `).
+ *
+ * usfm-js serialises the verse as verse 1, so the output starts with `\v 1`;
+ * exactly that one marker (and its separating space) is cut off. Upstream split
+ * on every `\v 1`, which truncated a verse whose text contained it (`\v 10`
+ * too) and silently dropped the verse when the marker was missing (#55).
+ *
  * @param {Object} verseData - `{ verseObjects }`
- * @returns {string}
+ * @returns {string} The verse content; '' for an empty verse
+ * @throws {Error} When the serialised verse does not start with its marker
  */
 function convertVerseDataToUSFM(verseData) {
   const outputData = {
@@ -158,17 +167,15 @@ function convertVerseDataToUSFM(verseData) {
     verses: { 1: verseData },
   };
   const USFM = usfmjs.toUSFM(outputData, { chunk: true, forcedNewLines: true });
-  const split = USFM.split('\\v 1');
-
-  if (split.length > 1) {
-    let content = split[1];
-
-    if (content.substr(0, 1) === ' ') {
-      content = content.substr(1); // remove the separator space
-    }
-    return content;
+  // The marker, then at most one separating space; anything else after it (a
+  // newline before a poetry line, say) is the verse's own.
+  const marker = USFM.match(/^\\v 1(?=\s|$) ?/);
+  if (!marker) {
+    throw new Error(
+      `usfm-js wrote a verse without its marker: expected "\\v 1" at the start, got ${JSON.stringify(USFM.slice(0, 40))}`
+    );
   }
-  return ''; // JSON → USFM failed
+  return USFM.slice(marker[0].length);
 }
 
 /**

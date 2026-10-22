@@ -1,7 +1,13 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { removeAlignments, removeMilestonesAndWordMarkers } from '../usfm/removeAlignments.js';
+import { jest } from '@jest/globals';
+import usfmjs from 'usfm-js';
+import {
+  removeAlignments,
+  removeMilestonesAndWordMarkers,
+  getUsfmForVerseContent,
+} from '../usfm/removeAlignments.js';
 
 /**
  * removeAlignments() was inlined from usfm-alignment-remover 0.1.6 (issue #45).
@@ -147,5 +153,50 @@ describe('removeAlignments — nested character formatting without structuredClo
     expect(removeAlignments(usfm)).toBe(
       '\\id TIT\n\n\\c 1\n\\p\n\\v 1 Paul \\add a servant\\add* of God.\n'
     );
+  });
+});
+
+/**
+ * #55: upstream cut the serialised verse with `split('\\v 1')`, keeping only
+ * the piece after the first marker, and returned '' when there was none.
+ */
+describe('removeAlignments — the verse marker is cut off exactly once (#55)', () => {
+  test('a verse whose text contains "\\v 1" or "\\v 10" keeps all of it', () => {
+    for (const text of ['see \\v 1 here', 'up to \\v 10 and on']) {
+      expect(getUsfmForVerseContent({ verseObjects: [{ type: 'text', text }] })).toBe(text);
+    }
+  });
+
+  test('an empty verse is empty, and the verses after it are kept', () => {
+    // No verse objects: usfm-js writes just "\\v 1".
+    expect(getUsfmForVerseContent({ verseObjects: [] })).toBe('');
+    // A verse whose line ends at its marker holds one "\n" text object, which
+    // usfm-js writes as "\\v 1\n"; the newline is the verse's and stays.
+    expect(removeAlignments(`\\id TIT\n\\c 1\n\\p\n\\v 1\n\\v 2 ${W('Paul')}.\n`)).toBe(
+      '\\id TIT\n\n\\c 1\n\\p\n\\v 1 \n\\v 2 Paul.\n'
+    );
+  });
+
+  test('only the marker and one space are cut: a newline after the marker stays', () => {
+    const spy = jest.spyOn(usfmjs, 'toUSFM');
+    try {
+      spy.mockReturnValue('\\v 1\n\\q line');
+      expect(getUsfmForVerseContent({ verseObjects: [] })).toBe('\n\\q line');
+      spy.mockReturnValue('\\v 1  two spaces');
+      expect(getUsfmForVerseContent({ verseObjects: [] })).toBe(' two spaces');
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  test('a serialised verse without its marker throws instead of vanishing', () => {
+    const spy = jest.spyOn(usfmjs, 'toUSFM').mockReturnValue('Paul, a servant');
+    try {
+      expect(() => getUsfmForVerseContent({ verseObjects: [{ type: 'text', text: 'x' }] })).toThrow(
+        'expected "\\v 1" at the start'
+      );
+    } finally {
+      spy.mockRestore();
+    }
   });
 });
