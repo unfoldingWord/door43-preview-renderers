@@ -178,6 +178,43 @@ describe('directoryContentSource', () => {
     const zip = await source().readArchive({ name: 'en_tn' });
     expect(Object.keys(zip.files).some((n) => n.includes('.git'))).toBe(false);
   });
+
+  test('archive files read as text only', async () => {
+    const zip = await source().readArchive(ta);
+    const file = zip.file('en_ta/translate/figs-abstractnouns/01.md');
+    await expect(file.async('uint8array')).rejects.toThrow('Unsupported read type');
+  });
+
+  test('a read never leaves the repository folder', async () => {
+    write('outside.txt', 'secret');
+    fs.symlinkSync(path.join(dir, 'outside.txt'), path.join(dir, 'en_tn', 'link.tsv'));
+    write('en_tn/inner.tsv', 'inner');
+    fs.symlinkSync(path.join(dir, 'en_tn', 'inner.tsv'), path.join(dir, 'en_tn', 'alias.tsv'));
+    const tn = { name: 'en_tn' };
+    await expect(source().readFile(tn, './../outside.txt')).rejects.toThrow('outside');
+    await expect(source().readFile(tn, 'a/../../outside.txt')).rejects.toThrow('outside');
+    await expect(source().readFile({ name: '../en_tn' }, 'tn_TIT.tsv')).rejects.toThrow(
+      'single folder name'
+    );
+    await expect(source().readArchive({ name: 'x/..' })).rejects.toThrow('single folder name');
+    await expect(source().readFile(tn, 'link.tsv')).rejects.toThrow('leads outside');
+    await expect(source().readFile(tn, '.git/HEAD')).rejects.toThrow('hidden');
+    // A symlink that stays inside the repository is still read.
+    expect(await source().readFile(tn, 'alias.tsv')).toBe('inner');
+  });
+
+  test('readLicense: only a missing file falls through to the next name', async () => {
+    fs.mkdirSync(path.join(dir, 'en_lic', 'LICENSE.md'), { recursive: true });
+    write('en_lic/LICENSE.txt', 'later');
+    await expect(source().readLicense({ name: 'en_lic' })).rejects.toThrow();
+  });
+
+  test('the Node modules are loaded outside browser bundles (webpackIgnore)', () => {
+    const text = fs.readFileSync(path.join(here, '..', 'contentSource.js'), 'utf8');
+    const imports = text.match(/import\([^)]*'node:[^']+'\)/g);
+    expect(imports).toHaveLength(2);
+    for (const call of imports) expect(call).toContain('webpackIgnore: true');
+  });
 });
 
 describe('content source helpers', () => {

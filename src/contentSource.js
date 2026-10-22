@@ -61,13 +61,22 @@ export function dcsContentSource(dcs_api_url = 'https://git.door43.org/api/v1') 
  * repository named as the catalog entry names it (`<dirPath>/en_tn/tn_TIT.tsv`).
  * Node only; `fs` is loaded on first use.
  *
+ * Catalog entries come from DCS or a saved file, so their repository names and
+ * ingredient paths are not trusted: a read never leaves the repository's
+ * folder, by `..` or by a symlink, and never reads a dot entry such as `.git`.
+ *
  * @param {string} dirPath
  */
 export function directoryContentSource(dirPath) {
   let modules;
   const load = async () => {
     if (!modules) {
-      const [fs, path] = await Promise.all([import('node:fs/promises'), import('node:path')]);
+      // webpackIgnore: keep these Node modules out of browser bundles of
+      // getResourceData (the demos); only this source, in Node, loads them.
+      const [fs, path] = await Promise.all([
+        import(/* webpackIgnore: true */ 'node:fs/promises'),
+        import(/* webpackIgnore: true */ 'node:path'),
+      ]);
       modules = { fs, path };
     }
     return modules;
@@ -76,23 +85,46 @@ export function directoryContentSource(dirPath) {
     const { path } = await load();
     const { repo } = entryCoords(entry);
     if (!repo) throw new Error('Catalog entry does not name its repository.');
+    if (repo === '.' || repo === '..' || /[\\/]/.test(repo)) {
+      throw new Error(`Repository name ${JSON.stringify(repo)} is not a single folder name.`);
+    }
     return path.join(dirPath, repo);
+  };
+  const isInside = (path, root, target) => {
+    const rel = path.relative(root, target);
+    if (rel === '') return true;
+    return rel !== '..' && !rel.startsWith(`..${path.sep}`) && !path.isAbsolute(rel);
+  };
+  // The file at `relPath` in the repository, refused if it leaves the folder.
+  const insideRepo = async (entry, relPath) => {
+    const { fs, path } = await load();
+    const parts = stripDotSlash(relPath).split(/[\\/]/);
+    if (parts.some((part) => part === '..' || (part.startsWith('.') && part !== '.'))) {
+      throw new Error(`Path ${JSON.stringify(relPath)} is outside the repository or hidden.`);
+    }
+    const root = await fs.realpath(await repoDir(entry));
+    const lexical = path.resolve(root, ...parts);
+    // realpath follows symlinks; it throws ENOENT for a file that is not there.
+    const real = await fs.realpath(lexical);
+    if (!isInside(path, root, lexical) || !isInside(path, root, real)) {
+      throw new Error(`Path ${JSON.stringify(relPath)} leads outside the repository.`);
+    }
+    return real;
   };
 
   return {
     async readFile(entry, filePath) {
-      const { fs, path } = await load();
-      return fs.readFile(path.join(await repoDir(entry), stripDotSlash(filePath)), 'utf8');
+      const { fs } = await load();
+      return fs.readFile(await insideRepo(entry, filePath), 'utf8');
     },
     async readLicense(entry) {
-      const { fs, path } = await load();
-      const dir = await repoDir(entry);
+      const { fs } = await load();
       for (const name of LICENSE_FILES) {
         try {
-          const text = await fs.readFile(path.join(dir, name), 'utf8');
+          const text = await fs.readFile(await insideRepo(entry, name), 'utf8');
           if (text) return text.trim();
-        } catch {
-          // Not this name; try the next.
+        } catch (error) {
+          if (error?.code !== 'ENOENT') throw error; // only a missing file means "try the next"
         }
       }
       return '';
@@ -133,8 +165,12 @@ export function directoryContentSource(dirPath) {
           return {
             name,
             dir: false,
+            // Only the text reads the extractors make; refuse the rest rather
+            // than hand back a Node Buffer where JSZip would give another type.
             async: (type) =>
-              fs.readFile(absolute, type === 'string' || type === 'text' ? 'utf8' : undefined),
+              type === 'string' || type === 'text'
+                ? fs.readFile(absolute, 'utf8')
+                : Promise.reject(new Error(`Unsupported read type ${JSON.stringify(type)}.`)),
           };
         },
       };
