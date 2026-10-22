@@ -91,3 +91,42 @@ describe('renderPdf', () => {
     expect(out.toString('utf8')).toContain('<html lang="ar-EG" dir="ltr">');
   });
 });
+
+describe("renderPdf takes renderHTML's composition options (#33)", () => {
+  const html = async (options) =>
+    (await renderPdf(sampleRenderResult(), { weasyprintPath: 'cat', ...options })).toString('utf8');
+
+  test('show, print.margins and print.pageNumber reach the document', async () => {
+    const out = await html({
+      show: { toc: false },
+      print: { margins: { left: '40mm' }, pageNumber: { show: { body: false } } },
+    });
+    expect(out).not.toContain('class="section toc-page"');
+    expect(out).toMatch(/@page :right \{\s*margin-left: 40mm;/);
+    expect(out).toContain('page: body-page;');
+  });
+
+  test('the flat pageSize and footerHtml still work, and the nested names win', async () => {
+    const flat = await html({ pageSize: 'A5_PORTRAIT', footerHtml: '<p>FOOT</p>' });
+    expect(flat).toContain('size: 148.5mm 210mm');
+    expect(flat).toContain('<p>FOOT</p>');
+    const both = await html({ pageSize: 'A5_PORTRAIT', print: { pageSize: 'US_LETTER_PORTRAIT' } });
+    expect(both).toContain('size: 8.5in 11in');
+  });
+
+  test('the running header is chosen by subject, as in renderHTML', async () => {
+    const bible = await renderPdf(
+      { ...sampleRenderResult(), subject: 'Aligned Bible' },
+      { weasyprintPath: 'cat' }
+    );
+    expect(bible.toString('utf8')).toContain('content: string(runningref, last);');
+    const notes = await html({});
+    expect(notes).toContain('content: string(runningtitle);');
+    expect(notes).not.toContain('string(runningref, last)');
+  });
+
+  test('cover overrides still apply', async () => {
+    const out = await html({ title: 'Other Title' });
+    expect(out).toContain('<title>Other Title - v1</title>');
+  });
+});

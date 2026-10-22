@@ -58,13 +58,17 @@ WeasyPrint panel will use a `pdfServiceUrl` when you provide one.
 
 ## Options
 
-`renderPdf(htmlData, options)` — `options` are PDF-rendering specific (see the full
-[Rendering options](./options.md) reference):
+`renderPdf(htmlData, options)` composes the document with
+`renderHTML(htmlData, { media: 'print' })`, so it takes the same composition
+options (see the full [Rendering options](./options.md) reference):
 
-- `pageSize` — a `PAGE_SIZES` key (`'A4_PORTRAIT'`, `'US_LETTER_PORTRAIT'`,
-  `'TRADE'`, …), a friendly label (`'A4'`, `'US Letter'`), or an explicit
-  `{ width, height }` object using CSS lengths (e.g. `{ width: '6in', height: '9in' }`).
-- `columns`, `footerHtml`
+- `show` (which sections; `appendices: ['tw']` keeps one kind), `columns`, and
+  `print.*`: `pageSize`, `margins`, `runningHeader`, `footerHtml`,
+  `pageNumber.position` and `pageNumber.show`
+- `pageSize` and `footerHtml` also work at the top level, as before. A page size is a
+  `PAGE_SIZES` key (`'A4_PORTRAIT'`, `'US_LETTER_PORTRAIT'`, `'TRADE'`, …), a friendly
+  label (`'A4'`, `'US Letter'`), or an explicit `{ width, height }` object using CSS
+  lengths (e.g. `{ width: '6in', height: '9in' }`)
 - `direction` (`'ltr'`/`'rtl'`) and `language` — default to the HtmlData's, so a
   right-to-left resource prints right to left
 - `title`, `version`, `abbreviation` — cover overrides (default to the render result)

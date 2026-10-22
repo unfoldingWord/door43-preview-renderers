@@ -129,17 +129,17 @@ for the screen or for print. Returns a string.
 | `show.copyright` | boolean | screen `false` / print `true` | ✅ | Include the license/copyright page. |
 | `show.toc` | boolean | screen `false` / print `true` | ✅ | Include a static Table of Contents page. (The TOC *data* is always on `htmlData.sections.toc` for an app's interactive selector.) |
 | `show.body` | boolean | `true` | ✅ | Include the main content. |
-| `show.appendices` | boolean \| `['ta','tw']` | `true` | ✅ (boolean) | Include the TA/TW appendices (a keyed `{ ta, tw }` section). The boolean is honored in screen and print; per-kind `['ta','tw']` selection is 🚧 planned. |
-| `columns` | number | `1` | print ✅ / screen 🚧 | Body column count. Print only, and only for **continuous-flow bodies**: an Aligned Bible book, or the story frames of an OBS-based TSV resource (`obs-tn`, `obs-tq`, …) — the rule targets `.section.bible-book` and `.obs-frames-body`. Bible-versed Notes and Questions are laid out per verse or per chapter, not as running text, so it does nothing there. Use `supportsBodyColumns(subject)` to test whether it applies. |
+| `show.appendices` | boolean \| `['ta','tw']` | `true` | ✅ | Include the TA/TW appendices (a keyed `{ ta, tw }` section): all of them (`true`), none (`false` or `[]`), or only the kinds listed (`['tw']`). The TOC lists only the appendices included. |
+| `columns` | number | `1` | ✅ | Body column count, in print and on screen, and only for **continuous-flow bodies**: an Aligned Bible book, or the story frames of an OBS-based TSV resource (`obs-tn`, `obs-tq`, …) — the rule targets `.section.bible-book` and `.obs-frames-body`. Bible-versed Notes and Questions are laid out per verse or per chapter, not as running text, so it does nothing there. Use `supportsBodyColumns(subject)` to test whether it applies. |
 | `language` | string | from `htmlData.language`, else `'en'` | ✅ | Language code written as `<html lang>`. |
 | `direction` | `'ltr'` \| `'rtl'` | from `htmlData.direction` | ✅ | Text direction, written as `<html dir>` (anything but `'rtl'` is `'ltr'`). In print, `rtl` also starts the book on a left-hand page (WeasyPrint takes the page progression from the root element) and mirrors the running headers: the title on the right-hand page, a range's first reference in the right corner. Every quote (a GL quote, an original-language fallback, a Translation Words entry) is isolated in `<bdi dir>` in its own direction when the sections are rendered, so overriding `direction` here cannot leave a quote reordering the text around it. |
 | `engine` | `'weasyprint'` \| `'pagedjs'` | `'weasyprint'` | ✅ | Print engine. `pagedjs` injects the PagedJS polyfill `<script>` for in-browser preview. |
 | `print.pageSize` | string \| `{width,height}` | `'A4_PORTRAIT'` | ✅ | Page size (see [Page sizes](#page-sizes)). `media:'print'` only. |
 | `print.footerHtml` | string | `''` | ✅ | Extra footer HTML on the copyright page (e.g. app version). |
-| `print.margins` | `{top,right,bottom,left}` | theme default | 🚧 | Page margins. |
+| `print.margins` | `{top,right,bottom,left}` | theme default | ✅ | Page margins, as CSS lengths (`'15mm'`, `'0.75in'`; a bare number is mm). `left` and `right` are a right-hand page's; a left-hand page mirrors them, so the binding margin stays on the spine. A side left out keeps the theme's: `1cm` top and bottom, `30mm` on the spine side, `20mm` outside. A value that is not a plain length is ignored. |
 | `print.runningHeader` | boolean | `true` | ✅ | Running header in the page margin. `false` turns it off; otherwise the layout is chosen by subject — scripture shows the **first and last reference on each page** ("Ruth 1:1 … Ruth 1:18") and no resource name, Open Bible Stories shows **none**, and everything else pairs the **resource or manual name on the verso** with the **reference or article title on the recto**. Renderers mark the tracked points with hidden `.running-title` / `.running-ref` spans. **WeasyPrint only** — PagedJS resolves `string()` to empty, so the browser preview shows no running header. |
 | `print.pageNumber.position` | `'top'` \| `'bottom'` | `'bottom'` | ✅ | Where the page number prints (the counter moves to `@top-center`/`@bottom-center`). |
-| `print.pageNumber.show` | per-section booleans | toc/body/appendices `true` | 🚧 | Which sections get a page number (needs named pages per section). |
+| `print.pageNumber.show` | `{ cover, copyright, toc, body, appendices }` | cover and copyright `false`, the rest `true` | ✅ | Which sections get a page number. Every page is still counted. A section set to `false` gets a named page with an empty number box; the cover and the copyright page are unnumbered by default. |
 
 > **About running headers:** the header text (`{book} {chapter}:{verse}`) comes
 > from the renderer and only appears in print/PDF (and the PagedJS preview) — never
@@ -149,21 +149,21 @@ for the screen or for print. Returns a string.
 
 ## `renderPdf(input, options?)`
 
-Assembles the print document and runs WeasyPrint. `input` is the `htmlData` from
-`renderHtmlData()` (it assembles the print view internally). Requires the
+Composes the print document with `renderHTML(htmlData, { media: 'print' })` and
+runs WeasyPrint. `input` is the `htmlData` from `renderHtmlData()`. Requires the
 `weasyprint` binary on `PATH` (or pass `weasyprintPath`).
 
-> Note: `renderPdf` currently takes **flat** options (`pageSize`, `columns`, …),
-> whereas `renderHTML` nests print options under `print.*`. These will be
-> reconciled in a later phase; for now use the names in this table.
+It takes **`renderHTML`'s composition options** (`show`, `columns`, `language`,
+`direction`, `print.*`; `media` is always `'print'`), so a PDF and the print HTML
+come out the same, running headers included. `pageSize` and `footerHtml` are still
+accepted at the top level as aliases of `print.pageSize` and `print.footerHtml`;
+the nested names win when both are given.
 
 | Option | Type | Default | Status | Description |
 |---|---|---|---|---|
-| `pageSize` | string \| `{width,height}` | `'A4_PORTRAIT'` | ✅ | Page size (see below). |
-| `columns` | number | renderer default | ✅ | Body column count. |
-| `direction` | `'ltr'` \| `'rtl'` | from `htmlData.direction` | ✅ | Text direction (see `renderHTML`). |
-| `language` | string | from `htmlData.language`, else `'en'` | ✅ | Language code for `<html lang>`. |
-| `footerHtml` | string | — | ✅ | Footer HTML (e.g. app version). |
+| `show`, `columns`, `language`, `direction`, `print.*` | | as `renderHTML` with `media: 'print'` | ✅ | See [`renderHTML`](#renderhtmlhtmldata-options). |
+| `pageSize` | string \| `{width,height}` | `'A4_PORTRAIT'` | ✅ | Alias of `print.pageSize` (see below). |
+| `footerHtml` | string | — | ✅ | Alias of `print.footerHtml`. |
 | `title` | string | `htmlData.title` | ✅ | Cover title override. |
 | `version` | string | `htmlData.version` | ✅ | Cover version override. |
 | `abbreviation` | string | `htmlData.abbreviation` | ✅ | Cover abbreviation (selects the logo). |

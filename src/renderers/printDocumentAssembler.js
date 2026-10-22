@@ -9,6 +9,7 @@
  */
 
 import { LOGO_DATA_URIS } from '../assets/logos.generated.js';
+import { selectAppendices } from '../renderOptions.js';
 
 const LOGO_CDN_BASE = 'https://cdn.door43.org/assets/uw-icons';
 
@@ -405,6 +406,12 @@ export const coverCss = `
  * @param {string} [options.extraCss] - Additional CSS to append
  * @param {'title-ref'|'range'|false} [options.runningHeader='title-ref'] - Running
  *   header layout; false disables the headers entirely
+ * @param {{top: string, right: string, bottom: string, left: string}} [options.margins] -
+ *   Page margins of a right-hand page, mirrored on a left-hand page (see
+ *   normalizeMargins); the theme's when unset
+ * @param {Object} [options.pageNumberShow] - Which sections get a page number:
+ *   `{ cover, copyright, toc, body, appendices }`; a section set to false gets a
+ *   named page with no number. Default: every section but the cover numbered
  * @returns {string} Complete print CSS string
  */
 export function getPrintCss(options = {}) {
@@ -416,6 +423,8 @@ export function getPrintCss(options = {}) {
     extraCss = '',
     pageNumberPosition = 'bottom',
     runningHeader = true,
+    margins,
+    pageNumberShow = {},
   } = options;
 
   const isRtl = direction === 'rtl';
@@ -452,13 +461,36 @@ export function getPrintCss(options = {}) {
   // The page-number counter lives in one margin box; the running header (if on)
   // occupies @top-left/@top-right, so a 'top' page number uses @top-center.
   const pnBox = pageNumberPosition === 'top' ? '@top-center' : '@bottom-center';
+  // Margins. Unset, the theme's: 1cm top and bottom, 30mm on the spine side and
+  // 20mm outside. Given, they are a right-hand page's, mirrored on a left-hand
+  // page (whose spine is on its right) — so the binding margin stays inside.
+  const pageMargin = margins
+    ? `${margins.top} ${margins.right} ${margins.bottom} ${margins.left}`
+    : '1cm';
+  const spineMargin = margins ? margins.left : '30mm';
+  const outerMargin = margins ? margins.right : '20mm';
+  // Page numbers per section. The cover has none unless asked for; any other
+  // section set to false is put on a named page whose number box is empty.
+  const numberCover = pageNumberShow.cover === true;
+  const hidden = (key) => pageNumberShow[key] === false;
+  // The body has no wrapper of its own, so an unnumbered body names the whole
+  // print container (naming its children instead fails: the running-header spans
+  // among them sit in anonymous boxes that cannot carry the name, and every
+  // change of page name forces a page break). The other sections then need
+  // names of their own, or they would take the body's.
+  const namedPages = [
+    ['copyright', 'copyright-page', '.section.copyright-page'],
+    ['toc', 'toc-page', '.section.toc-page'],
+    ['appendices', 'appendix-page', '.appendix'],
+  ].filter(([key]) => hidden('body') || hidden(key));
+  if (hidden('body')) namedPages.unshift(['body', 'body-page', '#pagedjs-print']);
 
   return `
 /* ─── Page Setup ─────────────────────────────────────────── */
 
 @page {
   size: ${pageWidth} ${pageHeight};
-  margin: 1cm;
+  margin: ${pageMargin};
 
   /* Footnotes restart at 1 on every page. Honoured by PagedJS; WeasyPrint
      ignores it — see the Footnotes section below for why. */
@@ -492,10 +524,14 @@ ${
 }
 }
 
-@page :first {
+${
+  numberCover
+    ? ''
+    : `@page :first {
   ${pnBox} { content: none; }
 }
-
+`
+}
 @page :blank {
   @bottom-center { content: none; }
   @top-center { content: none; }
@@ -507,15 +543,35 @@ ${
    make it a pseudo-class selector, which WeasyPrint/Prince ignore, leaving the
    cover with running headers/footers. */
 @page cover-page {
-  @bottom-center { content: none; }
-  @top-center { content: none; }
+${
+  numberCover
+    ? `  ${pnBox === '@top-center' ? '@bottom-center' : '@top-center'} { content: none; }`
+    : `  @bottom-center { content: none; }
+  @top-center { content: none; }`
+}
   @top-left { content: none; }
   @top-right { content: none; }
 }
-
+${namedPages
+  .map(
+    ([key, name, selector]) => `
+${selector} {
+  page: ${name};
+}
+${
+  hidden(key)
+    ? `
+@page ${name} {
+  ${pnBox} { content: none; }
+}
+`
+    : ''
+}`
+  )
+  .join('')}
 @page :left {
-  margin-right: 30mm;
-  margin-left: 20mm;
+  margin-right: ${spineMargin};
+  margin-left: ${outerMargin};
 ${
   showHeader && !rangeHeader
     ? `
@@ -529,8 +585,8 @@ ${
 }
 
 @page :right {
-  margin-left: 30mm;
-  margin-right: 20mm;
+  margin-left: ${spineMargin};
+  margin-right: ${outerMargin};
 ${
   showHeader && !rangeHeader
     ? `
@@ -805,6 +861,9 @@ export function assemblePrintDocument(sections, options = {}) {
     // Page-number margin box ('bottom' | 'top') and running-header toggle.
     pageNumberPosition = 'bottom',
     runningHeader = true,
+    // Page margins (normalizeMargins) and which sections are numbered.
+    margins,
+    pageNumberShow = {},
   } = options;
   // Allowlisted once: it reaches the root's dir, the print container's style and
   // data-direction, and the print CSS.
@@ -813,7 +872,6 @@ export function assemblePrintDocument(sections, options = {}) {
   const showCover = show.cover !== false;
   const showCopyright = show.copyright !== false;
   const showToc = show.toc !== false;
-  const showAppendices = show.appendices !== false;
 
   const {
     cover: coverSnippet = '',
@@ -821,8 +879,9 @@ export function assemblePrintDocument(sections, options = {}) {
     body = '',
     toc: tocData = [],
     css = {},
-    appendices = null,
   } = sections;
+  // All of them, none, or the kinds listed (`show.appendices: ['tw']`).
+  const appendices = selectAppendices(sections.appendices, show.appendices);
 
   // Prefer the renderer-provided cover (now a complete logo + title + version
   // cover); fall back to building one from the options for callers that pass
@@ -831,7 +890,7 @@ export function assemblePrintDocument(sections, options = {}) {
 
   // Build TOC. The body entries come from the renderer; the appendix entries are
   // derived here because the appendices themselves are assembled here.
-  const appendicesToc = showAppendices ? buildAppendicesToc(appendices) : [];
+  const appendicesToc = buildAppendicesToc(appendices);
   let tocHtml;
   if (Array.isArray(tocData) && tocData.length > 0) {
     tocHtml = generateTocHtml([...tocData, ...appendicesToc]);
@@ -850,6 +909,8 @@ export function assemblePrintDocument(sections, options = {}) {
     direction,
     pageNumberPosition,
     runningHeader,
+    margins,
+    pageNumberShow,
     extraCss: `${rendererWebCss}\n\n${rendererPrintCss}`,
   });
 
@@ -861,9 +922,7 @@ export function assemblePrintDocument(sections, options = {}) {
   const tocHtmlBlock = showToc
     ? `  <div class="section toc-page" id="toc">\n    ${tocHtml}\n  </div>\n`
     : '';
-  const appendicesHtml = showAppendices
-    ? renderAppendicesHtml(appendices, { titles: sections.appendixTitles })
-    : '';
+  const appendicesHtml = renderAppendicesHtml(appendices, { titles: sections.appendixTitles });
 
   const htmlStr = `<div id="pagedjs-print" style="direction: ${direction}" data-direction="${direction}">
 ${coverHtml}${copyrightHtml}${tocHtmlBlock}  ${body}
