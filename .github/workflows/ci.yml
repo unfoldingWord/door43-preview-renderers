@@ -92,6 +92,7 @@ jobs:
             'renderHtmlData',
             'renderObsHtml',
             'renderPdf',
+            'renderPreview',
             'renderTranslationAcademyHtml',
             'renderTranslationNotesHtml',
             'renderTranslationWordsHtml',

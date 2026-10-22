@@ -16,6 +16,7 @@ getResourceData(input, opts)         → ResourceData    (network; or a cached R
 renderHtmlData(resourceData, opts)   → HtmlData        (pure, no I/O)
 renderHTML(htmlData, opts)           → HTML string     (media: 'screen' | 'print')
 renderPdf(htmlData, opts)            → PDF             (WeasyPrint)
+renderPreview(request)               → HTML | PDF      (all of the above in one call)
 ```
 
 A renderer is stage 3. It never fetches; it takes the ResourceData that stage 2 produced (including the supporting resources in `extras`) and returns sections. Stage 4 composes the document.

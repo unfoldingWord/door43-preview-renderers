@@ -196,6 +196,21 @@ renderPdf(htmlData, { pageSize: { width: '160mm', height: '240mm' } });
 
 ---
 
+## `renderPreview(request)`
+
+The whole pipeline in one call. `request` names the resource as `getAllCatalogEntries`
+takes it (`owner`, `repo`, `ref`, `books`, or `lang`, `subject`, `stage`; an owner/repo
+without a `ref` means the latest release) and carries the options of every stage
+above in the same object, each read by its stage.
+
+| Option | Type | Default | Status | Description |
+|---|---|---|---|---|
+| `output` | `'html'` \| `'pdf'` | `'html'` | ✅ | `'html'` returns `renderHTML`'s document (`media` picks screen or print); `'pdf'` returns `renderPdf`'s bytes, or its `outputPath`. |
+
+See [Full Pipeline](./pipeline.md#one-call-renderpreviewrequest).
+
+---
+
 ## Anchors (deep-linking)
 
 Every rendered element gets a unique, hierarchical `id` prefixed with the

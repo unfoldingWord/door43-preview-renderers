@@ -50,3 +50,4 @@ export {
 export { generatePdf, generatePdfFromAssembled } from './pdf/generatePdf.js';
 export { generatePdfViaService } from './pdf/generatePdfViaService.js';
 export { renderPdf, resolvePageSize } from './pdf/renderPdf.js';
+export { renderPreview } from './renderPreview.js';
