@@ -1,3 +1,6 @@
+# The one ignore list for Prettier and ESLint (`pnpm lint` passes --ignore-path
+# .prettierignore). Prettier also skips everything in .gitignore.
+
 # Build output and local scratch
 dist/
 coverage/
@@ -5,9 +8,15 @@ styleguide/
 tmp/
 .claude/
 
-# Lockfile
+# Lockfile and editor settings
 pnpm-lock.yaml
+.vscode/
 
-# Generated: the CLI writes the demo fixtures, scripts/fetch-logos.mjs writes the logos
-src/fixtures/
+# Generated: the CLI writes the demo fixtures, scripts/gen-glquote-fixtures.mjs the
+# quote parity data, scripts/fetch-logos.mjs the logos
+src/fixtures/**/*.json
 src/assets/logos.generated.js
+
+# Prose is not reformatted, except the style guide demo pages beside their components
+*.md
+!src/**/*.md

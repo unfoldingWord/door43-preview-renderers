@@ -13,16 +13,7 @@ module.exports = {
       jsx: true,
     },
   },
-  // Build output, local scratch and generated files (see .prettierignore).
-  ignorePatterns: [
-    'dist/',
-    'coverage/',
-    'styleguide/',
-    'tmp/',
-    '.claude/',
-    'src/fixtures/',
-    'src/assets/logos.generated.js',
-  ],
+  // Ignored paths live in .prettierignore, which `pnpm lint` passes as --ignore-path.
   rules: {
     'no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
     'no-console': ['warn', { allow: ['warn', 'error'] }],
