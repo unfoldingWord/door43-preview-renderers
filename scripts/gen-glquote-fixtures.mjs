@@ -93,9 +93,13 @@ for (const b of books) {
     console.log(
       `${res}_${b.id}: ${rows} rows, ${result.errors.length} converter errors, ${((Date.now() - t0) / 1000).toFixed(1)}s`
     );
+    // A clean run removes the error file an earlier, failed run left behind.
+    const errorFile = `${OUT}/${res}_${b.id}.converter-errors.txt`;
     if (result.errors.length) {
       errorCount += result.errors.length;
-      fs.writeFileSync(`${OUT}/${res}_${b.id}.converter-errors.txt`, result.errors.join('\n'));
+      fs.writeFileSync(errorFile, result.errors.join('\n'));
+    } else {
+      fs.rmSync(errorFile, { force: true });
     }
   }
 }

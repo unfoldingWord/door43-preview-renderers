@@ -43,7 +43,7 @@ A subject renderer returns:
   - `appendixTitles`: optional `{ ta, tw }`
   - `webView`: optional alternate view (raw USFM for Aligned Bible when `includeRawUsfmView`)
 
-`renderHtmlData` promotes `abbreviation`, `version`, `language`, `direction` onto the HtmlData (`renderHTML` and `renderPdf` write them as `<html lang dir>`; a renderer wraps every quote in `<bdi dir>` in the quote's own direction with `isolatedQuoteHtml`, so sections do not depend on the document's direction) and rewrites `nav-` anchors in every section to `<abbreviation>-`. There is no `fullHtml`; `renderHTML` composes the document.
+`renderHtmlData` promotes `abbreviation`, `version`, `language`, `direction` onto the HtmlData (`renderHTML` and `renderPdf` write them as `<html lang dir>`; a renderer wraps every quote that has a letter in `<bdi dir>` in the quote's own direction with `isolatedQuoteHtml`, so sections do not depend on the document's direction) and rewrites `nav-` anchors in every section to `<abbreviation>-`. There is no `fullHtml`; `renderHTML` composes the document.
 
 Keep errors explicit: unsupported subject or invalid input shape throws with context.
 
