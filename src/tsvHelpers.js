@@ -127,8 +127,9 @@ function buildBibleLinks(catalogEntries) {
 
 /**
  * Fetch the raw USFM (alignment markers intact) of one book from a catalog entry.
- * Returns undefined when the entry has no ingredient for the book or the fetch
- * fails, in which case the converter downloads it itself (its fallback).
+ * Returns undefined when the entry has no ingredient for the book or the read
+ * fails (also when a directory source refuses it); that Bible then gives no GL
+ * quotes. Nothing is downloaded in its place.
  */
 async function fetchBookUsfm(entry, bookId, contentSource, quiet) {
   const ingredient = entry.ingredients?.find(

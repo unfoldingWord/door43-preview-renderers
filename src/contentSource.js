@@ -63,7 +63,10 @@ export function dcsContentSource(dcs_api_url = 'https://git.door43.org/api/v1') 
  *
  * Catalog entries come from DCS or a saved file, so their repository names and
  * ingredient paths are not trusted: a read never leaves the repository's
- * folder, by `..` or by a symlink, and never reads a dot entry such as `.git`.
+ * folder, by `..` or by a symlink, and never reads a dot entry such as `.git`,
+ * whether as a file in the repository or as the repository itself. A
+ * repository folder may be a symlink to a clone elsewhere (a "symlink farm"),
+ * but not to a hidden folder inside the checkout directory.
  *
  * @param {string} dirPath
  */
@@ -81,19 +84,30 @@ export function directoryContentSource(dirPath) {
     }
     return modules;
   };
-  const repoDir = async (entry) => {
-    const { path } = await load();
-    const { repo } = entryCoords(entry);
-    if (!repo) throw new Error('Catalog entry does not name its repository.');
-    if (repo === '.' || repo === '..' || /[\\/]/.test(repo)) {
-      throw new Error(`Repository name ${JSON.stringify(repo)} is not a single folder name.`);
-    }
-    return path.join(dirPath, repo);
-  };
   const isInside = (path, root, target) => {
     const rel = path.relative(root, target);
     if (rel === '') return true;
     return rel !== '..' && !rel.startsWith(`..${path.sep}`) && !path.isAbsolute(rel);
+  };
+  const hasHiddenPart = (path, rel) => rel.split(path.sep).some((part) => part.startsWith('.'));
+  // The repository's folder, resolved. Its name is one visible folder name, and
+  // if it is a symlink to somewhere inside the checkout directory, that place
+  // must not be hidden either (`en_tn` -> `.git`).
+  const repoDir = async (entry) => {
+    const { fs, path } = await load();
+    const { repo } = entryCoords(entry);
+    if (!repo) throw new Error('Catalog entry does not name its repository.');
+    if (repo.startsWith('.') || /[\\/]/.test(repo)) {
+      throw new Error(
+        `Repository name ${JSON.stringify(repo)} is not a single, visible folder name.`
+      );
+    }
+    const checkout = await fs.realpath(dirPath);
+    const real = await fs.realpath(path.join(checkout, repo));
+    if (isInside(path, checkout, real) && hasHiddenPart(path, path.relative(checkout, real))) {
+      throw new Error(`Repository ${JSON.stringify(repo)} resolves to a hidden folder.`);
+    }
+    return real;
   };
   // The file at `relPath` in the repository, refused if it leaves the folder.
   const insideRepo = async (entry, relPath) => {
@@ -102,7 +116,7 @@ export function directoryContentSource(dirPath) {
     if (parts.some((part) => part === '..' || (part.startsWith('.') && part !== '.'))) {
       throw new Error(`Path ${JSON.stringify(relPath)} is outside the repository or hidden.`);
     }
-    const root = await fs.realpath(await repoDir(entry));
+    const root = await repoDir(entry);
     const lexical = path.resolve(root, ...parts);
     // realpath follows symlinks; it throws ENOENT for a file that is not there.
     const real = await fs.realpath(lexical);
@@ -111,12 +125,7 @@ export function directoryContentSource(dirPath) {
     }
     // The same rule for where a symlink lands: a clean name that points into
     // .git (or any hidden entry) is refused too.
-    if (
-      path
-        .relative(root, real)
-        .split(path.sep)
-        .some((part) => part.startsWith('.'))
-    ) {
+    if (hasHiddenPart(path, path.relative(root, real))) {
       throw new Error(`Path ${JSON.stringify(relPath)} leads to a hidden file.`);
     }
     return real;
@@ -162,6 +171,16 @@ export function directoryContentSource(dirPath) {
             await walk(path.join(absolute, item.name), `${relative}${item.name}/`);
           } else if (item.isFile()) {
             files[name] = { name, dir: false };
+          } else {
+            // A symlink (or a filesystem that does not report the type): listed
+            // when it is a file readFile would read, inside the repository and
+            // not hidden. Symlinked folders are not followed.
+            try {
+              const target = await insideRepo(entry, `${relative}${item.name}`);
+              if ((await fs.stat(target)).isFile()) files[name] = { name, dir: false };
+            } catch {
+              // Outside, hidden or dangling: not part of the repository.
+            }
           }
         }
       };
@@ -171,7 +190,6 @@ export function directoryContentSource(dirPath) {
         file(name) {
           const found = files[name];
           if (!found || found.dir) return null;
-          const absolute = path.join(dir, name.slice(root.length + 1));
           return {
             name,
             dir: false,
@@ -179,7 +197,10 @@ export function directoryContentSource(dirPath) {
             // than hand back a Node Buffer where JSZip would give another type.
             async: (type) =>
               type === 'string' || type === 'text'
-                ? fs.readFile(absolute, 'utf8')
+                ? // Read through the same guard as readFile, resolved at read time.
+                  insideRepo(entry, name.slice(root.length + 1)).then((target) =>
+                    fs.readFile(target, 'utf8')
+                  )
                 : Promise.reject(new Error(`Unsupported read type ${JSON.stringify(type)}.`)),
           };
         },

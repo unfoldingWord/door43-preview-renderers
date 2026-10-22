@@ -194,9 +194,11 @@ describe('directoryContentSource', () => {
     await expect(source().readFile(tn, './../outside.txt')).rejects.toThrow('outside');
     await expect(source().readFile(tn, 'a/../../outside.txt')).rejects.toThrow('outside');
     await expect(source().readFile({ name: '../en_tn' }, 'tn_TIT.tsv')).rejects.toThrow(
-      'single folder name'
+      'single, visible folder name'
     );
-    await expect(source().readArchive({ name: 'x/..' })).rejects.toThrow('single folder name');
+    await expect(source().readArchive({ name: 'x/..' })).rejects.toThrow(
+      'single, visible folder name'
+    );
     await expect(source().readFile(tn, 'link.tsv')).rejects.toThrow('leads outside');
     await expect(source().readFile(tn, '.git/HEAD')).rejects.toThrow('hidden');
     // A clean name that resolves into .git is refused too, and so is a license
@@ -211,6 +213,66 @@ describe('directoryContentSource', () => {
     await expect(source().readLicense({ name: 'en_gitlic' })).rejects.toThrow('hidden file');
     // A symlink that stays inside the repository is still read.
     expect(await source().readFile(tn, 'alias.tsv')).toBe('inner');
+  });
+
+  test('a hidden folder cannot be the repository, by name or by symlink (#70 review)', async () => {
+    write('.git/config', '[remote] url = https://token@example.com');
+    write('.ssh/id_rsa', 'PRIVATE KEY');
+    fs.symlinkSync(path.join(dir, '.git'), path.join(dir, 'en_link'));
+    const refused = 'single, visible folder name';
+    await expect(source().readFile({ name: '.git' }, 'config')).rejects.toThrow(refused);
+    await expect(source().readArchive({ name: '.git' })).rejects.toThrow(refused);
+    await expect(source().readLicense({ name: '.git' })).rejects.toThrow(refused);
+    await expect(source().readFile({ name: '.ssh' }, 'id_rsa')).rejects.toThrow(refused);
+    // A visible name that is a symlink to a hidden folder in the checkout.
+    await expect(source().readFile({ name: 'en_link' }, 'config')).rejects.toThrow(
+      'resolves to a hidden folder'
+    );
+    await expect(source().readArchive({ name: 'en_link' })).rejects.toThrow(
+      'resolves to a hidden folder'
+    );
+    // And through stage 2: a Bible entry named .git yields no book from it.
+    await expect(
+      getResourceDataFromDirectory(
+        [
+          {
+            name: '.git',
+            owner: 'x',
+            branch_or_tag_name: 'v1',
+            subject: 'Bible',
+            metadata_type: 'rc',
+            ingredients: [{ identifier: 'tit', path: './config' }],
+          },
+        ],
+        dir,
+        { ...offline, books: ['tit'] }
+      )
+    ).rejects.toThrow(refused);
+  });
+
+  test('a repository folder may be a symlink to a clone outside the checkout', async () => {
+    const elsewhere = fs.mkdtempSync(path.join(os.tmpdir(), 'd43-clone-'));
+    try {
+      fs.writeFileSync(path.join(elsewhere, 'tn_TIT.tsv'), 'from the clone');
+      fs.symlinkSync(elsewhere, path.join(dir, 'en_farm'));
+      expect(await source().readFile({ name: 'en_farm' }, 'tn_TIT.tsv')).toBe('from the clone');
+      const zip = await source().readArchive({ name: 'en_farm' });
+      expect(await zip.file('en_farm/tn_TIT.tsv').async('string')).toBe('from the clone');
+    } finally {
+      fs.rmSync(elsewhere, { recursive: true, force: true });
+    }
+  });
+
+  test('the archive lists a symlinked file readFile would read, and not one it would refuse', async () => {
+    write('en_arch/real.md', 'real');
+    write('en_arch/.git/HEAD', 'ref');
+    fs.symlinkSync(path.join(dir, 'en_arch', 'real.md'), path.join(dir, 'en_arch', 'alias.md'));
+    fs.symlinkSync(path.join(dir, 'en_arch', '.git', 'HEAD'), path.join(dir, 'en_arch', 'head.md'));
+    fs.symlinkSync(path.join(dir, 'en_arch', 'gone.md'), path.join(dir, 'en_arch', 'dangling.md'));
+    const zip = await source().readArchive({ name: 'en_arch' });
+    expect(await zip.file('en_arch/alias.md').async('string')).toBe('real');
+    expect(zip.file('en_arch/head.md')).toBeNull();
+    expect(zip.file('en_arch/dangling.md')).toBeNull();
   });
 
   test('readLicense: only a missing file falls through to the next name', async () => {
