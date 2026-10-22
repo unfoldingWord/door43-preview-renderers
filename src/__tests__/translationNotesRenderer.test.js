@@ -116,7 +116,7 @@ describe('renderTranslationNotesHtml', () => {
 
   test('renders BOTH ULT and UST GL quotes per note, tagged, without the original', () => {
     // ULT quote bold, UST quote present, both tagged
-    expect(body).toContain('<strong>Paul</strong>');
+    expect(body).toContain('<strong><bdi dir="ltr">Paul</bdi></strong>');
     expect(body).toContain('I, Paul');
     expect(body).toContain('class="tn-bible-tag">ULT<');
     expect(body).toContain('class="tn-bible-tag">UST<');
@@ -185,8 +185,8 @@ describe('renderTranslationNotesHtml', () => {
     // Both Bibles' GL quotes appear as links to the same TW article
     const links = body.match(/href="#nav-tit--tw-names-paul"/g) || [];
     expect(links.length).toBeGreaterThanOrEqual(2);
-    expect(body).toContain('>Paul</a>'); // ULT
-    expect(body).toContain('>I, Paul</a>'); // UST
+    expect(body).toContain('><bdi dir="ltr">Paul</bdi></a>'); // ULT
+    expect(body).toContain('><bdi dir="ltr">I, Paul</bdi></a>'); // UST
   });
 
   test('leaves no raw rc:// links anywhere in the output', () => {
@@ -420,7 +420,7 @@ describe('renderTranslationNotesHtml — OBS', () => {
 
   test('uses the TSV quote directly — no Bible tag, no scripture columns', () => {
     const { sections } = renderTranslationNotesHtml(buildObsData());
-    expect(sections.body).toContain('<strong>God made</strong>');
+    expect(sections.body).toContain('<strong><bdi dir="ltr">God made</bdi></strong>');
     expect(sections.body).not.toContain('tn-bible-tag');
     expect(sections.body).not.toContain('tn-scripture-cols');
   });
@@ -492,7 +492,9 @@ describe('renderTranslationNotesHtml — OBS', () => {
     expect(sections.body).toContain('tn-verse-twl-table');
     // No aligned Bibles for OBS: one column with the GL words the TSV already has.
     expect(sections.body).toContain('>Quote</th>');
-    expect(sections.body).toContain('href="#nav-obs--tw-kt-god" class="internal-link">God</a>');
+    expect(sections.body).toContain(
+      'href="#nav-obs--tw-kt-god" class="internal-link"><bdi dir="ltr">God</bdi></a>'
+    );
     expect(sections.appendices.tw['kt/god'].title).toBe('God');
   });
 
@@ -560,7 +562,9 @@ describe('renderTranslationNotesHtml — OBS', () => {
       },
     };
     const { sections } = renderTranslationNotesHtml(data);
-    expect(sections.body).toContain('<span class="unresolved-link">people</span>');
+    expect(sections.body).toContain(
+      '<span class="unresolved-link"><bdi dir="ltr">people</bdi></span>'
+    );
     expect(sections.body).not.toContain('--tw-other-peoplegroup');
     expect(sections.appendices?.tw?.['other/peoplegroup']).toBeUndefined();
   });

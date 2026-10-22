@@ -124,7 +124,7 @@ describe('renderTsvQuestionsHtml — Bible-versed', () => {
   });
 
   test('renders a Bible-tag quote header with the GL quotes only, not the original', () => {
-    expect(body).toContain('<strong>Paul</strong>');
+    expect(body).toContain('<strong><bdi dir="ltr">Paul</bdi></strong>');
     expect(body).toContain('I, Paul');
     expect(body).toContain('class="tq-bible-tag">ULT<');
     expect(body).toContain('class="tq-bible-tag">UST<');

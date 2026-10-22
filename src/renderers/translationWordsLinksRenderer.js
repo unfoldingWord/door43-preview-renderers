@@ -369,7 +369,6 @@ function renderVerseLayout(resourceData, ctx) {
         const seen = dedupe === 'book' ? seenInBook : seenInChapter;
         const tableHtml = renderTwlTable(rows, {
           bibles,
-          direction: ctx.direction,
           bookId,
           chapterKey,
           verseKey,
@@ -570,7 +569,7 @@ function renderGlossaryLayout(resourceData, ctx) {
             (r) =>
               `<span class="twl-ref">${escapeHtml(r.ref)}` +
               (r.quote
-                ? ` <span class="twl-ref-quote">(${isolatedQuoteHtml(r.quote, ctx.direction)})</span>`
+                ? ` <span class="twl-ref-quote">(${isolatedQuoteHtml(r.quote)})</span>`
                 : '') +
               `</span>`
           )
@@ -633,7 +632,6 @@ export function renderTranslationWordsLinksHtml(resourceData, options = {}) {
     obsData: isObs ? findObsExtra(extras) : null,
     twResource: extras.tw,
     extras,
-    direction: resourceData.direction,
     bookIdSet: new Set(bookIds),
     resolution: options.resolution || 'none',
     includeScripture: options.includeScripture !== false,

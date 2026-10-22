@@ -143,20 +143,19 @@ export function textDirection(text) {
 }
 
 /**
- * Escape a quote for HTML, isolating it in `<bdi dir="…">` when it runs the
- * other way from the document (a Hebrew quote in English notes, a Greek one in
- * Arabic notes), so it cannot reorder the text around it. A quote that runs the
- * document's way is returned escaped and unwrapped.
+ * Escape a quote for HTML and isolate it in `<bdi dir="…">` in its own
+ * direction, so it cannot reorder the text around it (a Hebrew quote in English
+ * notes, a Greek one in Arabic notes). Every quote with a letter is wrapped,
+ * whichever way the document runs: the sections are rendered before
+ * `renderHTML` settles the document's direction, and a caller can override it
+ * there. A quote with no letter is returned escaped and unwrapped.
  *
  * @param {string} text
- * @param {'ltr'|'rtl'} [docDirection='ltr']
  */
-export function isolatedQuoteHtml(text, docDirection = 'ltr') {
+export function isolatedQuoteHtml(text) {
   const html = escapeHtml(text);
   const dir = textDirection(text);
-  return dir && dir !== (docDirection === 'rtl' ? 'rtl' : 'ltr')
-    ? `<bdi dir="${dir}">${html}</bdi>`
-    : html;
+  return dir ? `<bdi dir="${dir}">${html}</bdi>` : html;
 }
 
 /**
@@ -211,19 +210,14 @@ export function renderScriptureColumns(bibles, parsedExtras, bookId, ch, v, clas
  * @param {Object} row - Note/question row carrying `Quote` and `GLQuotes`
  * @param {Array} bibles - From getBibleColumns()
  * @param {Object} classes - { header, quote, tag } CSS class names
- * @param {'ltr'|'rtl'} [direction='ltr'] - The document's direction; a quote
- *   running the other way is isolated (see isolatedQuoteHtml)
  */
-export function renderQuoteHeader(row, bibles, classes = {}, direction = 'ltr') {
+export function renderQuoteHeader(row, bibles, classes = {}) {
   const { header = 'note-header', quote = 'note-quote', tag = 'bible-tag' } = classes;
   const lines = [];
   bibles.forEach((b, i) => {
     const q = quoteForDisplay(glQuoteForBibleId(row.GLQuotes, b.id));
     if (!q) return;
-    const quoteHtml =
-      i === 0
-        ? `<strong>${isolatedQuoteHtml(q, direction)}</strong>`
-        : isolatedQuoteHtml(q, direction);
+    const quoteHtml = i === 0 ? `<strong>${isolatedQuoteHtml(q)}</strong>` : isolatedQuoteHtml(q);
     lines.push(
       `  <div class="${quote}"><span class="${tag}">${escapeHtml(b.abbr)}</span> ${quoteHtml}</div>`
     );
@@ -231,9 +225,7 @@ export function renderQuoteHeader(row, bibles, classes = {}, direction = 'ltr') 
   if (lines.length === 0) {
     const origQuote = quoteForDisplay(row.Quote);
     if (!origQuote) return '';
-    lines.push(
-      `  <div class="${quote}"><strong>${isolatedQuoteHtml(origQuote, direction)}</strong></div>`
-    );
+    lines.push(`  <div class="${quote}"><strong>${isolatedQuoteHtml(origQuote)}</strong></div>`);
   }
   return `<div class="${header}">\n${lines.join('\n')}\n</div>\n`;
 }

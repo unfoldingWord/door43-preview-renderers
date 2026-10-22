@@ -51,7 +51,9 @@ describe('renderQuoteHeader with discontiguous quotes', () => {
       },
       bibles
     );
-    expect(html).toContain('<strong>God … the people whom he has chosen as his own</strong>');
+    expect(html).toContain(
+      '<strong><bdi dir="ltr">God … the people whom he has chosen as his own</bdi></strong>'
+    );
     expect(html).toContain('God … his chosen people');
     expect(html).not.toContain('&amp;');
     // The original-language quote is not part of the box.
@@ -60,7 +62,7 @@ describe('renderQuoteHeader with discontiguous quotes', () => {
 
   test('applies to the original quote in the no-GL-quote fallback', () => {
     const html = renderQuoteHeader({ Quote: 'ὁ Θεὸς & ἐκλεκτῶν' }, bibles);
-    expect(html).toContain('<strong>ὁ Θεὸς … ἐκλεκτῶν</strong>');
+    expect(html).toContain('<strong><bdi dir="ltr">ὁ Θεὸς … ἐκλεκτῶν</bdi></strong>');
     expect(html).not.toContain('&amp;');
   });
 });
@@ -144,7 +146,7 @@ describe('Translation Words Links quotes in the notes renderer', () => {
   });
 
   test('renders the note quote header with an ellipsis and no original quote', () => {
-    expect(sections.body).toContain('<strong>Do … commit adultery</strong>');
+    expect(sections.body).toContain('<strong><bdi dir="ltr">Do … commit adultery</bdi></strong>');
     expect(sections.body).not.toContain('μοιχεύσεις');
   });
 });

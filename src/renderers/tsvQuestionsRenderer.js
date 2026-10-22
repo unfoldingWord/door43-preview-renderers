@@ -262,17 +262,16 @@ article.tq-question {
  * Render a single question/note row: optional quote header (Bible-versed only),
  * then either a question with a collapsible answer, or a study-note body.
  */
-function renderQuestionArticle(row, { anchor, bookId, chapterKey, bibles, isObs, direction }) {
+function renderQuestionArticle(row, { anchor, bookId, chapterKey, bibles, isObs }) {
   let html = `<article class="tq-question" id="${anchor}">\n`;
 
   // Quote header (study questions / study notes that target a scripture quote).
   if (!isObs && bibles.length && (row.Quote || row.GLQuotes)) {
-    html += renderQuoteHeader(
-      row,
-      bibles,
-      { header: 'tq-quote-header', quote: 'tq-quote', tag: 'tq-bible-tag' },
-      direction
-    );
+    html += renderQuoteHeader(row, bibles, {
+      header: 'tq-quote-header',
+      quote: 'tq-quote',
+      tag: 'tq-bible-tag',
+    });
   }
 
   const questionText = row.Question || '';
@@ -522,7 +521,6 @@ export function renderTsvQuestionsHtml(resourceData, options = {}) {
               chapterKey,
               bibles,
               isObs,
-              direction: resourceData.direction,
             })
           );
         }
