@@ -199,6 +199,16 @@ describe('directoryContentSource', () => {
     await expect(source().readArchive({ name: 'x/..' })).rejects.toThrow('single folder name');
     await expect(source().readFile(tn, 'link.tsv')).rejects.toThrow('leads outside');
     await expect(source().readFile(tn, '.git/HEAD')).rejects.toThrow('hidden');
+    // A clean name that resolves into .git is refused too, and so is a license
+    // that does (#70 review).
+    fs.symlinkSync(path.join(dir, 'en_tn', '.git', 'HEAD'), path.join(dir, 'en_tn', 'head.tsv'));
+    await expect(source().readFile(tn, 'head.tsv')).rejects.toThrow('hidden file');
+    write('en_gitlic/.git/config', '[remote] url = https://token@example.com');
+    fs.symlinkSync(
+      path.join(dir, 'en_gitlic', '.git', 'config'),
+      path.join(dir, 'en_gitlic', 'LICENSE.md')
+    );
+    await expect(source().readLicense({ name: 'en_gitlic' })).rejects.toThrow('hidden file');
     // A symlink that stays inside the repository is still read.
     expect(await source().readFile(tn, 'alias.tsv')).toBe('inner');
   });

@@ -109,6 +109,16 @@ export function directoryContentSource(dirPath) {
     if (!isInside(path, root, lexical) || !isInside(path, root, real)) {
       throw new Error(`Path ${JSON.stringify(relPath)} leads outside the repository.`);
     }
+    // The same rule for where a symlink lands: a clean name that points into
+    // .git (or any hidden entry) is refused too.
+    if (
+      path
+        .relative(root, real)
+        .split(path.sep)
+        .some((part) => part.startsWith('.'))
+    ) {
+      throw new Error(`Path ${JSON.stringify(relPath)} leads to a hidden file.`);
+    }
     return real;
   };
 

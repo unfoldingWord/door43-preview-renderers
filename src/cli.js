@@ -294,7 +294,9 @@ async function main() {
 
       case 'getResourceData': {
         if (!quiet) {
-          console.error(`Fetching resource data for ${params.owner}/${params.repo}...`);
+          console.error(
+            `${params.dir ? 'Reading' : 'Fetching'} resource data for ${params.owner}/${params.repo}...`
+          );
         }
         result = await loadResourceData(set);
         break;
