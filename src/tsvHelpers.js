@@ -197,6 +197,8 @@ async function convertQuotes(rows, bookCode, bibleEntries, options = {}) {
   });
   if (!bibles.length) return { converted: 0, missed: [] };
 
+  // addGlQuotes keeps a GLQuotes[repo] the row already has on purpose: a GL quote
+  // an editor put in the published TSV wins over the computed one.
   const result = addGlQuotes(rows, { source, bibles });
   if (result.missed.length && !quiet) {
     console.warn(`${result.missed.length} quote(s) in ${bookCode} had no aligned words`);

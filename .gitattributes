@@ -1,4 +1,9 @@
-# Generated test fixtures (DCS snapshots, converter outputs): large and
-# machine-produced. Keep them out of diffs so a patch shows the code that
-# changed, not megabytes of USFM and TSV; GitHub also folds them as generated.
-src/fixtures/** -diff linguist-generated=true
+# Generated test fixtures (DCS snapshots, converter outputs). GitHub folds all
+# of them as generated. The multi-megabyte ones are also kept out of a default
+# `git diff`, so a patch shows the code that changed: the GL-quote parity goldens
+# and the rendered HtmlData snapshots. Their changes still show with
+# `git diff --text`; the smaller fixtures (USFM, ResourceData, index.js) diff
+# normally.
+src/fixtures/** linguist-generated=true
+src/fixtures/glquotes/** -diff
+src/fixtures/*.htmlData.json -diff

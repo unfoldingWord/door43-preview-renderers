@@ -90,7 +90,7 @@ export async function generateCopyrightAndLicenseHtml(catalogEntry, builtWith = 
   const now = new Date().toISOString().split('T')[0];
   html += `<div class="generated-with-footer">\n`;
   if (generatorUrl) {
-    html += `  <span><span class="built-with-label">Generated with:</span> <a href="${escapeHtml(generatorUrl)}" target="_blank">${escapeHtml(generatorName)}</a></span>\n`;
+    html += `  <span><span class="built-with-label">Generated with:</span> <a href="${escapeHtml(generatorUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(generatorName)}</a></span>\n`;
   } else if (generatorName) {
     html += `  <span><span class="built-with-label">Generated with:</span> ${escapeHtml(generatorName)}</span>\n`;
   }

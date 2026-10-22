@@ -22,6 +22,9 @@
 import fs from 'fs';
 import { addGLQuoteCols } from 'tsv-quote-converters';
 const OUT = 'src/fixtures/glquotes';
+// Converter errors across the run: any at all fails the script, so a flagged
+// run cannot be committed as the new expected output without anyone noticing.
+let errorCount = 0;
 const raw = async (o, r, p, ref) => {
   const res = await fetch(`https://git.door43.org/api/v1/repos/${o}/${r}/raw/${p}?ref=${ref}`);
   if (!res.ok) throw new Error(`${res.status} ${o}/${r}/${p}@${ref}`);
@@ -90,8 +93,17 @@ for (const b of books) {
     console.log(
       `${res}_${b.id}: ${rows} rows, ${result.errors.length} converter errors, ${((Date.now() - t0) / 1000).toFixed(1)}s`
     );
-    if (result.errors.length)
+    if (result.errors.length) {
+      errorCount += result.errors.length;
       fs.writeFileSync(`${OUT}/${res}_${b.id}.converter-errors.txt`, result.errors.join('\n'));
+    }
   }
 }
-console.log('done');
+if (errorCount) {
+  console.error(
+    `${errorCount} converter errors; see ${OUT}/*.converter-errors.txt before committing these fixtures`
+  );
+  process.exitCode = 1;
+} else {
+  console.log('done');
+}

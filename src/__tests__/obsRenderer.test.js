@@ -226,10 +226,17 @@ describe('renderObsHtml input validation', () => {
     expect(() => renderObsHtml(null)).toThrow('OBS renderer expects OBS resource data');
   });
 
-  test('rejects data of another type', () => {
-    expect(() => renderObsHtml({ type: 'usfm', stories: {} })).toThrow(
+  test('rejects data of another type, even with stories', () => {
+    expect(() => renderObsHtml({ ...buildResourceData(), type: 'usfm' })).toThrow(
       'OBS renderer expects OBS resource data'
     );
+  });
+
+  test('renders OBS data with no stories as a document with no story sections', () => {
+    // The same result as a `chapters` filter that selects nothing.
+    const { sections } = renderObsHtml({ type: 'obs', stories: {} }, { resolution: 'none' });
+    expect(sections.toc).toEqual([]);
+    expect(sections.body).not.toContain('nav-obs-');
   });
 
   test('rejects OBS data without stories', () => {

@@ -151,7 +151,9 @@ describe('renderTranslationNotesHtml', () => {
       '## Paul\n\n* [Titus 1:1](rc://*/tn/help/tit/01/01)\n* [Titus 3:1](rc://*/tn/help/tit/03/01)';
     const article = renderTranslationNotesHtml(data).sections.appendices.tw['names/paul'].html;
     // Each assertion is tied to the link's own text, in any attribute order.
-    expect(article).toMatch(/<a [^>]*href="#nav-tit-1-1"[^>]*>Titus 1:1<\/a>/);
+    expect(article).toMatch(
+      /<a (?=[^>]*href="#nav-tit-1-1")(?=[^>]*class="internal-link")[^>]*>Titus 1:1<\/a>/
+    );
     expect(article).not.toContain('nav-tit-3-1');
     expect(article).toMatch(
       /<a (?=[^>]*href="#")(?=[^>]*class="external-ref")[^>]*>Titus 3:1<\/a>/

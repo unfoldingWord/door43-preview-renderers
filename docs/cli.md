@@ -48,7 +48,7 @@ Every other command names the resource either by repository (`--owner` and
 
 Other options:
 
-- `--book <bookId>` — one book id (e.g. `gen`, `tit`, `1jn`). `findResources` ignores it; `getAllCatalogEntries` records it on the CatalogSet (and with `--lang` the package must carry it). For a Bible or a Bible-book TSV resource (notes, questions, words links), the data commands (`getResourceData`, `renderHtml`, `assemblePrint`, `generatePdf`) fetch only that book; without it a Bible gives every book and a TSV resource fails (`No valid books were processed from the TSV data`). Open Bible Stories and its TSV resources (`obs-tn`, `obs-tq`, `obs-twl`, …), TA and TW ignore it either way
+- `--book <bookId>` — one book id (e.g. `gen`, `tit`, `1jn`). `findResources` ignores it; `getAllCatalogEntries` records it on the CatalogSet (and with `--lang` the package must carry it). The data commands (`getResourceData`, `renderHtml`, `assemblePrint`, `generatePdf`) pass it on as `books`; which resources use it, and what happens without it, is [the `books` rule](https://github.com/unfoldingWord/door43-preview-renderers/blob/main/skills/door43-renderers-maintainer/references/contracts.md#books-at-stage-2)
 - `--dcs-api-url <url>` — DCS API base (default `https://git.door43.org/api/v1`)
 - `--output <file>` — write to a file instead of stdout
 - `--quiet`, `-q` — no progress logging; JSON only, so the output pipes cleanly into `jq`
