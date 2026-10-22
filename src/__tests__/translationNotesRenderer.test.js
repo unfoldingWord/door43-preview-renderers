@@ -772,3 +772,65 @@ describe('renderTranslationNotesHtml — Translation Questions (#23)', () => {
     expect(upTo13).not.toContain('A chapter 2 question?');
   });
 });
+
+describe('renderTranslationNotesHtml — print page breaks (#75)', () => {
+  // A chapter with an introduction and a verse, so both breaks are exercised.
+  function withChapterIntro() {
+    const data = buildResourceData();
+    data.books.tit.chapters[1].verses.intro = [
+      { ID: 'ci1', Reference: '1:intro', Note: '# Titus 1 Chapter Introduction\n\nAbout it.' },
+    ];
+    return data;
+  }
+
+  test("a verse's running-header marker is inside its heading, not before it", () => {
+    const { body } = renderTranslationNotesHtml(withChapterIntro()).sections;
+    expect(body).toContain(
+      '<h4 class="tn-verse-header" id="nav-tit-1-1"><span class="running-ref">Titus 1:1</span><a href="#nav-tit-1-1" class="header-link">Titus 1:1</a></h4>'
+    );
+    expect(body).toMatch(
+      /<h4 class="tn-verse-header" id="nav-tit-1-intro"><span class="running-ref">Titus 1<\/span>/
+    );
+    // No marker stands between headings or alone before a verse heading.
+    expect(body).not.toMatch(
+      /<span class="running-ref">[^<]*<\/span>\n<h4 class="tn-verse-header"/
+    );
+  });
+
+  test('the chapter heading is directly followed by its first verse heading', () => {
+    const { body, css } = renderTranslationNotesHtml(withChapterIntro()).sections;
+    // So `.tn-chapter-header + .tn-verse-header { break-before: avoid }` matches
+    // and the chapter heading shares the page with its introduction.
+    expect(body).toMatch(
+      /<h3 class="tn-chapter-header" id="nav-tit-1"[^>]*>.*?<\/h3>\n<h4 class="tn-verse-header"/
+    );
+    expect(css.print).toMatch(
+      /\.tn-chapter-header \+ \.tn-verse-header,[^{]*\{\s*break-before: avoid !important;/
+    );
+  });
+
+  test("the book introduction's marker still opens it (it has no heading of its own)", () => {
+    const data = buildResourceData();
+    data.books.tit.chapters.front = {
+      verses: { intro: [{ ID: 'bi1', Reference: 'front:intro', Note: '# Introduction to Titus' }] },
+    };
+    const { body } = renderTranslationNotesHtml(data).sections;
+    expect(body).toMatch(
+      /<\/h3>\n<span class="running-ref">Titus<\/span>\n<article class="tn-note tn-note-intro"/
+    );
+  });
+
+  test('the Translation Questions heading has about 1em more space above it', () => {
+    const data = buildResourceData();
+    data.extras.tq = {
+      type: 'tsv',
+      subject: 'TSV Translation Questions',
+      books: {
+        tit: { chapters: { 1: { verses: { 1: [{ ID: 'q', Question: 'Q?', Response: 'A.' }] } } } },
+      },
+    };
+    const { css } = renderTranslationNotesHtml(data).sections;
+    expect(css.web).toMatch(/\.tn-verse-questions-header \{[^}]*margin: 1\.6em 0 1px 0;/);
+    expect(css.web).toMatch(/\.tn-verse-twl-header \{[^}]*margin: 8px 0 1px 0;/);
+  });
+});
