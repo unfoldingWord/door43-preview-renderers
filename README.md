@@ -357,7 +357,20 @@ CI (`.github/workflows/ci.yml`) runs lint, the format check, the coverage-gated 
 
 1. Bump `version` in `package.json` in a pull request and merge it.
 2. Publish a GitHub release whose tag is that version with a `v` in front (`v1.7.0`).
-3. `npm-publish.yml` runs the tests, checks that the tag matches `package.json`, and publishes to npm; a version that is already on the registry is skipped. The workflow publishes with the `NPM_TOKEN` organization secret.
+3. `npm-publish.yml` runs the tests, checks that the tag matches `package.json`, and publishes to npm; a version that is already on the registry is skipped. It publishes with npm trusted publishing (OIDC): no npm token is stored, and npm accepts the publish because the package's Trusted Publisher on npmjs.com names this repository and `npm-publish.yml`. Renaming the workflow file means updating that setting.
+
+### Trying an unreleased build in another project
+
+To try a change in door43-preview-app (or any project that uses this package) before it is released, link your checkout instead of publishing:
+
+```bash
+pnpm build                                  # here: the app imports dist/
+cd ../door43-preview-app
+pnpm link ../door43-preview-renderers       # use the local checkout
+pnpm unlink @unfoldingword/door43-preview-renderers && pnpm install   # back to the published version
+```
+
+Rebuild here after each change, and don't commit a lockfile that points at a link.
 
 ## Project structure
 

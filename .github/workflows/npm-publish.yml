@@ -1,8 +1,11 @@
 name: Publish to npm
 
 # Publishes @unfoldingword/door43-preview-renderers to npm when a GitHub release
-# is published. Uses an npm AUTOMATION token (secrets.NPM_TOKEN) which is exempt
-# from the org's 2FA-on-write requirement, so no interactive OTP is needed.
+# is published, with npm trusted publishing (OIDC): no npm token is stored. The
+# package's Trusted Publisher on npmjs.com names this repository and this
+# workflow file (npm-publish.yml); npm accepts a publish only from here. With
+# trusted publishing from a public repository, npm adds provenance itself.
+# Requires npm >= 11.5.1 and Node >= 22.14 (docs.npmjs.com/trusted-publishers).
 #
 # Idempotent: if the version in package.json is already on the registry, the
 # publish step is skipped (so re-running, or the v1.5.0 release that matches the
@@ -14,15 +17,17 @@ on:
     types: [published]
   workflow_dispatch:
 
-# Read-only token for every job; publishing uses NPM_TOKEN, not the job token.
+# Read-only by default; the publish job adds only the OIDC token it needs.
 permissions:
   contents: read
 
 jobs:
   publish:
+    # GitHub-hosted: npm does not accept trusted publishing from self-hosted runners.
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      id-token: write # lets npm exchange the workflow's OIDC token for a publish
     steps:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -43,6 +48,13 @@ jobs:
           registry-url: https://registry.npmjs.org
           cache: pnpm
 
+      - name: Use an npm that supports trusted publishing
+        # Node 22 ships npm 10; trusted publishing needs 11.5.1 or later. Pinned
+        # to a release that has been out for a while.
+        run: |
+          npm install -g npm@11.6.2
+          npm --version
+
       - name: Install
         run: pnpm install --frozen-lockfile
 
@@ -60,8 +72,7 @@ jobs:
           fi
 
       - name: Publish to npm (skip if version already published)
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        # No NODE_AUTH_TOKEN: npm authenticates with the job's OIDC token.
         run: |
           NAME="$(node -p "require('./package.json').name")"
           VER="$(node -p "require('./package.json').version")"
