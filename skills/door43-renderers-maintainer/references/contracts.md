@@ -25,7 +25,7 @@ This is the one statement of the rule; the README, `docs/options.md`, `docs/get-
 Common: `type`, `metadataType`, `subject`, `title`, `abbreviation`, `version`, `license`; and, when the catalog entry gives them, `language`, `languageTitle`, `direction` (`'ltr'` | `'rtl'`), `isGatewayLanguage` (copied once in `getResourceData`, for extras too).
 
 - `usfm` (Aligned Bible, Bible, Greek New Testament, Hebrew Old Testament): `books: { [bookId]: usfmString }` — alignment markers removed.
-- `tsv` (TN, TQ, SN, SQ, TWL and their OBS variants; OBS has one `obs` book, stories as chapters, frames as verses): `books: { [bookId]: { title, identifier, sort, chapters: { [ch]: { verses: { [v]: [row] } } } } }`. A row has the TSV columns normalized to `Reference`, `ID`, `Tags`, `Quote`, `Occurrence`, `Note` / `Question` / `Response`, `SupportReference` / `TWLink`, plus `GLQuotes: { [bibleRepo]: { Quote, Occurrence, FullGLQuote?, FullGLOccurrence? } }` when aligned Bibles were available. `extras: { ult, ust, ta, tw, twl, ugnt | uhb, obs, obs-twl, tq | obs-tq }` (`tq`/`obs-tq` only when requested with `extraSubjects`) (whatever the subject needs, keyed by repo identifier; find one by its `subject`), each itself a ResourceData.
+- `tsv` (TN, TQ, SN, SQ, TWL and their OBS variants; OBS has one `obs` book, stories as chapters, frames as verses): `books: { [bookId]: { title, identifier, sort, chapters: { [ch]: { verses: { [v]: [row] } } } } }`. A row has the TSV columns normalized to `Reference`, `ID`, `Tags`, `Quote`, `Occurrence`, `Note` / `Question` / `Response`, `SupportReference` / `TWLink`, plus `GLQuotes: { [bibleRepo]: { Quote, Occurrence, FullGLQuote?, FullGLOccurrence? } }` when aligned Bibles were available. A book whose quotes were not all matched also has `glQuoteMisses: [{ reference, quote, repo }]`. `extras: { ult, ust, ta, tw, twl, ugnt | uhb, obs, obs-twl, tq | obs-tq }` (`tq`/`obs-tq` only when requested with `extraSubjects`) (whatever the subject needs, keyed by repo identifier; find one by its `subject`), each itself a ResourceData.
 - `obs`: `stories: { [num]: { title, reference, frames: { [n]: { text, img } } } }`, `front`, `back`.
 - `ta`: `manuals: { [manualId]: { title, toc, articles: { [articleId]: { title, text } } } }`.
 - `tw`: `articles: { kt: { [slug]: { title, text } }, names: {…}, other: {…} }` (each category also carries a `title` meta key).
@@ -48,7 +48,7 @@ A subject renderer returns:
 
 `renderHtmlData` promotes `abbreviation`, `version`, `language`, `direction` onto the HtmlData (`renderHTML` and `renderPdf` write them as `<html lang dir>`; a renderer wraps every quote that has a letter in `<bdi dir>` in the quote's own direction with `isolatedQuoteHtml`, so sections do not depend on the document's direction) and rewrites `nav-` anchors in every section to `<abbreviation>-`. There is no `fullHtml`; `renderHTML` composes the document.
 
-Keep errors explicit: unsupported subject or invalid input shape throws with context.
+Keep errors explicit: throw a `ResourceError` (`src/errors.js`) with a `code` (`NOT_FOUND`, `HTTP`, `NETWORK`, `INVALID_INPUT`, `UNSUPPORTED`, `NO_CONTENT`), plus `status` and `url` when there was a request. In 1.x `getResourceData` still returns `{ error, code, status, url }` for a failed descriptor lookup unless `throwOnError` is set.
 
 ## Anchors
 

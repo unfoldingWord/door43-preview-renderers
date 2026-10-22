@@ -1,4 +1,5 @@
 import { removeAlignments } from './usfm/removeAlignments.js';
+import { ResourceError } from './errors.js';
 import { loggerFor } from './logger.js';
 import { contentSourceFor } from './contentSource.js';
 import { BibleBookData } from './constants.js';
@@ -15,7 +16,9 @@ export async function extractRcAlignedBibleData(catalogEntry, books = [], option
   const ref = catalogEntry.branch_or_tag_name || catalogEntry.ref;
 
   if (!owner || !repo || !ref) {
-    throw new Error('Catalog entry is missing owner, repo, or ref details.');
+    throw new ResourceError('Catalog entry is missing owner, repo, or ref details.', {
+      code: 'INVALID_INPUT',
+    });
   }
 
   const ingredientBooks = (catalogEntry.ingredients || [])
@@ -51,14 +54,14 @@ export async function extractRcAlignedBibleData(catalogEntry, books = [], option
       const usfmContent = await source.readFile(catalogEntry, filePath);
       booksContent[bookId] = removeAlignments(usfmContent);
     } catch (error) {
-      throw new Error(
-        `Failed to fetch or process USFM content for book ${bookId}: ${error.message}`
-      );
+      throw ResourceError.wrap(`Failed to fetch or process USFM content for book ${bookId}`, error);
     }
   }
 
   if (Object.keys(booksContent).length === 0) {
-    throw new Error('No valid books were processed from the aligned USFM data');
+    throw new ResourceError('No valid books were processed from the aligned USFM data', {
+      code: 'NO_CONTENT',
+    });
   }
 
   const license = await source.readLicense(catalogEntry);

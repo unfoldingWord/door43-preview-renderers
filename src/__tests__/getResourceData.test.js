@@ -98,7 +98,12 @@ describe('getResourceData', () => {
       { quiet: true }
     );
 
-    expect(result).toEqual({ error: 'Failed to get catalog entry: network down' });
+    // 1.x shape, with the ResourceError's code and URL alongside the message.
+    expect(result).toEqual({
+      error: 'Failed to get catalog entry: network down',
+      code: 'NETWORK',
+      url: 'https://git.door43.org/api/v1/catalog/entry/u/r/ref',
+    });
     consoleErrorSpy.mockRestore();
   });
 
