@@ -37,8 +37,8 @@ node src/cli.js getResourceData --owner unfoldingWord --repo en_tn --ref v91 --b
 
 Name the resource either by repository or by language:
 
-- `--owner <owner>` — repository owner (required unless `--lang` and `--subject` are given; with them, a preferred publisher)
-- `--repo <repo>` — repository name (required unless `--lang` and `--subject` are given)
+- `--owner <owner>` — repository owner (required by every command but `findResources` unless `--lang` and `--subject` are given; with them, or with `findResources`, a preferred publisher)
+- `--repo <repo>` — repository name (required by every command but `findResources` unless `--lang` and `--subject` are given)
 - `--lang <code>` — language code, e.g. `en`, `es-419`; with `--subject`, the publisher and release are found for you ([stage 0](./find-resources.md)). `findResources` needs only `--lang`
 - `--subject <subject>` — catalog subject, e.g. `"TSV Translation Notes"`
 - `--stage <stage>` — catalog stage for `--lang` lookups: `prod` (default), `preprod`, `latest`, `branch`
@@ -46,7 +46,7 @@ Name the resource either by repository or by language:
 
 The rest apply to every command:
 
-- `--book <bookId>` — one book id (e.g. `gen`, `tit`, `1jn`); omit for whole-resource output (OBS, TA, TW)
+- `--book <bookId>` — one book id (e.g. `gen`, `tit`, `1jn`); omitted, a USFM Bible gives every book, a TSV subject fails (`No valid books were processed from the TSV data`), and OBS, TA and TW ignore it
 - `--dcs-api-url <url>` — DCS API base (default `https://git.door43.org/api/v1`)
 - `--output <file>` — write to a file instead of stdout
 - `--quiet`, `-q` — no progress logging; JSON only, so the output pipes cleanly into `jq`
