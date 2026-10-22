@@ -46,8 +46,10 @@ caller can compute the same set (for a cache key, for instance) without fetching
 ## Returns
 
 A Promise resolving to a **ResourceData** object. Every shape carries `type`,
-`subject`, `title`, `abbreviation`, `version`, and `license`; the content differs
-by `type`:
+`subject`, `title`, `abbreviation`, `version`, and `license`, and, when the catalog
+entry gives them, `language` (e.g. `ar`), `languageTitle`, `direction` (`'ltr'` or
+`'rtl'`) and `isGatewayLanguage`. Each extra carries its own (an English Bible
+`ltr`, the Hebrew Old Testament `rtl`). The content differs by `type`:
 
 | `type` | Subjects | Content |
 |---|---|---|

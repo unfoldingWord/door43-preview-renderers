@@ -15,7 +15,7 @@ renderHTML(htmlData, opts)           → HTML string     src/renderHTML.js      
 renderPdf(htmlData, opts)            → PDF             src/pdf/renderPdf.js          (WeasyPrint binary or pdfServiceUrl)
 ```
 
-Rules: every stage is `stage(input, options)` with a discriminated input object (no positional type-sniffing); `renderHtmlData` and `renderHTML` do no I/O; `src/index.js` is the public surface and CI checks its export names. Option names and defaults live in `docs/options.md`.
+Rules: every stage is `stage(input, options)` with a discriminated input object (no positional type-sniffing); `renderHtmlData` and `renderHTML` do no I/O; `src/index.js` is the public surface and CI checks its export names. Option names and defaults live in `docs/options.md`. Language and direction come from the catalog entry (`withLanguage` in `getResourceData.js`) and end as `<html lang dir>` (written by `renderHTML`, `assemblePrintDocument`, and the renderers' `htmlRootAttributes`); never hardcode `lang="en"`.
 
 Stage 0 is reached through `getAllCatalogEntries({ lang, subject, books?, owner?, stage?, ref? })`, which returns the blueprint fetched during selection as the CatalogSet, or directly through `findResources`, `resolveResource`, `resolveRef`, `resolveTarget`, `listLanguages`. `getResourceData` does not take the language form; pass it the CatalogSet. Only a 404 moves on to the next publisher; any other HTTP error aborts. With books requested, a book-based dependency (Bible, Words Links, …) that lacks one of them is dropped before the Aligned Bibles are chosen, as DCS does for a one-book blueprint.
 

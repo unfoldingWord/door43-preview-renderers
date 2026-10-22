@@ -11,7 +11,7 @@
 
 ## ResourceData shapes (stage 2 output, renderer input)
 
-Common: `type`, `metadataType`, `subject`, `title`, `abbreviation`, `version`, `license`.
+Common: `type`, `metadataType`, `subject`, `title`, `abbreviation`, `version`, `license`; and, when the catalog entry gives them, `language`, `languageTitle`, `direction` (`'ltr'` | `'rtl'`), `isGatewayLanguage` (copied once in `getResourceData`, for extras too).
 
 - `usfm` (Aligned Bible, Bible, Greek New Testament, Hebrew Old Testament): `books: { [bookId]: usfmString }` — alignment markers removed.
 - `tsv` (TN, TQ, SN, SQ, TWL and the OBS variants of TN/TQ/SN/SQ — OBS TWL extraction is still a stub, #21): `books: { [bookId]: { title, identifier, sort, chapters: { [ch]: { verses: { [v]: [row] } } } } }`. A row has the TSV columns normalized to `Reference`, `ID`, `Tags`, `Quote`, `Occurrence`, `Note` / `Question` / `Response`, `SupportReference` / `TWLink`, plus `GLQuotes: { [bibleRepo]: { Quote, Occurrence, FullGLQuote?, FullGLOccurrence? } }` when aligned Bibles were available. `extras: { ult, ust, ta, tw, twl, ugnt | uhb, obs }` (whatever the subject needs), each itself a ResourceData.
@@ -35,7 +35,7 @@ A subject renderer returns:
   - `appendixTitles`: optional `{ ta, tw }`
   - `webView`: optional alternate view (raw USFM for Aligned Bible when `includeRawUsfmView`)
 
-`renderHtmlData` promotes `abbreviation`, `version`, `direction` onto the HtmlData and rewrites `nav-` anchors in every section to `<abbreviation>-`. There is no `fullHtml`; `renderHTML` composes the document.
+`renderHtmlData` promotes `abbreviation`, `version`, `language`, `direction` onto the HtmlData (`renderHTML` and `renderPdf` write them as `<html lang dir>`; a renderer isolates an opposite-direction quote with `isolatedQuoteHtml`) and rewrites `nav-` anchors in every section to `<abbreviation>-`. There is no `fullHtml`; `renderHTML` composes the document.
 
 Keep errors explicit: unsupported subject or invalid input shape throws with context.
 

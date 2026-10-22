@@ -64,7 +64,9 @@ WeasyPrint panel will use a `pdfServiceUrl` when you provide one.
 - `pageSize` — a `PAGE_SIZES` key (`'A4_PORTRAIT'`, `'US_LETTER_PORTRAIT'`,
   `'TRADE'`, …), a friendly label (`'A4'`, `'US Letter'`), or an explicit
   `{ width, height }` object using CSS lengths (e.g. `{ width: '6in', height: '9in' }`).
-- `columns`, `direction` (`'ltr'`/`'rtl'`), `footerHtml`
+- `columns`, `footerHtml`
+- `direction` (`'ltr'`/`'rtl'`) and `language` — default to the HtmlData's, so a
+  right-to-left resource prints right to left
 - `title`, `version`, `abbreviation` — cover overrides (default to the render result)
 - `outputPath` — write the PDF here and resolve with the path instead of returning bytes
 - `weasyprintPath`, `baseUrl`, `timeoutMs`, `quiet` — forwarded to WeasyPrint

@@ -217,7 +217,8 @@ Returns an **HtmlData** package:
   title: 'unfoldingWord® Literal Text',
   abbreviation: 'ult',
   version: 'v91',
-  direction: 'ltr',
+  language: 'en',              // from the catalog entry → <html lang>
+  direction: 'ltr',            // 'rtl' for Arabic, Hebrew, Farsi… → <html dir>
   sections: {
     cover: '<h1 ...',
     copyright: '<div ...',
@@ -237,7 +238,7 @@ Returns an **HtmlData** package:
 Stage 4. Composes an HtmlData package into **one self-contained HTML document** for the screen or for print. Pure and synchronous; returns a string.
 
 - `options.media`: `'screen'` (default; continuous page, cover/copyright/toc off) or `'print'` (paged, PagedJS/WeasyPrint-ready, cover/copyright/toc on)
-- `options.show`, `options.columns`, `options.direction`, `options.engine`, `options.print.*` (`pageSize`, `footerHtml`, `runningHeader`, `pageNumber.position`)
+- `options.show`, `options.columns`, `options.language`, `options.direction` (both default to the resource's), `options.engine`, `options.print.*` (`pageSize`, `footerHtml`, `runningHeader`, `pageNumber.position`)
 
 ```javascript
 const webHtml = renderHTML(htmlData);                       // continuous web page
