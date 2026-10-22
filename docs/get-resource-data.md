@@ -76,15 +76,18 @@ ingredient path, or the whole tree), but has not been compared with DCS.
 
 ## Errors
 
-The stages throw a **`ResourceError`** (exported), so a caller can tell the cases
-apart without reading messages:
+`getResourceData`, `getResourceDataFromDirectory`, `getAllCatalogEntries` and the
+stage 0 lookups (`findResources`, `resolveResource`, `resolveRef`, `resolveTarget`,
+`listLanguages`) throw a **`ResourceError`** (exported) for every failure, a
+failed DCS request included, so a caller can tell the cases apart without reading
+messages:
 
 | `code` | When |
 |---|---|
-| `NOT_FOUND` | DCS answered 404, or nothing is published (stage 0) |
-| `HTTP` | DCS answered another error status |
+| `NOT_FOUND` | DCS answered 404, nothing is published (stage 0), or a file is missing from a local checkout |
+| `HTTP` | DCS answered another error status, or a response this library can't use (no data, a search that never ends) |
 | `NETWORK` | no answer: unreachable or timed out |
-| `INVALID_INPUT` | the arguments or the catalog entry can't be used |
+| `INVALID_INPUT` | the arguments, a catalog entry, or a resource's content can't be used (e.g. USFM that can't be processed) |
 | `UNSUPPORTED` | a subject, metadata type or flavor that isn't handled |
 | `NO_CONTENT` | the resource has none of the requested books |
 
@@ -123,7 +126,10 @@ Bible out of the row's `GLQuotes`, and the renderers show the original-language
 quote instead. Such quotes are listed on the book as
 `glQuoteMisses: [{ reference, quote, repo }]` (only when there are any), so an app
 can say why a quote fell back; without the original-language Bible no `GLQuotes` are added. A row
-that already has a GL quote for a Bible keeps it.
+that already has a GL quote for a Bible keeps it. If the lookup itself fails (a
+Bible can't be fetched or indexed), a warning is logged and the book gets no
+`glQuoteMisses`: no `glQuoteMisses` doesn't by itself mean
+every quote matched.
 
 ## Usage
 

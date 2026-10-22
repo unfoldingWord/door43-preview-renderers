@@ -54,11 +54,7 @@ export async function extractRcAlignedBibleData(catalogEntry, books = [], option
       const usfmContent = await source.readFile(catalogEntry, filePath);
       booksContent[bookId] = removeAlignments(usfmContent);
     } catch (error) {
-      // Keep the failed request's status (a 404 is NOT_FOUND) and the cause.
-      throw new ResourceError(
-        `Failed to fetch or process USFM content for book ${bookId}: ${error.message}`,
-        { status: error?.status ?? error?.response?.status, cause: error }
-      );
+      throw ResourceError.wrap(`Failed to fetch or process USFM content for book ${bookId}`, error);
     }
   }
 

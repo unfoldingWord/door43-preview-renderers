@@ -287,7 +287,12 @@ export async function extractRcTsvData(catalogEntry, books, options = {}, catalo
     const filePath = ingredient.path.replace(/^\.\//, '');
 
     // Fetch and parse the TSV
-    const tsvContent = await contentSource.readFile(catalogEntry, filePath);
+    let tsvContent;
+    try {
+      tsvContent = await contentSource.readFile(catalogEntry, filePath);
+    } catch (error) {
+      throw ResourceError.wrap(`Failed to read the TSV for book ${bookId}`, error);
+    }
     const normalizedRows = normalizeTsvColumns(parseTsv(tsvContent), singleBibleRepo);
 
     // Look up the GL quotes if aligned bibles are available and there is
