@@ -482,6 +482,44 @@ describe('renderTranslationNotesHtml — OBS', () => {
     expect(sections.appendices.tw['kt/god'].title).toBe('God');
   });
 
+  test('a TW article citing a frame without notes does not link to a missing anchor', () => {
+    // en_tw articles list "Examples from the Bible stories" as rc://*/tn/help/obs/…
+    // links; frame 18:11 has no notes here, so it has no anchor to point at.
+    const data = buildObsData();
+    data.extras.tw = {
+      type: 'tw',
+      subject: 'Translation Words',
+      articles: {
+        kt: {
+          god: {
+            title: 'God',
+            text: '## God\n\n* [01:01](rc://*/tn/help/obs/01/01)\n* [18:11](rc://*/tn/help/obs/18/11)',
+          },
+        },
+      },
+    };
+    data.extras['obs-twl'] = {
+      type: 'tsv',
+      subject: 'TSV OBS Translation Words Links',
+      books: {
+        obs: {
+          chapters: {
+            1: {
+              verses: {
+                1: [{ Reference: '1:1', Quote: 'God', TWLink: 'rc://*/tw/dict/bible/kt/god' }],
+              },
+            },
+          },
+        },
+      },
+    };
+    const { sections } = renderTranslationNotesHtml(data);
+    const article = sections.appendices.tw['kt/god'].html;
+    expect(article).toContain('href="#nav-obs-1-1" class="internal-link"');
+    expect(article).not.toContain('nav-obs-18-11');
+    expect(article).toContain('href="#" class="external-ref"');
+  });
+
   test('does not link a Translation Words row whose article the TW resource lacks', () => {
     // en_obs-twl v3 still links other/peoplegroup, which en_tw v87 no longer has.
     const data = buildObsData();

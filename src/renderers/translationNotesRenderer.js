@@ -19,6 +19,7 @@ import {
   collectAppendices,
   resolveRcLinks,
   findTwArticle,
+  neutralizeDanglingAnchors,
 } from './rcAppendices.js';
 import { renderTwlTable } from './twlTable.js';
 import {
@@ -688,7 +689,7 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
   // included), keyed by kind so the composer can render/toggle them separately.
   const firstBook = bookIds[0] || '';
   const bookIdSet = new Set(bookIds);
-  const appendices = collectAppendices(allRcLinks, extras, firstBook, backRefs);
+  let appendices = collectAppendices(allRcLinks, extras, firstBook, backRefs);
   // The names of the resources the appendix articles came from, for their
   // running headers (e.g. "unfoldingWord® Translation Academy").
   const appendixTitles = { ta: extras?.ta?.title, tw: extras?.tw?.title };
@@ -708,6 +709,10 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
       );
     }
   }
+  // Translation Words articles cite verses and OBS frames ("Titus 3:1", "18:11");
+  // one without notes has no anchor in this document, so point those links at
+  // nothing rather than leave them dangling.
+  ({ body, appendices } = neutralizeDanglingAnchors(body, appendices));
 
   const cover = buildCoverPage({
     title,
