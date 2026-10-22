@@ -58,6 +58,24 @@ describe('dcsApiUrlOf / dcsApiUrlFrom', () => {
     ).toBe('https://opt.test/api/v1');
     expect(dcsApiUrlFrom(undefined, {})).toBe(DEFAULT_DCS_API_URL);
   });
+
+  test("an empty URL is the caller's, not the public default", async () => {
+    const { dcsApiUrlOf, dcsApiUrlFrom } = await fresh();
+    const logger = spyLogger();
+    expect(dcsApiUrlOf({ dcsApiUrl: '' })).toBe('');
+    expect(dcsApiUrlOf({ dcs_api_url: '', logger })).toBe('');
+    expect(dcsApiUrlOf({ dcsApiUrl: '', dcs_api_url: 'https://b.test/api/v1' })).toBe('');
+    expect(dcsApiUrlFrom({ dcsApiUrl: '' }, { dcsApiUrl: 'https://src.test/api/v1' })).toBe('');
+  });
+
+  test("the old spelling on a descriptor warns through the options' logger", async () => {
+    const { dcsApiUrlFrom } = await fresh();
+    const logger = spyLogger();
+    expect(dcsApiUrlFrom({ logger }, { dcs_api_url: 'https://src.test/api/v1' })).toBe(
+      'https://src.test/api/v1'
+    );
+    expect(logger.warn).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('splitInternalOptions', () => {
