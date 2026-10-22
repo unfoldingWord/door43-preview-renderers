@@ -35,11 +35,13 @@ node src/cli.js getResourceData --owner unfoldingWord --repo en_tn --ref v91 --b
 
 ## Options
 
-Name the resource either by repository or by language:
+`findResources` needs only `--lang` (`--subject` and `--owner` narrow the list).
+Every other command names the resource either by repository (`--owner` and
+`--repo`) or by language (`--lang` and `--subject`):
 
-- `--owner <owner>` — repository owner (required by every command but `findResources` unless `--lang` and `--subject` are given; with them, or with `findResources`, a preferred publisher)
-- `--repo <repo>` — repository name (required by every command but `findResources` unless `--lang` and `--subject` are given)
-- `--lang <code>` — language code, e.g. `en`, `es-419`; with `--subject`, the publisher and release are found for you ([stage 0](./find-resources.md)). `findResources` needs only `--lang`
+- `--owner <owner>` — repository owner; with `--lang`/`--subject`, the preferred publisher
+- `--repo <repo>` — repository name
+- `--lang <code>` — language code, e.g. `en`, `es-419`; with `--subject`, the publisher and release are found for you ([stage 0](./find-resources.md))
 - `--subject <subject>` — catalog subject, e.g. `"TSV Translation Notes"`
 - `--stage <stage>` — catalog stage for `--lang` lookups: `prod` (default), `preprod`, `latest`, `branch`
 - `--ref <ref>` — git tag, branch, or commit. Omitted: the latest release (the default branch if there is none). With `--lang`, a given ref is the one each publisher's package is checked at

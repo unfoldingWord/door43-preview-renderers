@@ -17,7 +17,8 @@ getAllCatalogEntries(source, options?)
   - a **descriptor** `{ owner, repo, ref, books? }`
   - a **language form** `{ lang, subject, books?, owner?, stage?, ref? }`: the
     publisher and release are chosen first ([stage 0](./find-resources.md)), and the
-    blueprint fetched while choosing is returned, so `/catalog/bp/` is called once.
+    blueprint of the chosen package is returned, so it is not fetched a second time
+    (a candidate that does not fit costs one `/catalog/bp/` call of its own).
     `owner` is a preference, `stage` defaults to `prod`, and `ref` pins a release
     (each publisher's package is checked at that ref)
   - an existing **catalog entry** (its `url` is used to infer the DCS API base)
