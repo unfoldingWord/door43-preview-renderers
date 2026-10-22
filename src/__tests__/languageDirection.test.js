@@ -140,7 +140,7 @@ describe('mixed-direction quotes', () => {
     expect(textDirection('\u060C \u03A0\u03B1\u1FE6\u03BB\u03BF\u03C2')).toBe('ltr');
     expect(textDirection('\u0661\u0662 \u03A0\u03B1\u1FE6\u03BB\u03BF\u03C2')).toBe('ltr');
     expect(textDirection('\u0661\u0662\u060C')).toBe('');
-    expect(isolatedQuoteHtml('\u060C \u03A0\u03B1\u1FE6\u03BB\u03BF\u03C2', 'rtl')).toBe(
+    expect(isolatedQuoteHtml('\u060C \u03A0\u03B1\u1FE6\u03BB\u03BF\u03C2')).toBe(
       '<bdi dir="ltr">\u060C \u03A0\u03B1\u1FE6\u03BB\u03BF\u03C2</bdi>'
     );
   });
@@ -151,27 +151,65 @@ describe('mixed-direction quotes', () => {
     );
   });
 
-  test('isolatedQuoteHtml wraps only a quote that runs the other way', () => {
-    expect(isolatedQuoteHtml('בְּרֵאשִׁית', 'ltr')).toBe('<bdi dir="rtl">בְּרֵאשִׁית</bdi>');
-    expect(isolatedQuoteHtml('Paul', 'ltr')).toBe('Paul');
-    expect(isolatedQuoteHtml('ملاحظة', 'rtl')).toBe('ملاحظة');
-    expect(isolatedQuoteHtml('a <b> & c', 'rtl')).toBe('<bdi dir="ltr">a &lt;b&gt; &amp; c</bdi>');
+  test('isolatedQuoteHtml isolates every quote in its own direction', () => {
+    expect(isolatedQuoteHtml('בְּרֵאשִׁית')).toBe('<bdi dir="rtl">בְּרֵאשִׁית</bdi>');
+    expect(isolatedQuoteHtml('Paul')).toBe('<bdi dir="ltr">Paul</bdi>');
+    expect(isolatedQuoteHtml('ملاحظة')).toBe('<bdi dir="rtl">ملاحظة</bdi>');
+    expect(isolatedQuoteHtml('a <b> & c')).toBe('<bdi dir="ltr">a &lt;b&gt; &amp; c</bdi>');
+    // No letter, no direction to isolate: escaped and unwrapped.
+    expect(isolatedQuoteHtml('1:1 <')).toBe('1:1 &lt;');
+    expect(isolatedQuoteHtml('')).toBe('');
   });
 
   test('a Hebrew fallback quote in English notes is isolated as right-to-left', () => {
-    const header = renderQuoteHeader({ Quote: 'בְּרֵאשִׁית' }, [], {}, 'ltr');
+    const header = renderQuoteHeader({ Quote: 'בְּרֵאשִׁית' }, []);
     expect(header).toContain('<strong><bdi dir="rtl">בְּרֵאשִׁית</bdi></strong>');
   });
 
-  test('English quotes in English notes are unchanged', () => {
-    const header = renderQuoteHeader(
-      { GLQuotes: { en_ult: { Quote: 'Paul' } } },
-      [{ id: 'ult', abbr: 'ULT' }],
-      {},
-      'ltr'
-    );
-    expect(header).toContain('<strong>Paul</strong>');
-    expect(header).not.toContain('<bdi');
+  test('an English quote is isolated as left-to-right', () => {
+    const header = renderQuoteHeader({ GLQuotes: { en_ult: { Quote: 'Paul' } } }, [
+      { id: 'ult', abbr: 'ULT' },
+    ]);
+    expect(header).toContain('<strong><bdi dir="ltr">Paul</bdi></strong>');
+  });
+
+  test('English notes composed right to left keep their quotes isolated (#61)', () => {
+    const englishNotes = {
+      ...arabicNotes(),
+      language: 'en',
+      languageTitle: 'English',
+      direction: 'ltr',
+      books: {
+        tit: {
+          title: 'Titus',
+          chapters: {
+            1: {
+              verses: {
+                1: [
+                  {
+                    ID: 'e1',
+                    Reference: '1:1',
+                    Quote: 'Παῦλος',
+                    GLQuotes: { en_ult: { Quote: 'Paul' } },
+                    Occurrence: '1',
+                    Note: 'A note.',
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
+      extras: { ult: { type: 'usfm', subject: 'Aligned Bible', books: {} } },
+    };
+    const englishHtmlData = renderHtmlData(englishNotes);
+    // The sections do not depend on the direction they were rendered for, so a
+    // compose-time override cannot leave a quote running the other way unwrapped.
+    for (const media of ['screen', 'print']) {
+      const html = renderHTML(englishHtmlData, { media, direction: 'rtl' });
+      expect(html).toContain('<html lang="en" dir="rtl">');
+      expect(html).toContain('<strong><bdi dir="ltr">Paul</bdi></strong>');
+    }
   });
 
   test('htmlRootAttributes defaults to English, left to right', () => {

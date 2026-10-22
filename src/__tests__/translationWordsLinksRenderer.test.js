@@ -147,10 +147,14 @@ describe('renderTranslationWordsLinksHtml — verse layout (default)', () => {
   test('lists each word with a GL quote per Bible linked to its article', () => {
     expect(body).toContain('class="twl-col-label">ULT<');
     expect(body).toContain('class="twl-col-label">UST<');
-    expect(body).toContain('<a href="#nav-tit--tw-names-paul" class="internal-link">Paul</a>');
-    expect(body).toContain('<a href="#nav-tit--tw-names-paul" class="internal-link">I, Paul</a>');
     expect(body).toContain(
-      '<a href="#nav-tit--tw-other-servant" class="internal-link">servant</a>'
+      '<a href="#nav-tit--tw-names-paul" class="internal-link"><bdi dir="ltr">Paul</bdi></a>'
+    );
+    expect(body).toContain(
+      '<a href="#nav-tit--tw-names-paul" class="internal-link"><bdi dir="ltr">I, Paul</bdi></a>'
+    );
+    expect(body).toContain(
+      '<a href="#nav-tit--tw-other-servant" class="internal-link"><bdi dir="ltr">servant</bdi></a>'
     );
     // No table heading inside a verse — the verse header already says what it is.
     expect(body).not.toContain('>Translation Words</h4>');
@@ -206,7 +210,9 @@ describe('renderTranslationWordsLinksHtml — verse layout options', () => {
     expect(sections.body).toContain('twl-verse-table');
     // No appendix, so the words must not link to article anchors that were never emitted.
     expect(sections.body).not.toContain('--tw-');
-    expect(sections.body).toContain('<a href="#" class="external-ref">Paul</a>');
+    expect(sections.body).toContain(
+      '<a href="#" class="external-ref"><bdi dir="ltr">Paul</bdi></a>'
+    );
   });
 
   test("dedupe: 'chapter' lists a word once per chapter, dropping verses left empty", () => {
@@ -218,7 +224,9 @@ describe('renderTranslationWordsLinksHtml — verse layout options', () => {
     expect(body).toContain('id="nav-tit-1-1"');
     expect(body).not.toContain('id="nav-tit-1-3"');
     expect(body).toContain('id="nav-tit-2-1"');
-    expect(body.match(/nav-tit--tw-kt-god" class="internal-link">God<\/a>/g)).toHaveLength(2 * 2);
+    expect(
+      body.match(/nav-tit--tw-kt-god" class="internal-link"><bdi dir="ltr">God<\/bdi><\/a>/g)
+    ).toHaveLength(2 * 2);
   });
 
   test("dedupe: 'book' lists a word once in the whole book", () => {
@@ -237,7 +245,7 @@ describe('renderTranslationWordsLinksHtml — verse layout options', () => {
     delete data.extras.ust;
     const { sections } = renderTranslationWordsLinksHtml(data);
     expect(sections.body).toContain('class="twl-col-label">Quote<');
-    expect(sections.body).toContain('>Παῦλος</a>');
+    expect(sections.body).toContain('><bdi dir="ltr">Παῦλος</bdi></a>');
     expect(sections.body).not.toContain('twl-scripture-cols');
   });
 
@@ -309,7 +317,9 @@ describe('renderTranslationWordsLinksHtml — OBS', () => {
 
   test('lists each word with the GL words linked to its article', () => {
     const { sections } = renderTranslationWordsLinksHtml(buildObsTwl());
-    expect(sections.body).toContain('href="#nav-obs--tw-kt-god" class="internal-link">God</a>');
+    expect(sections.body).toContain(
+      'href="#nav-obs--tw-kt-god" class="internal-link"><bdi dir="ltr">God</bdi></a>'
+    );
     expect(sections.appendices.tw['kt/god'].title).toBe('God');
   });
 });
@@ -333,7 +343,7 @@ describe('renderTranslationWordsLinksHtml — glossary layout', () => {
     expect(body).toContain('The one true God.');
     // References: chapter:verse with the literal (ULT) quote, once per verse.
     expect(body).toContain(
-      '<span class="twl-ref-label">Titus:</span> <span class="twl-ref">1:1 <span class="twl-ref-quote">(God)</span></span>, <span class="twl-ref">1:3 <span class="twl-ref-quote">(God)</span></span>, <span class="twl-ref">2:1 <span class="twl-ref-quote">(God)</span></span>'
+      '<span class="twl-ref-label">Titus:</span> <span class="twl-ref">1:1 <span class="twl-ref-quote">(<bdi dir="ltr">God</bdi>)</span></span>, <span class="twl-ref">1:3 <span class="twl-ref-quote">(<bdi dir="ltr">God</bdi>)</span></span>, <span class="twl-ref">2:1 <span class="twl-ref-quote">(<bdi dir="ltr">God</bdi>)</span></span>'
     );
   });
 
@@ -350,7 +360,7 @@ describe('renderTranslationWordsLinksHtml — glossary layout', () => {
     }).sections.body;
     expect(concordance).toContain('>Paul, Saul</a></h4>');
     expect(concordance).not.toContain('Paul was an apostle.');
-    expect(concordance).toContain('twl-ref-quote">(Paul)');
+    expect(concordance).toContain('twl-ref-quote">(<bdi dir="ltr">Paul</bdi>)');
   });
 
   test('TOC lists the categories under the book', () => {
@@ -403,9 +413,11 @@ describe('renderTranslationWordsLinksHtml — several books', () => {
     expect(tw['names/onesimus'].id).toBe('nav-tit--tw-names-onesimus');
     // Philemon's word table points at the appendix that exists, not a dead anchor.
     expect(sections.body).toContain(
-      '<a href="#nav-tit--tw-names-onesimus" class="internal-link">Onesimus</a>'
+      '<a href="#nav-tit--tw-names-onesimus" class="internal-link"><bdi dir="ltr">Onesimus</bdi></a>'
     );
-    expect(sections.body).toContain('<a href="#nav-tit--tw-kt-god" class="internal-link">God</a>');
+    expect(sections.body).toContain(
+      '<a href="#nav-tit--tw-kt-god" class="internal-link"><bdi dir="ltr">God</bdi></a>'
+    );
     expect(sections.body).not.toContain('nav-phm--tw-');
     expect(sections.body).not.toContain('class="external-ref"');
     expect(tw['kt/god'].html).toContain('href="#nav-tit--tw-names-onesimus"');

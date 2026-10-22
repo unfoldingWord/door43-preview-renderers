@@ -632,12 +632,11 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
           });
 
           // Quote header — one line per Bible (ULT/UST) plus the original quote
-          const quoteHeader = renderQuoteHeader(
-            note,
-            bibles,
-            { header: 'tn-note-header', quote: 'tn-note-quote', tag: 'tn-bible-tag' },
-            resourceData.direction
-          );
+          const quoteHeader = renderQuoteHeader(note, bibles, {
+            header: 'tn-note-header',
+            quote: 'tn-note-quote',
+            tag: 'tn-bible-tag',
+          });
 
           // Introduction notes are marked so print CSS can let them flow; every
           // other note is kept whole on one page.
@@ -662,7 +661,6 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
           bodyParts.push(
             renderTwlTable(twlRows, {
               bibles,
-              direction: resourceData.direction,
               bookId,
               chapterKey,
               verseKey,
