@@ -1,4 +1,5 @@
 import { removeAlignments } from './usfm/removeAlignments.js';
+import { loggerFor } from './logger.js';
 import { contentSourceFor } from './contentSource.js';
 import { BibleBookData } from './constants.js';
 
@@ -40,7 +41,7 @@ export async function extractRcAlignedBibleData(catalogEntry, books = [], option
       (ing) => ing.identifier?.toLowerCase() === bookId
     );
     if (!ingredient || !ingredient.path) {
-      console.warn(`No ingredient found for book: ${bookId}`);
+      loggerFor(options).warn(`No ingredient found for book: ${bookId}`);
       continue;
     }
 

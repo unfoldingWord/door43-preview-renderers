@@ -1,4 +1,5 @@
 import { contentSourceFor, entryCoords } from './contentSource.js';
+import { loggerFor } from './logger.js';
 import { applyTwlQuoteTrimming } from './twlQuoteTrimming.js';
 import { BibleBookData } from './constants.js';
 import { indexUsfmBook } from './quotes/usfmBookIndex.js';
@@ -131,7 +132,7 @@ function buildBibleLinks(catalogEntries) {
  * fails (also when a directory source refuses it); that Bible then gives no GL
  * quotes. Nothing is downloaded in its place.
  */
-async function fetchBookUsfm(entry, bookId, contentSource, quiet) {
+async function fetchBookUsfm(entry, bookId, contentSource, logger) {
   const ingredient = entry.ingredients?.find(
     (ing) => ing.identifier?.toLowerCase() === bookId.toLowerCase()
   );
@@ -140,7 +141,7 @@ async function fetchBookUsfm(entry, bookId, contentSource, quiet) {
   try {
     return await contentSource.readFile(entry, ingredient.path);
   } catch (e) {
-    if (!quiet) console.warn(`Could not preload ${owner}/${repo}/${ref} ${bookId}: ${e.message}`);
+    logger.warn(`Could not read ${owner}/${repo}/${ref} ${bookId} for GL quotes: ${e.message}`);
     return undefined;
   }
 }
@@ -166,17 +167,17 @@ async function convertQuotes(rows, bookCode, bibleEntries, options = {}) {
   if (glEntries.length === 0) return { converted: 0, missed: [] };
 
   const contentSource = contentSourceFor(options);
-  const quiet = options.quiet !== false;
+  const logger = loggerFor(options);
   const olEntry = bibleEntries.find((e) => e.subject === olSubjectForBook(bookCode));
   if (!olEntry) {
-    if (!quiet) console.warn(`No original-language Bible for ${bookCode}; GL quotes skipped`);
+    logger.warn(`No original-language Bible for ${bookCode}; GL quotes skipped`);
     return { converted: 0, missed: [] };
   }
 
   // Fetch every Bible the lookup needs, concurrently.
   const [glContents, olContent] = await Promise.all([
-    Promise.all(glEntries.map((entry) => fetchBookUsfm(entry, bookCode, contentSource, quiet))),
-    fetchBookUsfm(olEntry, bookCode, contentSource, quiet),
+    Promise.all(glEntries.map((entry) => fetchBookUsfm(entry, bookCode, contentSource, logger))),
+    fetchBookUsfm(olEntry, bookCode, contentSource, logger),
   ]);
   if (olContent == null) return { converted: 0, missed: [] };
 
@@ -192,8 +193,10 @@ async function convertQuotes(rows, bookCode, bibleEntries, options = {}) {
   // addGlQuotes keeps a GLQuotes[repo] the row already has on purpose: a GL quote
   // an editor put in the published TSV wins over the computed one.
   const result = addGlQuotes(rows, { source, bibles });
-  if (result.missed.length && !quiet) {
-    console.warn(`${result.missed.length} quote(s) in ${bookCode} had no aligned words`);
+  // Progress, not a fault: a quote whose words are not aligned falls back to
+  // the original-language quote.
+  if (result.missed.length) {
+    logger.info(`${result.missed.length} quote(s) in ${bookCode} had no aligned words`);
   }
   return result;
 }
@@ -275,7 +278,7 @@ export async function extractRcTsvData(catalogEntry, books, options = {}, catalo
     // Find the ingredient for this book
     const ingredient = catalogEntry.ingredients.find((ing) => ing.identifier === bookId);
     if (!ingredient) {
-      console.warn(`No ingredient found for book: ${bookId}`);
+      loggerFor(options).warn(`No ingredient found for book: ${bookId}`);
       continue;
     }
 
@@ -292,9 +295,7 @@ export async function extractRcTsvData(catalogEntry, books, options = {}, catalo
       try {
         await convertQuotes(normalizedRows, bookId, bibleEntriesForGl, options);
       } catch (e) {
-        if (!options.quiet) {
-          console.warn(`GL quote lookup failed for ${bookId}: ${e.message}`);
-        }
+        loggerFor(options).warn(`GL quote lookup failed for ${bookId}: ${e.message}`);
       }
     }
 
@@ -338,6 +339,7 @@ export async function extractRcTsvData(catalogEntry, books, options = {}, catalo
             {
               dcs_api_url,
               quiet: options.quiet || false,
+              logger: options.logger,
               // Extras come from where the resource came from.
               contentSource: options.contentSource,
               glBibleEntries: bibleEntriesForGl,
@@ -349,9 +351,7 @@ export async function extractRcTsvData(catalogEntry, books, options = {}, catalo
         } catch (e) {
           // Dependency resource doesn't have the requested books — skip gracefully.
           // This is expected, e.g., when requesting NT book 'tit' from Hebrew OT.
-          if (!options.quiet) {
-            console.warn(`Skipping extra resource ${identifier}: ${e.message}`);
-          }
+          loggerFor(options).warn(`Skipping extra resource ${identifier}: ${e.message}`);
           return null;
         }
       })

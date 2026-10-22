@@ -1,6 +1,7 @@
 import yaml from 'js-yaml';
 import { readLicenseFromZip } from './dcsApi.js';
 import { contentSourceFor } from './contentSource.js';
+import { loggerFor } from './logger.js';
 
 /**
  * Extract Translation Academy data from RC format (markdown files in article directories)
@@ -45,7 +46,7 @@ export async function extractRcTaData(catalogEntry, options = {}) {
         try {
           toc = yaml.load(tocContent) || toc;
         } catch (e) {
-          console.warn(`Failed to parse toc.yaml at ${tocPath}:`, e);
+          loggerFor(options).warn(`Failed to parse toc.yaml at ${tocPath}: ${e.message}`);
         }
         break;
       }
@@ -67,7 +68,7 @@ export async function extractRcTaData(catalogEntry, options = {}) {
         try {
           config = yaml.load(configContent) || {};
         } catch (e) {
-          console.warn(`Failed to parse config.yaml at ${configPath}:`, e);
+          loggerFor(options).warn(`Failed to parse config.yaml at ${configPath}: ${e.message}`);
         }
         break;
       }

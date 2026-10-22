@@ -1,4 +1,5 @@
 import { contentSourceFor } from './contentSource.js';
+import { loggerFor } from './logger.js';
 import { BibleBookData } from './constants.js';
 
 /**
@@ -132,7 +133,7 @@ export async function extractTsBibleData(catalogEntry, books = [], options = {})
       (ing) => ing.identifier?.toLowerCase() === bookId
     );
     if (!ingredient) {
-      console.warn(`No ingredient found for book: ${bookId}`);
+      loggerFor(options).warn(`No ingredient found for book: ${bookId}`);
       continue;
     }
 

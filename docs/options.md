@@ -54,7 +54,8 @@ catalog entry object, or an existing `resourceData` (returned unchanged).
 | `input.ref` | string | — | ✅ | Tag, branch, or commit (e.g. `v91`, `master`). |
 | `input.books` | string[] | `[]` | ✅ | Book ids to fetch (e.g. `['tit','rom']`). What an empty list means, and which subjects ignore it: [the `books` rule](https://github.com/unfoldingWord/door43-preview-renderers/blob/main/skills/door43-renderers-maintainer/references/contracts.md#books-at-stage-2). |
 | `options.dcs_api_url` | string | `https://git.door43.org/api/v1` | ✅ | DCS API base URL. |
-| `options.quiet` | boolean | `false` | ✅ | Suppress progress logging. |
+| `options.quiet` | boolean | `false` | ✅ | Suppress progress logging (the URLs fetched). Warnings (a book or supporting resource that could not be read, GL quotes that could not be worked out) are still reported. |
+| `options.logger` | `{ info, warn }` | the console | ✅ | Where progress (`info`) and warnings (`warn`) go, per call. Also taken by `getAllCatalogEntries` and the stage-0 functions. The CLI passes one that writes to stderr. |
 | `options.books` | string[] | `[]` | ✅ | Books, when `input` does not carry them (catalog-entry form). |
 | `options.extraSubjects` | string[] | `[]` | ✅ | Blueprint subjects to fetch as extras beyond the ones the subject requires. `['TSV Translation Questions']` on Translation Notes (`['TSV OBS Translation Questions']` on OBS Translation Notes) fetches the package's questions, which the notes then show under each verse or frame (`includeQuestions`). A subject the blueprint lacks is ignored. |
 
