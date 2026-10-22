@@ -50,15 +50,6 @@ export function renderHtmlData(resourceData, options = {}) {
       { code: 'INVALID_INPUT' }
     );
   }
-  if (resourceData.error) {
-    // getResourceData's 1.x `{ error }` return: throw it as the ResourceError
-    // it was, with its code, status and URL.
-    throw new ResourceError(resourceData.error, {
-      code: resourceData.code,
-      status: resourceData.status,
-      url: resourceData.url,
-    });
-  }
 
   const { renderOptions = {} } = options;
 

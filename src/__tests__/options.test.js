@@ -2,51 +2,29 @@ import { jest } from '@jest/globals';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+import {
+  dcsApiUrlOf,
+  dcsApiUrlFrom,
+  splitInternalOptions,
+  DEFAULT_DCS_API_URL,
+} from '../options.js';
 
 /**
- * Option names in 1.x (#34, part C): `dcsApiUrl`, with the deprecated
- * `dcs_api_url` still read (one warning per process); getResourceData's
- * internal plumbing in a private argument, still honored on `options` with one
- * warning; and the caller's options never written to.
- *
- * Each test imports a fresh copy of the module, so "once per process" starts
- * over.
+ * Option names (#34, part C): `dcsApiUrl` is the one name for the DCS API;
+ * getResourceData's internal plumbing travels only in its private third
+ * argument; and the caller's options are never written to.
  */
-const fresh = async () => {
-  jest.resetModules();
-  return import('../options.js');
-};
 const spyLogger = () => ({ info: jest.fn(), warn: jest.fn() });
 
 describe('dcsApiUrlOf / dcsApiUrlFrom', () => {
-  test('dcsApiUrl wins, then the old spelling, then the default', async () => {
-    const { dcsApiUrlOf, DEFAULT_DCS_API_URL } = await fresh();
-    const logger = spyLogger();
-    expect(
-      dcsApiUrlOf({
-        dcsApiUrl: 'https://a.test/api/v1',
-        dcs_api_url: 'https://b.test/api/v1',
-        logger,
-      })
-    ).toBe('https://a.test/api/v1');
-    expect(logger.warn).not.toHaveBeenCalled();
-    expect(dcsApiUrlOf({ logger })).toBe(DEFAULT_DCS_API_URL);
-    expect(dcsApiUrlOf({ dcs_api_url: 'https://b.test/api/v1', logger })).toBe(
-      'https://b.test/api/v1'
-    );
+  test('dcsApiUrl, else the default; the old snake_case name is not read', () => {
+    expect(dcsApiUrlOf({ dcsApiUrl: 'https://a.test/api/v1' })).toBe('https://a.test/api/v1');
+    expect(dcsApiUrlOf({})).toBe(DEFAULT_DCS_API_URL);
+    expect(dcsApiUrlOf(undefined)).toBe(DEFAULT_DCS_API_URL);
+    expect(dcsApiUrlOf({ dcs_api_url: 'https://b.test/api/v1' })).toBe(DEFAULT_DCS_API_URL);
   });
 
-  test('the old spelling is reported once per process', async () => {
-    const { dcsApiUrlOf } = await fresh();
-    const logger = spyLogger();
-    dcsApiUrlOf({ dcs_api_url: 'https://b.test/api/v1', logger });
-    dcsApiUrlOf({ dcs_api_url: 'https://c.test/api/v1', logger });
-    expect(logger.warn).toHaveBeenCalledTimes(1);
-    expect(logger.warn.mock.calls[0][0]).toMatch(/`dcs_api_url` is deprecated; pass `dcsApiUrl`/);
-  });
-
-  test('dcsApiUrlFrom takes the first object that names a URL', async () => {
-    const { dcsApiUrlFrom, DEFAULT_DCS_API_URL } = await fresh();
+  test('dcsApiUrlFrom takes the first object that names a URL', () => {
     expect(dcsApiUrlFrom({}, { dcsApiUrl: 'https://src.test/api/v1' })).toBe(
       'https://src.test/api/v1'
     );
@@ -59,54 +37,23 @@ describe('dcsApiUrlOf / dcsApiUrlFrom', () => {
     expect(dcsApiUrlFrom(undefined, {})).toBe(DEFAULT_DCS_API_URL);
   });
 
-  test("an empty URL is the caller's, not the public default", async () => {
-    const { dcsApiUrlOf, dcsApiUrlFrom } = await fresh();
-    const logger = spyLogger();
+  test("an empty URL is the caller's, not the public default", () => {
     expect(dcsApiUrlOf({ dcsApiUrl: '' })).toBe('');
-    expect(dcsApiUrlOf({ dcs_api_url: '', logger })).toBe('');
-    expect(dcsApiUrlOf({ dcsApiUrl: '', dcs_api_url: 'https://b.test/api/v1' })).toBe('');
     expect(dcsApiUrlFrom({ dcsApiUrl: '' }, { dcsApiUrl: 'https://src.test/api/v1' })).toBe('');
-  });
-
-  test("the old spelling on a descriptor warns through the options' logger", async () => {
-    const { dcsApiUrlFrom } = await fresh();
-    const logger = spyLogger();
-    expect(dcsApiUrlFrom({ logger }, { dcs_api_url: 'https://src.test/api/v1' })).toBe(
-      'https://src.test/api/v1'
-    );
-    expect(logger.warn).toHaveBeenCalledTimes(1);
   });
 });
 
 describe('splitInternalOptions', () => {
-  test('internal keys leave the public options, with one warning; the private argument wins', async () => {
-    const { splitInternalOptions } = await fresh();
+  test('internal keys on options are dropped; only the private argument reaches the context', () => {
     const logger = spyLogger();
-    const caller = { quiet: true, logger, isExtra: true, catalogEntry: { name: 'legacy' } };
+    const caller = { quiet: true, logger, isExtra: true, catalogEntry: { name: 'from-options' } };
     const { options, context } = splitInternalOptions(caller, {
       catalogEntry: { name: 'private' },
     });
     expect(options).toEqual({ quiet: true, logger });
-    expect(context).toMatchObject({
-      quiet: true,
-      isExtra: true,
-      catalogEntry: { name: 'private' },
-    });
+    expect(context).toEqual({ quiet: true, logger, catalogEntry: { name: 'private' } });
     expect(caller.isExtra).toBe(true); // the caller's object is untouched
-    splitInternalOptions({ glBibleEntries: [], logger });
-    expect(logger.warn).toHaveBeenCalledTimes(1);
-    expect(logger.warn.mock.calls[0][0]).toMatch(
-      /`isExtra`, `catalogEntry` are internal and deprecated/
-    );
-  });
-
-  test('no internal keys, no warning', async () => {
-    const { splitInternalOptions } = await fresh();
-    const logger = spyLogger();
-    expect(splitInternalOptions({ quiet: true, logger }, {}).context).toEqual({
-      quiet: true,
-      logger,
-    });
+    expect(splitInternalOptions({ contentSource: {} }).context).toEqual({});
     expect(logger.warn).not.toHaveBeenCalled();
   });
 });

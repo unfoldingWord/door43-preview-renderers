@@ -21,7 +21,7 @@ describe('getAllCatalogEntries', () => {
 
     const result = await getAllCatalogEntries(
       { owner: 'unfoldingWord', repo: 'en_tn', ref: 'v80', books: ['tit'] },
-      { dcs_api_url: 'https://git.door43.org/api/v1', quiet: true }
+      { dcsApiUrl: 'https://git.door43.org/api/v1', quiet: true }
     );
 
     expect(axiosGetMock).toHaveBeenCalledWith(
@@ -34,7 +34,7 @@ describe('getAllCatalogEntries', () => {
     expect(result.source).toMatchObject({ owner: 'unfoldingWord', repo: 'en_tn', ref: 'v80' });
   });
 
-  test('fetches from a catalog-entry source and infers dcs_api_url from its url', async () => {
+  test('fetches from a catalog-entry source and infers dcsApiUrl from its url', async () => {
     const entries = [{ owner: 'unfoldingWord', name: 'en_tw' }];
     axiosGetMock.mockResolvedValueOnce({ data: { data: entries } });
 
@@ -75,7 +75,6 @@ describe('getAllCatalogEntries', () => {
     );
     // An empty URL is the caller's (it fails at the request), never the entry's host.
     expect(await calledWith({ dcsApiUrl: '' })).toBe(bp);
-    expect(await calledWith({ dcs_api_url: '', logger: { info() {}, warn() {} } })).toBe(bp);
   });
 
   test('returns a CatalogSet source unchanged (passthrough)', async () => {

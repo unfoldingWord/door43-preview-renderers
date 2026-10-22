@@ -56,8 +56,7 @@ export async function getCatalogEntry(
  *   - a catalog entry object
  *   - existing **ResourceData** (returned unchanged — passthrough)
  * @param {Object} [options]
- * @param {string} [options.dcsApiUrl] - DCS API base URL (default: https://git.door43.org/api/v1;
- *   the deprecated `dcs_api_url` is still read)
+ * @param {string} [options.dcsApiUrl] - DCS API base URL (default: https://git.door43.org/api/v1)
  * @param {boolean} [options.quiet] - Suppress progress logging (warnings still reach the logger)
  * @param {Object} [options.logger] - `{ info, warn }` in place of the console
  * @param {Array<string>} [options.books] - Books (when not carried on `input`)
@@ -69,7 +68,7 @@ export async function getCatalogEntry(
  * @param {number} [options.archiveTimeoutMs] - Archive download time limit (default 120 s)
  * @param {Object} [internal] - Private plumbing between this call and its extras
  *   (`isExtra`, `catalogEntry`, `glBibleEntries`, `contentSource`); not for callers.
- *   1.x still honors these on `options`, with a deprecation warning
+ *   The same keys on `options` are ignored
  * @returns {Promise<Object>} ResourceData
  *
  * @example
@@ -107,27 +106,14 @@ export async function getResourceData(input, rawOptions = {}, internal = {}) {
     context.preEntries = input.catalogEntries;
   } else if (input && input.ref && input.repo) {
     // Descriptor { owner, repo, ref }
-    try {
-      catalogEntry = await getCatalogEntry(
-        input.owner,
-        input.repo,
-        input.ref,
-        dcsApiUrlOf(options),
-        quiet,
-        options.logger
-      );
-    } catch (e) {
-      // 1.x: return `{ error }` unless the caller asks for the thrown
-      // ResourceError (2.0 will always throw). The status and URL are kept.
-      if (options.throwOnError) throw e;
-      loggerFor(options).warn(e.message);
-      return {
-        error: e.message,
-        ...(e.code ? { code: e.code } : {}),
-        ...(e.status ? { status: e.status } : {}),
-        ...(e.url ? { url: e.url } : {}),
-      };
-    }
+    catalogEntry = await getCatalogEntry(
+      input.owner,
+      input.repo,
+      input.ref,
+      dcsApiUrlOf(options),
+      quiet,
+      options.logger
+    );
   } else if (input && (input.name || input.branch_or_tag_name || input.ingredients)) {
     // A catalog entry object
     catalogEntry = input;
@@ -191,7 +177,7 @@ export async function getResourceDataFromDirectory(catalogEntries, dirPath, opti
  * `language` and `direction` on to the document's `lang` and `dir`.
  */
 function withLanguage(data, catalogEntry) {
-  if (!data || typeof data !== 'object' || data.error) return data;
+  if (!data || typeof data !== 'object') return data;
   const pick = (key) => catalogEntry[key] ?? catalogEntry.repo?.[key];
   const fields = {};
   if (pick('language')) fields.language = pick('language');

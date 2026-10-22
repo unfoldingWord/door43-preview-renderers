@@ -3,7 +3,6 @@ import { SofriaRenderFromProskomma, render } from 'proskomma-json-tools';
 import { renderers as sofriaRenderers } from './sofria2html.js';
 import { convertMarkdown } from '../converters/markdownConverter.js';
 import { buildCoverPage, coverCss, runningMarkerWebCss } from './printDocumentAssembler.js';
-import { htmlRootAttributes } from './scriptureColumns.js';
 
 const defaultFlags = {
   showWordAtts: false,
@@ -195,21 +194,6 @@ function buildBooksMap(resourceData, requestedBooks = []) {
   return output;
 }
 
-function buildFullHtmlDocument(title, css, content, resource = {}) {
-  return `<!DOCTYPE html>
-<html ${htmlRootAttributes(resource)}>
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${escapeHtml(title)}</title>
-  <style>${css}</style>
-</head>
-<body>
-  ${content}
-</body>
-</html>`;
-}
-
 /**
  * Render aligned Bible resource data into HTML sections and a full HTML document.
  *
@@ -305,10 +289,6 @@ export function renderAlignedBibleHtml(resourceData, options = {}) {
     ? `<div class="license-text">${convertMarkdown(resourceData.license)}</div>`
     : '';
   const body = bodyParts.join('\n');
-  const pageBody = [`<div class="section cover-page">${cover}</div>`, copyright, body]
-    .filter(Boolean)
-    .join('\n');
-
   return {
     subject: resourceData.subject,
     title: coverTitle,
@@ -323,8 +303,5 @@ export function renderAlignedBibleHtml(resourceData, options = {}) {
       webView: includeRawUsfmView ? buildRawUsfmWebView(booksMap) : null,
     },
     renderedBooks,
-    // Deprecated: renderHtmlData drops it and renderHTML composes the document.
-    // Kept for callers of this renderer in 1.x; removed in 2.0.
-    fullHtml: buildFullHtmlDocument(coverTitle, webCss, pageBody, resourceData),
   };
 }

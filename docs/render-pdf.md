@@ -23,7 +23,7 @@ const resourceData = await getResourceData(
 const htmlData = renderHtmlData(resourceData);
 
 // PDF bytes (Buffer); pass `outputPath` to write to disk instead.
-const pdf = await renderPdf(htmlData, { pageSize: 'A4_PORTRAIT' });
+const pdf = await renderPdf(htmlData, { print: { pageSize: 'A4_PORTRAIT' } });
 ```
 
 Or straight from the command line (headless, no browser, no server):
@@ -65,7 +65,7 @@ options (see the full [Rendering options](./options.md) reference):
 - `show` (which sections; `appendices: ['tw']` keeps one kind), `columns`, and
   `print.*`: `pageSize`, `margins`, `runningHeader`, `footerHtml`,
   `pageNumber.position` and `pageNumber.show`
-- `pageSize` and `footerHtml` also work at the top level, as before. A page size is a
+- A page size (`print.pageSize`) is a
   `PAGE_SIZES` key (`'A4_PORTRAIT'`, `'US_LETTER_PORTRAIT'`, `'TRADE'`, …), a friendly
   label (`'A4'`, `'US Letter'`), or an explicit `{ width, height }` object using CSS
   lengths (e.g. `{ width: '6in', height: '9in' }`)

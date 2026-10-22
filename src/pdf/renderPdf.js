@@ -22,9 +22,6 @@ export { resolvePageSize };
  *   (uses `renderResult.sections`; `title`/`abbreviation`/`version` seed cover fallbacks)
  * @param {Object} [options] - renderHTML's composition options (`show`, `columns`,
  *   `language`, `direction`, `print.*`; `media` is always 'print'), plus:
- * @param {string|{width:string,height:string}} [options.pageSize] - Alias of
- *   `print.pageSize` (default 'A4_PORTRAIT')
- * @param {string} [options.footerHtml] - Alias of `print.footerHtml`
  * @param {string} [options.title] - Cover title override (defaults to renderResult.title)
  * @param {string} [options.version] - Cover version override
  * @param {string} [options.abbreviation] - Cover abbreviation override (logo selection)
@@ -46,8 +43,6 @@ export async function renderPdf(renderResult, options = {}) {
   }
 
   const {
-    pageSize,
-    footerHtml,
     title,
     version,
     abbreviation,
@@ -68,17 +63,7 @@ export async function renderPdf(renderResult, options = {}) {
       version: version ?? renderResult.version,
       abbreviation: abbreviation ?? renderResult.abbreviation,
     },
-    {
-      ...composeOptions,
-      media: 'print',
-      engine: 'weasyprint',
-      print: {
-        ...(pageSize != null ? { pageSize } : {}),
-        ...(footerHtml != null ? { footerHtml } : {}),
-        // The nested names win over the flat aliases.
-        ...(composeOptions.print || {}),
-      },
-    }
+    { ...composeOptions, media: 'print', engine: 'weasyprint' }
   );
 
   // Remote service (no local binary needed) vs the local `weasyprint` binary.

@@ -363,7 +363,7 @@ export async function extractRcTsvData(catalogEntry, books, options = {}, catalo
               isExtra: true, // prevent recursive dependency fetching
             }
           );
-          return resourceData && !resourceData.error ? [identifier, resourceData] : null;
+          return resourceData ? [identifier, resourceData] : null;
         } catch (e) {
           // Dependency resource doesn't have the requested books — skip gracefully.
           // This is expected, e.g., when requesting NT book 'tit' from Hebrew OT.

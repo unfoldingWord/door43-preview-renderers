@@ -53,7 +53,6 @@ export default function PipelineDemo() {
         .map((b) => b.trim().toLowerCase())
         .filter(Boolean);
       const data = await getResourceData({ owner, repo, ref, books }, liveDataOptions);
-      if (!data || data.error) throw new Error(data?.error || 'No resource data');
       setResourceData(data);
     } catch (e) {
       setError(e.message);

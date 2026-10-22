@@ -365,7 +365,7 @@ async function main() {
         const htmlData = renderHtmlData(resourceData, { books: set.source.books });
         const pdfOutputPath = path.resolve(output);
         await renderPdf(htmlData, {
-          pageSize: resolveCliPageSize(params.pageSize),
+          print: { pageSize: resolveCliPageSize(params.pageSize) },
           columns: params.columns || 1,
           outputPath: pdfOutputPath,
           // Offload to a hosted weasyprint-pdf service instead of the local binary.

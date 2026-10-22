@@ -355,8 +355,8 @@ export const runningMarkerWebCss = `
 `;
 
 /**
- * Centering CSS for the cover when rendered as a standalone web document
- * (the renderers' `fullHtml`). Print uses its own cover-page rules in
+ * Centering CSS for the cover in the web document renderHTML() composes.
+ * Print uses its own cover-page rules in
  * getPrintCss(); these rules are scoped to `.cover-page` so they only affect
  * the cover block, not the rest of the page.
  */

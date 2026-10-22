@@ -52,7 +52,7 @@ describe('renderPdf', () => {
   test('assembles the print HTML and pipes it to the PDF engine (page size + content)', async () => {
     // weasyprintPath: 'cat' echoes the assembled HTML back as the "PDF" bytes.
     const out = await renderPdf(sampleRenderResult(), {
-      pageSize: 'US_LETTER_PORTRAIT',
+      print: { pageSize: 'US_LETTER_PORTRAIT' },
       weasyprintPath: 'cat',
     });
     const html = out.toString('utf8');
@@ -63,7 +63,7 @@ describe('renderPdf', () => {
 
   test('honours an explicit { width, height } page size', async () => {
     const out = await renderPdf(sampleRenderResult(), {
-      pageSize: { width: '6in', height: '9in' },
+      print: { pageSize: { width: '6in', height: '9in' } },
       weasyprintPath: 'cat',
     });
     expect(out.toString('utf8')).toContain('size: 6in 9in');
@@ -106,12 +106,13 @@ describe("renderPdf takes renderHTML's composition options (#33)", () => {
     expect(out).toContain('page: body-page;');
   });
 
-  test('the flat pageSize and footerHtml still work, and the nested names win', async () => {
-    const flat = await html({ pageSize: 'A5_PORTRAIT', footerHtml: '<p>FOOT</p>' });
-    expect(flat).toContain('size: 148.5mm 210mm');
-    expect(flat).toContain('<p>FOOT</p>');
-    const both = await html({ pageSize: 'A5_PORTRAIT', print: { pageSize: 'US_LETTER_PORTRAIT' } });
-    expect(both).toContain('size: 8.5in 11in');
+  test('page size and footer go under print; top-level pageSize and footerHtml are not read', async () => {
+    const nested = await html({ print: { pageSize: 'A5_PORTRAIT', footerHtml: '<p>FOOT</p>' } });
+    expect(nested).toContain('size: 148.5mm 210mm');
+    expect(nested).toContain('<p>FOOT</p>');
+    const flat = await html({ pageSize: 'A5_PORTRAIT', footerHtml: '<p>FLAT</p>' });
+    expect(flat).not.toContain('size: 148.5mm 210mm');
+    expect(flat).not.toContain('<p>FLAT</p>');
   });
 
   test('the running header is chosen by subject, as in renderHTML', async () => {

@@ -85,7 +85,7 @@ describe('OBS extraction (RC, SB, tS)', () => {
     `_${reference}_\n`;
   const read = (catalogEntry) =>
     getResourceDataFromDirectory([catalogEntry], dir, {
-      dcs_api_url: 'http://127.0.0.1:9/api/v1',
+      dcsApiUrl: 'http://127.0.0.1:9/api/v1',
       quiet: true,
     });
 

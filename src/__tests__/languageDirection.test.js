@@ -68,10 +68,8 @@ describe('an RTL resource through renderHtmlData and renderHTML', () => {
     expect(htmlData.sections.body).toContain('<bdi dir="ltr">Παῦλος</bdi>');
   });
 
-  test("the renderer's own full document carries the same attributes", () => {
-    expect(renderTranslationNotesHtml(arabicNotes()).fullHtml).toContain(
-      '<html lang="ar" dir="rtl">'
-    );
+  test('the renderer returns sections only, no document of its own', () => {
+    expect(renderTranslationNotesHtml(arabicNotes())).not.toHaveProperty('fullHtml');
   });
 
   test('a direction option other than ltr/rtl cannot reach the dir attribute', () => {

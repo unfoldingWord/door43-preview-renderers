@@ -58,9 +58,7 @@ export async function renderPreview(request = {}) {
   }
 
   const set = await getAllCatalogEntries(source, options);
-  // A copy: getResourceData notes the set's entries on the options it is given.
-  const resourceData = await getResourceData(set, { ...options });
-  if (resourceData?.error) throw new Error(`renderPreview: ${resourceData.error}`);
+  const resourceData = await getResourceData(set, options);
   const htmlData = renderHtmlData(resourceData, { ...options, books: set.source?.books });
 
   return output === 'pdf' ? renderPdf(htmlData, options) : renderHTML(htmlData, options);

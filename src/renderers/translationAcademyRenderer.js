@@ -1,7 +1,6 @@
 import { convertMarkdown } from '../converters/markdownConverter.js';
 import { buildCoverPage, coverCss, runningMarkerWebCss } from './printDocumentAssembler.js';
 import {
-  buildFullHtmlDocument,
   buildManualToc,
   createTextAnchorId,
   manualPrintCss,
@@ -119,10 +118,6 @@ export function renderTranslationAcademyHtml(resourceData, options = {}) {
     ? `<div class="license-text">${convertMarkdown(resourceData.license)}</div>`
     : '';
   const cssWeb = `${manualWebCss}\n.license-text { font-size: 0.9em; }\n${coverCss}\n${runningMarkerWebCss}\n`;
-  const pageBody = [`<div class="section cover-page">${cover}</div>`, copyright, body]
-    .filter(Boolean)
-    .join('\n');
-
   return {
     subject: resourceData.subject,
     title,
@@ -137,8 +132,5 @@ export function renderTranslationAcademyHtml(resourceData, options = {}) {
       },
     },
     manuals,
-    // Deprecated: renderHtmlData drops it and renderHTML composes the document.
-    // Kept for callers of this renderer in 1.x; removed in 2.0.
-    fullHtml: buildFullHtmlDocument(title, cssWeb, pageBody, resourceData),
   };
 }

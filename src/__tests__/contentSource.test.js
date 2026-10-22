@@ -143,7 +143,7 @@ describe('dcsContentSource.readArchive', () => {
 
   test('getResourceData options set the limits; a non-finite or non-positive one falls back', async () => {
     const tight = contentSourceFor({
-      dcs_api_url: `${dcs.origin}/api/v1`,
+      dcsApiUrl: `${dcs.origin}/api/v1`,
       archiveMaxBytes: 100,
       archiveTimeoutMs: 30000,
     });
@@ -152,7 +152,7 @@ describe('dcsContentSource.readArchive', () => {
     );
     // Infinity, 0 and NaN keep the default cap (100 MB), so the small archive reads.
     for (const archiveMaxBytes of [Infinity, 0, NaN]) {
-      const s = contentSourceFor({ dcs_api_url: `${dcs.origin}/api/v1`, archiveMaxBytes });
+      const s = contentSourceFor({ dcsApiUrl: `${dcs.origin}/api/v1`, archiveMaxBytes });
       await expect(s.readArchive(entry('/o/en_tw/archive/v91.zip'))).resolves.toBeDefined();
     }
   });

@@ -95,7 +95,7 @@ const countByUrl = () =>
 // --- tests -----------------------------------------------------------------
 describe('extractRcTsvData download accounting', () => {
   test('a Translation Notes book requests each distinct URL exactly once', async () => {
-    const result = await extractRcTsvData(tnEntry, ['tit'], { dcs_api_url: API, quiet: true }, [
+    const result = await extractRcTsvData(tnEntry, ['tit'], { dcsApiUrl: API, quiet: true }, [
       tnEntry,
       ultEntry,
       ugntEntry,
@@ -136,7 +136,7 @@ describe('extractRcTsvData download accounting', () => {
       }
       return respond(url);
     });
-    const result = await extractRcTsvData(tnEntry, ['tit'], { dcs_api_url: API, quiet: true }, [
+    const result = await extractRcTsvData(tnEntry, ['tit'], { dcsApiUrl: API, quiet: true }, [
       tnEntry,
       ultEntry,
       ugntEntry,
@@ -151,7 +151,7 @@ describe('extractRcTsvData download accounting', () => {
   });
 
   test('Translation Questions with no Quote get no GL quotes', async () => {
-    const result = await extractRcTsvData(tqEntry, ['tit'], { dcs_api_url: API, quiet: true }, [
+    const result = await extractRcTsvData(tqEntry, ['tit'], { dcsApiUrl: API, quiet: true }, [
       tqEntry,
       ultEntry,
       ugntEntry,
@@ -186,7 +186,7 @@ describe('extractRcTsvData download accounting', () => {
         })
     );
 
-    const run = extractRcTsvData(tnEntry, ['tit'], { dcs_api_url: API, quiet: true }, [
+    const run = extractRcTsvData(tnEntry, ['tit'], { dcsApiUrl: API, quiet: true }, [
       tnEntry,
       ugntEntry,
       ultEntry,

@@ -29,7 +29,7 @@ function formatDate(isoDate) {
  * @param {Object} catalogEntry - The main resource catalog entry
  * @param {Array<Object>} builtWith - Array of catalog entries for resources used in rendering
  * @param {Object} [options] - Options
- * @param {string} [options.dcsApiUrl] - DCS API base URL (`dcs_api_url`, deprecated, still read)
+ * @param {string} [options.dcsApiUrl] - DCS API base URL
  * @param {string} [options.generatorName] - Name of the generating tool
  * @param {string} [options.generatorVersion] - Version of the generating tool
  * @param {string} [options.generatorUrl] - URL of the generating tool

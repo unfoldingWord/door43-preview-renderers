@@ -56,7 +56,7 @@ const webHtml = renderHTML(htmlData);                       // continuous web pa
 const printHtml = renderHTML(htmlData, { media: 'print' }); // PagedJS/WeasyPrint-ready
 
 // 5. …or render a PDF directly (needs the weasyprint binary, or a pdfServiceUrl).
-const pdf = await renderPdf(htmlData, { pageSize: 'A4_PORTRAIT' });
+const pdf = await renderPdf(htmlData, { print: { pageSize: 'A4_PORTRAIT' } });
 ```
 
 See [Rendering options](./options.md) for every option each stage accepts.

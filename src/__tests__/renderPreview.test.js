@@ -3,7 +3,7 @@ import { renderPreview } from '../renderPreview.js';
 
 /**
  * renderPreview end to end, in process: a real HTTP server stands in for DCS
- * (`dcs_api_url`), nothing inside the library is mocked. For a PDF the
+ * (`dcsApiUrl`), nothing inside the library is mocked. For a PDF the
  * `weasyprint` binary is replaced by `cat`, so the "PDF" is the print document
  * WeasyPrint would have been given.
  */
@@ -78,7 +78,7 @@ beforeEach(() => {
   requests.length = 0;
 });
 
-const base = () => ({ dcs_api_url: api, quiet: true });
+const base = () => ({ dcsApiUrl: api, quiet: true });
 const blueprintCalls = () => requests.filter((u) => u.includes('/catalog/bp/')).length;
 
 describe('renderPreview', () => {
@@ -140,7 +140,7 @@ describe('renderPreview', () => {
       books: ['tit'],
       output: 'pdf',
       weasyprintPath: 'cat',
-      pageSize: 'A5_PORTRAIT',
+      print: { pageSize: 'A5_PORTRAIT' },
     });
     const html = pdf.toString('utf8');
     expect(html).toContain('size: 148.5mm 210mm');

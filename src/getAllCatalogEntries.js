@@ -16,8 +16,7 @@ const libraryVersion =
  * Resolve a `source` into { owner, repo, ref, books, dcsApiUrl }.
  *
  * `source` is either:
- *  - a descriptor: `{ owner, repo, ref, books?, dcsApiUrl? }`  (has `ref`; the
- *    deprecated `dcs_api_url` is still read)
+ *  - a descriptor: `{ owner, repo, ref, books?, dcsApiUrl? }`  (has `ref`)
  *  - a catalog entry: `{ owner, name, branch_or_tag_name, url, ... }`
  */
 function resolveDescriptor(source, options) {
@@ -29,7 +28,7 @@ function resolveDescriptor(source, options) {
       repo: source.repo,
       ref: source.ref,
       books: source.books || options.books || [],
-      // The options win over the descriptor; either may use the old spelling.
+      // The options win over the descriptor.
       dcsApiUrl: dcsApiUrlFrom(options, source),
     };
   }
@@ -63,7 +62,7 @@ function resolveDescriptor(source, options) {
  *   (the preferred publisher is found first, see findResources.js; its current
  *   release is used unless `ref` names one) | a catalog entry | a CatalogSet (returned as-is)
  * @param {Object} [options]
- * @param {string} [options.dcsApiUrl] - DCS API base URL (`dcs_api_url`, deprecated, still read)
+ * @param {string} [options.dcsApiUrl] - DCS API base URL
  * @param {boolean} [options.quiet] - Suppress logging
  * @param {Array<string>} [options.books] - Books (used with the catalog-entry source form)
  * @returns {Promise<{resourceVersion: string, libraryVersion: string, catalogEntries: Array, source: Object}>}
