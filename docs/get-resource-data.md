@@ -40,6 +40,35 @@ caller can compute the same set (for a cache key, for instance) without fetching
 `selectAlignedBibles(entries)` and `testamentOf(bookId)`. Their rules are in the
 [options reference](./options.md#catalog-selection-helpers).
 
+## From a local checkout: `getResourceDataFromDirectory`
+
+`getResourceDataFromDirectory(catalogEntries, dirPath, options?)` returns the same
+ResourceData from repositories checked out on disk (Node only). `dirPath` holds one
+folder per repository, named as its catalog entry names it, checked out at the
+entry's version:
+
+```
+checkouts/
+  en_tn/            tn_TIT.tsv, LICENSE.md, …
+  en_ult/  en_ust/  el-x-koine_ugnt/  en_ta/  en_tw/  en_twl/
+```
+
+The catalog entries say what each repository is and where its files are; pass the
+CatalogSet from `getAllCatalogEntries()` (save it with the CLI's `--output` to work
+offline later). The blueprint rules apply as online: only the supporting resources
+the subject needs are read, plus any `extraSubjects`.
+
+```js static
+const set = await getAllCatalogEntries({ owner: 'unfoldingWord', repo: 'en_tn', ref: 'v91', books: ['tit'] });
+const resourceData = await getResourceDataFromDirectory(set, '/path/to/checkouts');
+```
+
+Checked on en_tn v91 Titus: read from the v91 archives unpacked this way, with the
+network blocked, the ResourceData is byte-identical to the one from DCS. That
+covers the TSV, the aligned Bibles and Greek New Testament (GL quotes included),
+TA, TW and TWL. A Scripture Burrito, tC or tS repository is read the same way (a file by its
+ingredient path, or the whole tree), but has not been compared with DCS.
+
 ## Returns
 
 A Promise resolving to a **ResourceData** object. Every shape carries `type`,

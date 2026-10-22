@@ -23,7 +23,7 @@ renderPdf(htmlData, opts)            → PDF             (WeasyPrint)
 
 0. **Find** (optional) — `resolveResource()` turns a language and subject into the publisher and release to render; `getAllCatalogEntries({ lang, subject })` does it for you. [Learn more →](find-resources.md)
 1. **Catalog** — `getAllCatalogEntries()` calls the DCS Book Package endpoint once (the language form once per publisher it tries, without fetching the chosen one again) and returns every related resource at the versions that belong together. [Learn more →](get-all-catalog-entries.md)
-2. **Data** — `getResourceData()` fetches and parses one resource into a normalized object (USFM, TSV, Markdown, or OBS), pulling in the supporting resources it needs. [Learn more →](get-resource-data.md)
+2. **Data** — `getResourceData()` fetches and parses one resource into a normalized object (USFM, TSV, Markdown, or OBS), pulling in the supporting resources it needs; `getResourceDataFromDirectory()` reads the same from repositories checked out on disk. [Learn more →](get-resource-data.md)
 3. **HTML sections** — `renderHtmlData()` routes that data to the renderer for its subject and returns packaged sections (cover, copyright, body, TOC, CSS, appendices). [Learn more →](renderers.md)
 4. **Document** — `renderHTML()` composes the sections into one self-contained HTML document, for the screen or for print. [Learn more →](render-html.md)
 5. **PDF** — `renderPdf()` turns the print document into a PDF with WeasyPrint. [Learn more →](render-pdf.md)

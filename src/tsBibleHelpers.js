@@ -1,5 +1,4 @@
-import axios from 'axios';
-import JSZip from 'jszip';
+import { contentSourceFor } from './contentSource.js';
 import { BibleBookData } from './constants.js';
 
 /**
@@ -98,9 +97,9 @@ export async function ts2usfm(catalogEntry, ingredient, zip, basePath) {
  * @param {Object} [options] - Options
  * @returns {Promise<Object>} { type: 'usfm', ..., books: { [bookId]: usfmString } }
  */
-export async function extractTsBibleData(catalogEntry, books = [], _options = {}) {
-  const zipUrl = catalogEntry.zipball_url;
-  if (!zipUrl) {
+export async function extractTsBibleData(catalogEntry, books = [], options = {}) {
+  // Only the DCS archive needs a zipball_url; a local checkout does not.
+  if (!options.contentSource && !catalogEntry.zipball_url) {
     throw new Error('Catalog entry is missing a zipball_url for the ts Bible repository.');
   }
 
@@ -109,8 +108,8 @@ export async function extractTsBibleData(catalogEntry, books = [], _options = {}
     throw new Error('Catalog entry is missing a repository name.');
   }
 
-  const response = await axios.get(zipUrl, { responseType: 'arraybuffer' });
-  const zip = await JSZip.loadAsync(response.data);
+  // The repository's files: its DCS archive, or a local checkout.
+  const zip = await contentSourceFor(options).readArchive(catalogEntry);
 
   // Gitea lowercases the repo name in the archive's root folder, so match
   // case-insensitively and use the actual folder name from the zip.

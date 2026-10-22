@@ -1,12 +1,10 @@
-import axios from 'axios';
-import JSZip from 'jszip';
 import { readLicenseFromZip } from './dcsApi.js';
+import { contentSourceFor } from './contentSource.js';
 
 /**
  * Extract Translation Words data from RC format (markdown files in directories)
  */
-export async function extractRcTwData(catalogEntry, _options) {
-  const zipUrl = catalogEntry.zipball_url;
+export async function extractRcTwData(catalogEntry, options = {}) {
   const ingredient = catalogEntry.ingredients && catalogEntry.ingredients[0];
 
   if (!ingredient) {
@@ -15,9 +13,8 @@ export async function extractRcTwData(catalogEntry, _options) {
 
   const path = ingredient.path || './bible';
 
-  // Download and extract zip
-  const response = await axios.get(zipUrl, { responseType: 'arraybuffer' });
-  const zip = await JSZip.loadAsync(response.data);
+  // The repository's files: its DCS archive, or a local checkout.
+  const zip = await contentSourceFor(options).readArchive(catalogEntry);
 
   const repoName = catalogEntry.name;
   const basePath = `${repoName}/${path.replace(/^\.\//, '')}`;

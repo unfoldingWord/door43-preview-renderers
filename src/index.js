@@ -3,7 +3,11 @@
  * Main entry point for the library
  */
 
-export { getResourceData, getCatalogEntry } from './getResourceData.js';
+export {
+  getResourceData,
+  getResourceDataFromDirectory,
+  getCatalogEntry,
+} from './getResourceData.js';
 export { renderHtmlData } from './renderHtmlData.js';
 export { renderHTML } from './renderHTML.js';
 export { resolveComposeOptions, parseBooksOption } from './renderOptions.js';

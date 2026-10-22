@@ -1,6 +1,6 @@
 # Rendering Pipeline Architecture
 
-**Status:** Implemented: stages 1–5 and the options schema. Still planned: `getResourceDataFromDirectory` (stage 2′) and the `renderPreview` orchestrator. Stage 0, finding a resource from a language ([Find Resources](./find-resources.md)), came later.
+**Status:** Implemented: stages 1–5 and the options schema. Still planned: the `renderPreview` orchestrator. `getResourceDataFromDirectory` (stage 2′) is implemented, with the content source of §5 (`src/contentSource.js`). Stage 0, finding a resource from a language ([Find Resources](./find-resources.md)), came later.
 This page is the design record. For how the pipeline works today, see [Full Pipeline](./pipeline.md) and [Rendering Options](./options.md).
 **Decision:** Clean break to a staged API (drop the old positional `owner, repo, ref, books, options` signatures; update all callers in the same pass — no back-compat aliases).
 
@@ -468,11 +468,12 @@ anchor in the print wrapper.
    CatalogSet via `options.preEntries` (no redundant `/catalog/entry/` or
    `/catalog/bp/`); `is_extra`→`options.isExtra`. CLI + demos rewired; verified
    end-to-end on real DCS data.
-7. ⏳ **PENDING (2c)** — `getResourceDataFromDirectory(catalogEntries, dirPath, options)`:
-   needs a content-provider abstraction (HTTP vs `fs`) threaded through every
-   extractor (incl. the TA/TW archive-zip path) so they can read
-   `${dirPath}/${repo.name}/${ingredient.path}` from disk. RC/SB/TC only — not TS.
-   A cross-cutting refactor; best as a focused follow-up.
+7. ✅ **DONE (2c)** — `getResourceDataFromDirectory(catalogEntries, dirPath, options)`:
+   a content source (`src/contentSource.js`: `readFile`, `readLicense`, `readArchive`)
+   is threaded through every extractor, DCS by default; the directory source reads
+   `${dirPath}/${repo.name}/${ingredient.path}` and presents a repository as the
+   archive the TA/TW/OBS/TS extractors already walk, in git's tree order. Verified
+   byte-identical to DCS on en_tn v91 Titus (TSV, Bibles, GL quotes, TA, TW, TWL).
 
 **Phase 3 — Tail + orchestrator.**
 8. Teach `renderPdf(input, options)` to accept a composed print string; force

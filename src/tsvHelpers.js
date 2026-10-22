@@ -1,4 +1,4 @@
-import { fetchContent, fetchLicense } from './dcsApi.js';
+import { contentSourceFor, entryCoords } from './contentSource.js';
 import { applyTwlQuoteTrimming } from './twlQuoteTrimming.js';
 import { BibleBookData } from './constants.js';
 import { indexUsfmBook } from './quotes/usfmBookIndex.js';
@@ -111,15 +111,6 @@ function olSubjectForBook(bookId) {
   return null;
 }
 
-/** owner/repo/ref of a catalog entry, derived the same way the Bible extractor does. */
-function entryCoords(entry) {
-  return {
-    owner: entry.repo?.owner?.username || entry.repo?.owner?.login || entry.owner,
-    repo: entry.repo?.name || entry.name,
-    ref: entry.branch_or_tag_name || entry.ref,
-  };
-}
-
 /** Link string for the quote converter: "owner/repo/ref". */
 function entryLink(entry) {
   const { owner, repo, ref } = entryCoords(entry);
@@ -139,14 +130,14 @@ function buildBibleLinks(catalogEntries) {
  * Returns undefined when the entry has no ingredient for the book or the fetch
  * fails, in which case the converter downloads it itself (its fallback).
  */
-async function fetchBookUsfm(entry, bookId, dcsApiUrl, quiet) {
+async function fetchBookUsfm(entry, bookId, contentSource, quiet) {
   const ingredient = entry.ingredients?.find(
     (ing) => ing.identifier?.toLowerCase() === bookId.toLowerCase()
   );
   if (!ingredient?.path) return undefined;
   const { owner, repo, ref } = entryCoords(entry);
   try {
-    return await fetchContent(owner, repo, ref, ingredient.path.replace(/^\.\//, ''), dcsApiUrl);
+    return await contentSource.readFile(entry, ingredient.path);
   } catch (e) {
     if (!quiet) console.warn(`Could not preload ${owner}/${repo}/${ref} ${bookId}: ${e.message}`);
     return undefined;
@@ -173,7 +164,7 @@ async function convertQuotes(rows, bookCode, bibleEntries, options = {}) {
   const glEntries = bibleEntries.filter((e) => e.subject === 'Aligned Bible');
   if (glEntries.length === 0) return { converted: 0, missed: [] };
 
-  const dcsApiUrl = options.dcs_api_url || 'https://git.door43.org/api/v1';
+  const contentSource = contentSourceFor(options);
   const quiet = options.quiet !== false;
   const olEntry = bibleEntries.find((e) => e.subject === olSubjectForBook(bookCode));
   if (!olEntry) {
@@ -183,8 +174,8 @@ async function convertQuotes(rows, bookCode, bibleEntries, options = {}) {
 
   // Fetch every Bible the lookup needs, concurrently.
   const [glContents, olContent] = await Promise.all([
-    Promise.all(glEntries.map((entry) => fetchBookUsfm(entry, bookCode, dcsApiUrl, quiet))),
-    fetchBookUsfm(olEntry, bookCode, dcsApiUrl, quiet),
+    Promise.all(glEntries.map((entry) => fetchBookUsfm(entry, bookCode, contentSource, quiet))),
+    fetchBookUsfm(olEntry, bookCode, contentSource, quiet),
   ]);
   if (olContent == null) return { converted: 0, missed: [] };
 
@@ -247,9 +238,8 @@ function groupByChapterVerse(rows) {
  */
 export async function extractRcTsvData(catalogEntry, books, options = {}, catalogEntries = []) {
   const { dcs_api_url = 'https://git.door43.org/api/v1' } = options;
-  const owner = catalogEntry.repo.owner.username || catalogEntry.repo.owner.login;
-  const repo = catalogEntry.repo.name;
-  const ref = catalogEntry.branch_or_tag_name;
+  // DCS, or a local checkout (getResourceDataFromDirectory).
+  const contentSource = contentSourceFor(options);
 
   const result = {
     type: 'tsv',
@@ -260,7 +250,7 @@ export async function extractRcTsvData(catalogEntry, books, options = {}, catalo
     title: catalogEntry.title,
     abbreviation: catalogEntry.abbreviation || catalogEntry.repo?.abbreviation || '',
     version: catalogEntry.branch_or_tag_name || catalogEntry.ref || '',
-    license: await fetchLicense(owner, repo, ref, dcs_api_url),
+    license: await contentSource.readLicense(catalogEntry),
     books: {},
     extras: {},
   };
@@ -292,7 +282,7 @@ export async function extractRcTsvData(catalogEntry, books, options = {}, catalo
     const filePath = ingredient.path.replace(/^\.\//, '');
 
     // Fetch and parse the TSV
-    const tsvContent = await fetchContent(owner, repo, ref, filePath, dcs_api_url);
+    const tsvContent = await contentSource.readFile(catalogEntry, filePath);
     const normalizedRows = normalizeTsvColumns(parseTsv(tsvContent), singleBibleRepo);
 
     // Look up the GL quotes if aligned bibles are available and there is
@@ -347,6 +337,8 @@ export async function extractRcTsvData(catalogEntry, books, options = {}, catalo
             {
               dcs_api_url,
               quiet: options.quiet || false,
+              // Extras come from where the resource came from.
+              contentSource: options.contentSource,
               glBibleEntries: bibleEntriesForGl,
               catalogEntry: entry,
               isExtra: true, // prevent recursive dependency fetching

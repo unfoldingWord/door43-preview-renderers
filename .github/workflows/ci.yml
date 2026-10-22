@@ -84,6 +84,7 @@ jobs:
             'getCatalogEntry',
             'getPrintCss',
             'getResourceData',
+            'getResourceDataFromDirectory',
             'listLanguages',
             'parseBooksOption',
             'renderAlignedBibleHtml',

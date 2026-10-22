@@ -10,6 +10,7 @@ import { extractRcTaData } from './taHelpers.js';
 import { extractRcAlignedBibleData } from './rcAlignedBibleHelpers.js';
 import { extractTsBibleData } from './tsBibleHelpers.js';
 import { filterCatalogEntries } from './catalogSelection.js';
+import { directoryContentSource } from './contentSource.js';
 import { getAllCatalogEntries } from './getAllCatalogEntries.js';
 import axios from 'axios';
 
@@ -67,6 +68,8 @@ export async function getCatalogEntry(
  * @param {boolean} [options.quiet] - Suppress logging
  * @param {Array<string>} [options.books] - Books (when not carried on `input`)
  * @param {boolean} [options.isExtra] - Internal: this is a dependency; skip resolving its own deps
+ * @param {Object} [options.contentSource] - Internal: where the files are read
+ *   (contentSource.js); DCS unless getResourceDataFromDirectory() set it
  * @returns {Promise<Object>} ResourceData
  *
  * @example
@@ -121,6 +124,42 @@ export async function getResourceData(input, options = {}) {
   }
 
   return withLanguage(await extractResourceData(catalogEntry, books, options), catalogEntry);
+}
+
+/**
+ * Stage 2′: the same ResourceData as getResourceData(), read from repositories
+ * checked out on disk instead of DCS.
+ *
+ * `dirPath` holds one folder per repository, named as its catalog entry names
+ * it (`en_tn`, `en_ult`, `hbo_uhb`, …), checked out at the version the entry
+ * gives. The catalog entries say what each repository is and where its files
+ * are (subject, metadata type, ingredient paths), so no manifest is read; take
+ * them from getAllCatalogEntries() (its CatalogSet can be passed whole, or saved
+ * and reused offline). The blueprint rules apply as online: only the supporting
+ * resources the subject needs are read (plus `extraSubjects`), and each must be
+ * checked out too; one that is missing is skipped, as an unreachable extra is
+ * online.
+ *
+ * @param {Array<Object>|Object} catalogEntries - Full catalog entries, main
+ *   resource first, or a CatalogSet
+ * @param {string} dirPath - The directory holding the checked-out repositories
+ * @param {Object} [options] - getResourceData()'s options (`books`, `extraSubjects`, `quiet`)
+ * @returns {Promise<Object>} ResourceData
+ */
+export async function getResourceDataFromDirectory(catalogEntries, dirPath, options = {}) {
+  const set = Array.isArray(catalogEntries) ? { catalogEntries } : catalogEntries;
+  if (!set || !Array.isArray(set.catalogEntries) || set.catalogEntries.length === 0) {
+    throw new Error(
+      'getResourceDataFromDirectory: pass the catalog entries (main resource first) or a CatalogSet.'
+    );
+  }
+  if (typeof dirPath !== 'string' || !dirPath) {
+    throw new Error('getResourceDataFromDirectory: dirPath must name a directory.');
+  }
+  return getResourceData(
+    { catalogEntries: set.catalogEntries, source: set.source },
+    { ...options, contentSource: directoryContentSource(dirPath) }
+  );
 }
 
 /**
@@ -287,12 +326,16 @@ async function getRcAlignedBibleData(catalogEntry, books, options) {
 /**
  * Get resource data for RC OBS
  */
-async function getRcObsData(catalogEntry, _options) {
+async function getRcObsData(catalogEntry, options) {
   if (!catalogEntry.ingredients?.length) {
     throw new Error('No ingredients found in catalog entry');
   }
 
-  const data = await extractRcSbObsData(catalogEntry, { path: getObsContentPath(catalogEntry) });
+  const data = await extractRcSbObsData(
+    catalogEntry,
+    { path: getObsContentPath(catalogEntry) },
+    options
+  );
   return formatObsData(data, catalogEntry);
 }
 
@@ -453,23 +496,31 @@ async function getSbBibleData(catalogEntry, books, options) {
 /**
  * Get resource data for SB OBS
  */
-async function getSbObsData(catalogEntry, _options) {
+async function getSbObsData(catalogEntry, options) {
   if (!catalogEntry.ingredients?.length) {
     throw new Error('No ingredients found in catalog entry');
   }
 
-  const data = await extractRcSbObsData(catalogEntry, { path: getObsContentPath(catalogEntry) });
+  const data = await extractRcSbObsData(
+    catalogEntry,
+    { path: getObsContentPath(catalogEntry) },
+    options
+  );
   return formatObsData(data, catalogEntry);
 }
 /**
  * Get resource data for TS OBS
  */
-async function getTsObsData(catalogEntry, _options) {
+async function getTsObsData(catalogEntry, options) {
   if (!catalogEntry.ingredients?.length) {
     throw new Error('No ingredients found in catalog entry');
   }
 
-  const data = await extractTsObsData(catalogEntry, { path: getObsContentPath(catalogEntry) });
+  const data = await extractTsObsData(
+    catalogEntry,
+    { path: getObsContentPath(catalogEntry) },
+    options
+  );
   return formatObsData(data, catalogEntry);
 }
 /**

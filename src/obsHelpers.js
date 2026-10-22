@@ -1,5 +1,4 @@
-import axios from 'axios';
-import JSZip from 'jszip';
+import { contentSourceFor } from './contentSource.js';
 /**
  * Strip markdown heading syntax from text
  */
@@ -39,13 +38,11 @@ export function getObsContentPath(catalogEntry) {
 /**
  * Extract OBS data from RC or SB format (markdown files)
  */
-export async function extractRcSbObsData(catalogEntry, ingredient) {
-  const zipUrl = catalogEntry.zipball_url;
+export async function extractRcSbObsData(catalogEntry, ingredient, options = {}) {
   const path = ingredient.path || './content';
 
-  // Download and extract zip
-  const response = await axios.get(zipUrl, { responseType: 'arraybuffer' });
-  const zip = await JSZip.loadAsync(response.data);
+  // The repository's files: its DCS archive, or a local checkout.
+  const zip = await contentSourceFor(options).readArchive(catalogEntry);
 
   const repoName = catalogEntry.name;
   const basePath = `${repoName}/${path.replace(/^\.\//, '')}`;
@@ -186,13 +183,11 @@ function parseRcSbObsStory(content, storyNum) {
 /**
  * Extract OBS data from TS format (text files in directories)
  */
-export async function extractTsObsData(catalogEntry, ingredient) {
-  const zipUrl = catalogEntry.zipball_url;
+export async function extractTsObsData(catalogEntry, ingredient, options = {}) {
   const path = ingredient.path || './content';
 
-  // Download and extract zip
-  const response = await axios.get(zipUrl, { responseType: 'arraybuffer' });
-  const zip = await JSZip.loadAsync(response.data);
+  // The repository's files: its DCS archive, or a local checkout.
+  const zip = await contentSourceFor(options).readArchive(catalogEntry);
 
   const repoName = catalogEntry.name;
 

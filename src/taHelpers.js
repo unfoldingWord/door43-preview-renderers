@@ -1,22 +1,19 @@
-import axios from 'axios';
-import JSZip from 'jszip';
 import yaml from 'js-yaml';
 import { readLicenseFromZip } from './dcsApi.js';
+import { contentSourceFor } from './contentSource.js';
 
 /**
  * Extract Translation Academy data from RC format (markdown files in article directories)
  */
-export async function extractRcTaData(catalogEntry, _options) {
-  const zipUrl = catalogEntry.zipball_url;
+export async function extractRcTaData(catalogEntry, options = {}) {
   const ingredients = catalogEntry.ingredients;
 
   if (!ingredients || ingredients.length === 0) {
     throw new Error('No ingredients found in catalog entry');
   }
 
-  // Download and extract zip
-  const response = await axios.get(zipUrl, { responseType: 'arraybuffer' });
-  const zip = await JSZip.loadAsync(response.data);
+  // The repository's files: its DCS archive, or a local checkout.
+  const zip = await contentSourceFor(options).readArchive(catalogEntry);
 
   const repoName = catalogEntry.name;
 

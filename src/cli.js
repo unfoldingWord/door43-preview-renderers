@@ -19,6 +19,7 @@ const distEntry = new URL('../dist/index.esm.js', import.meta.url);
 const {
   getAllCatalogEntries,
   getResourceData,
+  getResourceDataFromDirectory,
   renderHtmlData,
   renderHTML,
   renderPdf,
@@ -112,6 +113,10 @@ Options:
   --page-size <size>      Page size for assemblePrint (A4, A5, USL, TRADE, CQ; default A4)
   --columns <n>           Number of columns for assemblePrint (default 1)
   --pdf-service-url <url> generatePdf: use a hosted weasyprint-pdf service instead of the local binary
+  --dir <path>            Read the files from repositories checked out under <path>, one folder per
+                          repo (en_tn, en_ult, …), instead of from DCS
+  --catalog <file>        Start from a CatalogSet saved with getAllCatalogEntries --output instead of
+                          asking DCS; with --dir, nothing is fetched
 
 Examples:
   # What is published for a language?
@@ -181,6 +186,14 @@ async function main() {
   const { command, params, output, quiet } = parseArgs(args);
 
   const dcsApiUrl = params.dcsApiUrl || 'https://git.door43.org/api/v1';
+  // Stage 2 from DCS, or from local checkouts with --dir.
+  const loadResourceData = (set) =>
+    params.dir
+      ? getResourceDataFromDirectory(set, path.resolve(params.dir), {
+          dcs_api_url: dcsApiUrl,
+          quiet,
+        })
+      : getResourceData(set, { dcs_api_url: dcsApiUrl, quiet });
   const byLanguage = !!(params.lang && params.subject);
 
   if (command === 'findResources') {
@@ -190,7 +203,7 @@ async function main() {
       );
       process.exit(1);
     }
-  } else if (!byLanguage && (!params.owner || !params.repo)) {
+  } else if (!params.catalog && !byLanguage && (!params.owner || !params.repo)) {
     console.error('Error: --owner and --repo are required (or --lang with --subject)');
     console.error('Use --help for usage information');
     process.exit(1);
@@ -205,7 +218,22 @@ async function main() {
     // handed on as-is, so the selected resource stays first and the version
     // is the one resolved.
     let set;
-    if (command !== 'findResources') {
+    if (command !== 'findResources' && params.catalog) {
+      // A CatalogSet saved earlier: the resource, its version and its package,
+      // with no catalog request.
+      set = JSON.parse(fs.readFileSync(path.resolve(params.catalog), 'utf8'));
+      if (!Array.isArray(set?.catalogEntries) || !set.catalogEntries.length) {
+        console.error(`Error: ${params.catalog} is not a CatalogSet (no catalogEntries)`);
+        process.exit(1);
+      }
+      set.source = { ...(set.source || {}) };
+      if (params.bookId) set.source.books = [params.bookId];
+      params.owner = set.source.owner;
+      params.repo = set.source.repo || set.catalogEntries[0].name;
+      params.ref = set.source.ref || set.resourceVersion;
+      if (!quiet)
+        console.error(`Using ${params.owner}/${params.repo}@${params.ref} from ${params.catalog}`);
+    } else if (command !== 'findResources') {
       const books = params.bookId ? [params.bookId] : [];
       let descriptor;
       if (byLanguage) {
@@ -268,7 +296,7 @@ async function main() {
         if (!quiet) {
           console.error(`Fetching resource data for ${params.owner}/${params.repo}...`);
         }
-        result = await getResourceData(set, { dcs_api_url: dcsApiUrl, quiet });
+        result = await loadResourceData(set);
         break;
       }
 
@@ -276,7 +304,7 @@ async function main() {
         if (!quiet) {
           console.error(`Rendering HTML for ${params.owner}/${params.repo}...`);
         }
-        const resourceData = await getResourceData(set, { dcs_api_url: dcsApiUrl, quiet });
+        const resourceData = await loadResourceData(set);
         // HtmlData package (identity + sections); the body can be large.
         result = renderHtmlData(resourceData, { books: set.source.books });
         break;
@@ -286,7 +314,7 @@ async function main() {
         if (!quiet) {
           console.error(`Assembling print document for ${params.owner}/${params.repo}...`);
         }
-        const resourceData = await getResourceData(set, { dcs_api_url: dcsApiUrl, quiet });
+        const resourceData = await loadResourceData(set);
         const htmlData = renderHtmlData(resourceData, { books: set.source.books });
         const html = renderHTML(htmlData, {
           media: 'print',
@@ -316,7 +344,7 @@ async function main() {
         if (!quiet) {
           console.error(`Generating PDF for ${params.owner}/${params.repo}...`);
         }
-        const resourceData = await getResourceData(set, { dcs_api_url: dcsApiUrl, quiet });
+        const resourceData = await loadResourceData(set);
         const htmlData = renderHtmlData(resourceData, { books: set.source.books });
         const pdfOutputPath = path.resolve(output);
         await renderPdf(htmlData, {

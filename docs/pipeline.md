@@ -1,9 +1,9 @@
 # Full Pipeline
 
 The renderer is a **composable chain** — each stage takes the previous stage's
-output, so you can run the whole thing or resume from any cached intermediate (reading
-checked-out repositories from disk, `getResourceDataFromDirectory`, is still planned —
-see [Rendering Options](./options.md)):
+output, so you can run the whole thing or resume from any cached intermediate. Stage 2
+can also read repositories checked out on disk (`getResourceDataFromDirectory`, see
+[Get Resource Data](./get-resource-data.md)):
 
 ```
 resolveResource(query, opts)         → owner/repo/ref  (network; stage 0, optional: language + subject → publisher + release)

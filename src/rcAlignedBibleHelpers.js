@@ -1,12 +1,13 @@
 import { removeAlignments } from './usfm/removeAlignments.js';
-import { fetchContent, fetchLicense } from './dcsApi.js';
+import { contentSourceFor } from './contentSource.js';
 import { BibleBookData } from './constants.js';
 
 /**
  * Extract aligned Bible data and remove alignments from USFM.
  */
 export async function extractRcAlignedBibleData(catalogEntry, books = [], options = {}) {
-  const { dcs_api_url = 'https://git.door43.org/api/v1' } = options;
+  // DCS, or a local checkout (getResourceDataFromDirectory).
+  const source = contentSourceFor(options);
   const owner =
     catalogEntry.owner || catalogEntry.repo?.owner?.username || catalogEntry.repo?.owner?.login;
   const repo = catalogEntry.name || catalogEntry.repo?.name;
@@ -46,7 +47,7 @@ export async function extractRcAlignedBibleData(catalogEntry, books = [], option
     const filePath = ingredient.path.replace(/^\.\//, '');
 
     try {
-      const usfmContent = await fetchContent(owner, repo, ref, filePath, dcs_api_url);
+      const usfmContent = await source.readFile(catalogEntry, filePath);
       booksContent[bookId] = removeAlignments(usfmContent);
     } catch (error) {
       throw new Error(
@@ -59,7 +60,7 @@ export async function extractRcAlignedBibleData(catalogEntry, books = [], option
     throw new Error('No valid books were processed from the aligned USFM data');
   }
 
-  const license = await fetchLicense(owner, repo, ref, dcs_api_url);
+  const license = await source.readLicense(catalogEntry);
 
   return {
     type: 'usfm',
