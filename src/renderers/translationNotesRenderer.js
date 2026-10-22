@@ -391,7 +391,9 @@ const tnQuestionsWebCss = `
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: #555;
-  margin: 8px 0 1px 0;
+  /* About 1em more above than the words table's heading (8px, ~0.6em at this
+     size), to set the questions apart from the Translation Words list. */
+  margin: 1.6em 0 1px 0;
 }
 
 .tn-verse-questions-ref {
@@ -630,21 +632,28 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
         // Verse header
         // The running header tracks the first item on the page: the verse
         // reference, or for an introduction the book or chapter it introduces.
-        bodyParts.push(
-          `<span class="running-ref">${escapeHtml(
-            isBookIntro
-              ? bookTitle
-              : isIntro
-                ? chapterLabel
-                : isObs
-                  ? obsFrameHeaderRef(story, chapterKey, verseKey)
-                  : verseLabel
-          )}</span>\n`
-        );
+        const runningRef = `<span class="running-ref">${escapeHtml(
+          isBookIntro
+            ? bookTitle
+            : isIntro
+              ? chapterLabel
+              : isObs
+                ? obsFrameHeaderRef(story, chapterKey, verseKey)
+                : verseLabel
+        )}</span>`;
 
-        if (!isBookIntro) {
+        if (isBookIntro) {
+          // No heading of its own (the chapter header stands for it), and no
+          // forced break follows, so the marker can stand alone here.
+          bodyParts.push(`${runningRef}\n`);
+        } else {
+          // The marker goes inside the heading. As a sibling before it, it kept
+          // the chapter heading from being adjacent to its first verse heading
+          // (so `.tn-chapter-header + .tn-verse-header` never matched and the
+          // chapter heading was left alone on a page), and its empty line could
+          // spill onto a page of its own before the heading's forced break (#75).
           bodyParts.push(
-            `<${verseTag} class="tn-verse-header" id="${verseAnchor}">` +
+            `<${verseTag} class="tn-verse-header" id="${verseAnchor}">${runningRef}` +
               `<a href="#${verseAnchor}" class="header-link">${escapeHtml(verseLabel)}</a></${verseTag}>\n`
           );
         }
