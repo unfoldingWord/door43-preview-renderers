@@ -110,7 +110,7 @@ renderHtmlData(resourceData, {
 
 ```js
 {
-  subject, title, abbreviation, version, direction,
+  subject, title, abbreviation, version, language, direction,
   sections: { cover, copyright, body, toc, css: { web, print? }, webView? },
 }
 ```
@@ -131,7 +131,8 @@ for the screen or for print. Returns a string.
 | `show.body` | boolean | `true` | ✅ | Include the main content. |
 | `show.appendices` | boolean \| `['ta','tw']` | `true` | ✅ (boolean) | Include the TA/TW appendices (a keyed `{ ta, tw }` section). The boolean is honored in screen and print; per-kind `['ta','tw']` selection is 🚧 planned. |
 | `columns` | number | `1` | print ✅ / screen 🚧 | Body column count. Print only, and only for **continuous-flow bodies**: an Aligned Bible book, or the story frames of an OBS-based TSV resource (`obs-tn`, `obs-tq`, …) — the rule targets `.section.bible-book` and `.obs-frames-body`. Bible-versed Notes and Questions are laid out per verse or per chapter, not as running text, so it does nothing there. Use `supportsBodyColumns(subject)` to test whether it applies. |
-| `direction` | `'ltr'` \| `'rtl'` | from `htmlData.direction` | ✅ | Text direction. |
+| `language` | string | from `htmlData.language`, else `'en'` | ✅ | Language code written as `<html lang>`. |
+| `direction` | `'ltr'` \| `'rtl'` | from `htmlData.direction` | ✅ | Text direction, written as `<html dir>` (anything but `'rtl'` is `'ltr'`). In print, `rtl` also starts the book on a left-hand page (WeasyPrint takes the page progression from the root element) and mirrors the running headers: the title on the right-hand page, a range's first reference in the right corner. A quote running the other way from the resource is isolated in `<bdi dir>` when the sections are rendered. |
 | `engine` | `'weasyprint'` \| `'pagedjs'` | `'weasyprint'` | ✅ | Print engine. `pagedjs` injects the PagedJS polyfill `<script>` for in-browser preview. |
 | `print.pageSize` | string \| `{width,height}` | `'A4_PORTRAIT'` | ✅ | Page size (see [Page sizes](#page-sizes)). `media:'print'` only. |
 | `print.footerHtml` | string | `''` | ✅ | Extra footer HTML on the copyright page (e.g. app version). |
@@ -160,7 +161,8 @@ Assembles the print document and runs WeasyPrint. `input` is the `htmlData` from
 |---|---|---|---|---|
 | `pageSize` | string \| `{width,height}` | `'A4_PORTRAIT'` | ✅ | Page size (see below). |
 | `columns` | number | renderer default | ✅ | Body column count. |
-| `direction` | `'ltr'` \| `'rtl'` | renderer default | ✅ | Text direction. |
+| `direction` | `'ltr'` \| `'rtl'` | from `htmlData.direction` | ✅ | Text direction (see `renderHTML`). |
+| `language` | string | from `htmlData.language`, else `'en'` | ✅ | Language code for `<html lang>`. |
 | `footerHtml` | string | — | ✅ | Footer HTML (e.g. app version). |
 | `title` | string | `htmlData.title` | ✅ | Cover title override. |
 | `version` | string | `htmlData.version` | ✅ | Cover version override. |

@@ -1,3 +1,5 @@
+import { htmlRootAttributes } from './scriptureColumns.js';
+
 function escapeHtml(value) {
   return String(value ?? '')
     .replaceAll('&', '&amp;')
@@ -206,9 +208,9 @@ export function buildManualToc(manuals = []) {
   }));
 }
 
-export function buildFullHtmlDocument(title, css, content) {
+export function buildFullHtmlDocument(title, css, content, resource = {}) {
   return `<!DOCTYPE html>
-<html lang="en">
+<html ${htmlRootAttributes(resource)}>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">

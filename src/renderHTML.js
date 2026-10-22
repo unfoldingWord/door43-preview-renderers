@@ -25,7 +25,7 @@ function escapeHtml(value) {
  * omits cover/copyright/toc by default; `media: 'print'` yields a paged,
  * PagedJS/WeasyPrint-ready document with cover/copyright/toc.
  *
- * @param {Object} htmlData - Output of renderHtmlData(): { title, version, abbreviation, direction, sections }
+ * @param {Object} htmlData - Output of renderHtmlData(): { title, version, abbreviation, language, direction, sections }
  * @param {Object} [options] - Composition options (docs §6)
  * @returns {string} A complete HTML document string
  */
@@ -47,6 +47,7 @@ export function renderHTML(htmlData, options = {}) {
       pageWidth: size.width,
       pageHeight: size.height,
       columns: opts.columns,
+      language: opts.language,
       direction: opts.direction,
       engine: options.engine || 'weasyprint',
       footerHtml: opts.print.footerHtml,
@@ -101,7 +102,7 @@ function buildScreenDocument(htmlData, opts) {
   }
 
   return `<!DOCTYPE html>
-<html lang="en" dir="${dir}">
+<html lang="${escapeHtml(opts.language)}" dir="${dir}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">

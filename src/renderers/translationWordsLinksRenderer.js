@@ -13,7 +13,9 @@ import {
   getBibleColumns,
   glQuoteForBibleId,
   quoteForDisplay,
+  isolatedQuoteHtml,
   renderScriptureColumns,
+  htmlRootAttributes,
 } from './scriptureColumns.js';
 import {
   twKey,
@@ -367,6 +369,7 @@ function renderVerseLayout(resourceData, ctx) {
         const seen = dedupe === 'book' ? seenInBook : seenInChapter;
         const tableHtml = renderTwlTable(rows, {
           bibles,
+          direction: ctx.direction,
           bookId,
           chapterKey,
           verseKey,
@@ -566,7 +569,9 @@ function renderGlossaryLayout(resourceData, ctx) {
           .map(
             (r) =>
               `<span class="twl-ref">${escapeHtml(r.ref)}` +
-              (r.quote ? ` <span class="twl-ref-quote">(${escapeHtml(r.quote)})</span>` : '') +
+              (r.quote
+                ? ` <span class="twl-ref-quote">(${isolatedQuoteHtml(r.quote, ctx.direction)})</span>`
+                : '') +
               `</span>`
           )
           .join(', ');
@@ -628,6 +633,7 @@ export function renderTranslationWordsLinksHtml(resourceData, options = {}) {
     obsData: isObs ? findObsExtra(extras) : null,
     twResource: extras.tw,
     extras,
+    direction: resourceData.direction,
     bookIdSet: new Set(bookIds),
     resolution: options.resolution || 'none',
     includeScripture: options.includeScripture !== false,
@@ -696,7 +702,8 @@ export function renderTranslationWordsLinksHtml(resourceData, options = {}) {
   const fullHtml = buildFullHtmlDocument(
     title,
     twlWebCss + twlPrintCss + coverCss + runningMarkerWebCss,
-    `<div class="section cover-page">${cover}</div>\n${body}${renderAppendicesHtml(finalAppendices, { titles: appendixTitles })}`
+    `<div class="section cover-page">${cover}</div>\n${body}${renderAppendicesHtml(finalAppendices, { titles: appendixTitles })}`,
+    resourceData
   );
 
   return {
@@ -717,9 +724,9 @@ export function renderTranslationWordsLinksHtml(resourceData, options = {}) {
   };
 }
 
-function buildFullHtmlDocument(title, css, content) {
+function buildFullHtmlDocument(title, css, content, resource = {}) {
   return `<!DOCTYPE html>
-<html lang="en">
+<html ${htmlRootAttributes(resource)}>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">

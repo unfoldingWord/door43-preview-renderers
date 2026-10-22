@@ -21,6 +21,17 @@ export function escapeHtml(value) {
     .replaceAll("'", '&#39;');
 }
 
+/**
+ * The `lang` and `dir` attributes for a document's <html> element, from the
+ * resource's language code and direction (`en` and `ltr` when unknown).
+ *
+ * @param {Object} [resource] - ResourceData or HtmlData: `{ language, direction }`
+ * @returns {string} e.g. `lang="ar" dir="rtl"`
+ */
+export function htmlRootAttributes({ language, direction } = {}) {
+  return `lang="${escapeHtml(language || 'en')}" dir="${direction === 'rtl' ? 'rtl' : 'ltr'}"`;
+}
+
 // Verse-text extraction is shared with the data layer (which recomputes TWL GL
 // occurrences against the verse), so it lives in bibleHelpers.
 export { extractVerseObjectsText };
@@ -114,6 +125,40 @@ export function quoteForDisplay(quote) {
   return String(quote).replace(/\s+&\s*|\s*&\s+/g, ' … ');
 }
 
+// Hebrew, Arabic, Syriac, Thaana, N'Ko, Samaritan, Mandaic and their
+// presentation forms: the scripts written right to left.
+const RTL_CHAR = /[\u0590-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFC]/;
+
+/**
+ * The direction a text runs in, by its first letter: 'rtl' for a right-to-left
+ * script, 'ltr' for any other letter, '' when it has no letter to judge by.
+ */
+export function textDirection(text) {
+  for (const ch of String(text || '')) {
+    // Only a letter decides: Arabic punctuation and digits sit in the RTL
+    // ranges but say nothing about the quote's script.
+    if (/\p{L}/u.test(ch)) return RTL_CHAR.test(ch) ? 'rtl' : 'ltr';
+  }
+  return '';
+}
+
+/**
+ * Escape a quote for HTML, isolating it in `<bdi dir="…">` when it runs the
+ * other way from the document (a Hebrew quote in English notes, a Greek one in
+ * Arabic notes), so it cannot reorder the text around it. A quote that runs the
+ * document's way is returned escaped and unwrapped.
+ *
+ * @param {string} text
+ * @param {'ltr'|'rtl'} [docDirection='ltr']
+ */
+export function isolatedQuoteHtml(text, docDirection = 'ltr') {
+  const html = escapeHtml(text);
+  const dir = textDirection(text);
+  return dir && dir !== (docDirection === 'rtl' ? 'rtl' : 'ltr')
+    ? `<bdi dir="${dir}">${html}</bdi>`
+    : html;
+}
+
 /**
  * Look up the GL quote for a specific Bible from a row's GLQuotes object.
  * GLQuotes is keyed by Bible repo identifier (e.g. "en_ult"); `id` is the short
@@ -166,14 +211,19 @@ export function renderScriptureColumns(bibles, parsedExtras, bookId, ch, v, clas
  * @param {Object} row - Note/question row carrying `Quote` and `GLQuotes`
  * @param {Array} bibles - From getBibleColumns()
  * @param {Object} classes - { header, quote, tag } CSS class names
+ * @param {'ltr'|'rtl'} [direction='ltr'] - The document's direction; a quote
+ *   running the other way is isolated (see isolatedQuoteHtml)
  */
-export function renderQuoteHeader(row, bibles, classes = {}) {
+export function renderQuoteHeader(row, bibles, classes = {}, direction = 'ltr') {
   const { header = 'note-header', quote = 'note-quote', tag = 'bible-tag' } = classes;
   const lines = [];
   bibles.forEach((b, i) => {
     const q = quoteForDisplay(glQuoteForBibleId(row.GLQuotes, b.id));
     if (!q) return;
-    const quoteHtml = i === 0 ? `<strong>${escapeHtml(q)}</strong>` : escapeHtml(q);
+    const quoteHtml =
+      i === 0
+        ? `<strong>${isolatedQuoteHtml(q, direction)}</strong>`
+        : isolatedQuoteHtml(q, direction);
     lines.push(
       `  <div class="${quote}"><span class="${tag}">${escapeHtml(b.abbr)}</span> ${quoteHtml}</div>`
     );
@@ -181,7 +231,9 @@ export function renderQuoteHeader(row, bibles, classes = {}) {
   if (lines.length === 0) {
     const origQuote = quoteForDisplay(row.Quote);
     if (!origQuote) return '';
-    lines.push(`  <div class="${quote}"><strong>${escapeHtml(origQuote)}</strong></div>`);
+    lines.push(
+      `  <div class="${quote}"><strong>${isolatedQuoteHtml(origQuote, direction)}</strong></div>`
+    );
   }
   return `<div class="${header}">\n${lines.join('\n')}\n</div>\n`;
 }

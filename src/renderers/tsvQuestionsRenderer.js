@@ -7,6 +7,7 @@ import {
   getBibleColumns,
   renderScriptureColumns,
   renderQuoteHeader,
+  htmlRootAttributes,
 } from './scriptureColumns.js';
 import {
   isObsSubject,
@@ -261,16 +262,17 @@ article.tq-question {
  * Render a single question/note row: optional quote header (Bible-versed only),
  * then either a question with a collapsible answer, or a study-note body.
  */
-function renderQuestionArticle(row, { anchor, bookId, chapterKey, bibles, isObs }) {
+function renderQuestionArticle(row, { anchor, bookId, chapterKey, bibles, isObs, direction }) {
   let html = `<article class="tq-question" id="${anchor}">\n`;
 
   // Quote header (study questions / study notes that target a scripture quote).
   if (!isObs && bibles.length && (row.Quote || row.GLQuotes)) {
-    html += renderQuoteHeader(row, bibles, {
-      header: 'tq-quote-header',
-      quote: 'tq-quote',
-      tag: 'tq-bible-tag',
-    });
+    html += renderQuoteHeader(
+      row,
+      bibles,
+      { header: 'tq-quote-header', quote: 'tq-quote', tag: 'tq-bible-tag' },
+      direction
+    );
   }
 
   const questionText = row.Question || '';
@@ -520,6 +522,7 @@ export function renderTsvQuestionsHtml(resourceData, options = {}) {
               chapterKey,
               bibles,
               isObs,
+              direction: resourceData.direction,
             })
           );
         }
@@ -553,7 +556,8 @@ export function renderTsvQuestionsHtml(resourceData, options = {}) {
   const fullHtml = buildFullHtmlDocument(
     title,
     tqWebCss + tqPrintCss + coverCss + runningMarkerWebCss,
-    `<div class="section cover-page">${cover}</div>\n${body}`
+    `<div class="section cover-page">${cover}</div>\n${body}`,
+    resourceData
   );
 
   return {
@@ -572,9 +576,9 @@ export function renderTsvQuestionsHtml(resourceData, options = {}) {
   };
 }
 
-function buildFullHtmlDocument(title, css, content) {
+function buildFullHtmlDocument(title, css, content, resource = {}) {
   return `<!DOCTYPE html>
-<html lang="en">
+<html ${htmlRootAttributes(resource)}>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">

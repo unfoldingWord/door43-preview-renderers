@@ -120,6 +120,37 @@ export async function getResourceData(input, options = {}) {
     throw new Error('Catalog entry not found.');
   }
 
+  return withLanguage(await extractResourceData(catalogEntry, books, options), catalogEntry);
+}
+
+/**
+ * Copy the catalog entry's language onto the extracted data: `language` (code,
+ * e.g. `ar`), `languageTitle`, `direction` (`'ltr'` | `'rtl'`, from
+ * `language_direction`) and `isGatewayLanguage`. Only what the entry says is
+ * copied, and a value the extractor set itself is kept. renderHtmlData() carries
+ * `language` and `direction` on to the document's `lang` and `dir`.
+ */
+function withLanguage(data, catalogEntry) {
+  if (!data || typeof data !== 'object' || data.error) return data;
+  const pick = (key) => catalogEntry[key] ?? catalogEntry.repo?.[key];
+  const fields = {};
+  if (pick('language')) fields.language = pick('language');
+  if (pick('language_title')) fields.languageTitle = pick('language_title');
+  const direction = pick('language_direction');
+  if (direction === 'rtl' || direction === 'ltr') fields.direction = direction;
+  if (typeof pick('language_is_gl') === 'boolean')
+    fields.isGatewayLanguage = pick('language_is_gl');
+  const unset = (key) =>
+    data[key] == null || (key === 'direction' && data[key] !== 'ltr' && data[key] !== 'rtl');
+  const missing = Object.entries(fields).filter(([key]) => unset(key));
+  return missing.length ? { ...data, ...Object.fromEntries(missing) } : data;
+}
+
+/**
+ * Route a resolved catalog entry to the extractor for its metadata type,
+ * subject and flavor.
+ */
+async function extractResourceData(catalogEntry, books, options) {
   let metadataType = ''; // default
   let subject = '';
   let flavorType = '';

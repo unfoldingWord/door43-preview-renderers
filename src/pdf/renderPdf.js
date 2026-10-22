@@ -20,7 +20,8 @@ export { resolvePageSize };
  * @param {Object} [options]
  * @param {string|{width:string,height:string}} [options.pageSize='A4_PORTRAIT'] - PDF page size
  * @param {number} [options.columns] - Number of body columns
- * @param {'ltr'|'rtl'} [options.direction] - Text direction
+ * @param {'ltr'|'rtl'} [options.direction] - Text direction (defaults to renderResult.direction)
+ * @param {string} [options.language] - Language code for `lang` (defaults to renderResult.language)
  * @param {string} [options.footerHtml] - Optional footer HTML (e.g. app version)
  * @param {string} [options.title] - Cover title override (defaults to renderResult.title)
  * @param {string} [options.version] - Cover version override
@@ -46,6 +47,7 @@ export async function renderPdf(renderResult, options = {}) {
     pageSize = 'A4_PORTRAIT',
     columns,
     direction,
+    language,
     footerHtml,
     title,
     version,
@@ -69,7 +71,9 @@ export async function renderPdf(renderResult, options = {}) {
     pageHeight: size.height,
     engine: 'weasyprint',
     ...(columns != null ? { columns } : {}),
-    ...(direction != null ? { direction } : {}),
+    // The resource's own direction and language unless the caller overrides them.
+    direction: direction ?? renderResult.direction,
+    language: language ?? renderResult.language,
     ...(footerHtml != null ? { footerHtml } : {}),
   });
 

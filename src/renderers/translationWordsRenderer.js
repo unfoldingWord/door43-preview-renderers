@@ -131,6 +131,6 @@ export function renderTranslationWordsHtml(resourceData, options = {}) {
       },
     },
     manuals,
-    fullHtml: buildFullHtmlDocument(title, cssWeb, pageBody),
+    fullHtml: buildFullHtmlDocument(title, cssWeb, pageBody, resourceData),
   };
 }

@@ -64,7 +64,8 @@ An **HtmlData** package:
   title: 'unfoldingWord® Translation Notes',
   abbreviation: 'tn',
   version: 'v91',
-  direction: 'ltr',
+  language: 'en',        // from the resource; renderHTML writes it as <html lang>
+  direction: 'ltr',      // 'rtl' for Arabic, Hebrew, Farsi…; renderHTML writes <html dir>
   sections: {
     cover: '…',          // cover page HTML
     copyright: '…',      // license page HTML

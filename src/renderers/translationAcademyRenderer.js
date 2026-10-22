@@ -137,6 +137,6 @@ export function renderTranslationAcademyHtml(resourceData, options = {}) {
       },
     },
     manuals,
-    fullHtml: buildFullHtmlDocument(title, cssWeb, pageBody),
+    fullHtml: buildFullHtmlDocument(title, cssWeb, pageBody, resourceData),
   };
 }

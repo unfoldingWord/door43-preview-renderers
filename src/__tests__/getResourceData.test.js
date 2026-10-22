@@ -274,6 +274,63 @@ describe('getResourceData', () => {
     expect(result).toEqual({ type: 'tsv' });
   });
 
+  test("copies the catalog entry's language and direction onto the data", async () => {
+    const catalogEntry = {
+      title: 'ملاحظات الترجمة',
+      subject: 'Translation Words',
+      ingredients: [{ identifier: 'bible' }],
+      metadata_type: 'rc',
+      language: 'ar',
+      language_title: 'العربية',
+      language_direction: 'rtl',
+      language_is_gl: true,
+    };
+    axiosGetMock.mockResolvedValueOnce({ data: catalogEntry });
+    extractRcTwDataMock.mockResolvedValueOnce({ type: 'tw', subject: 'Translation Words' });
+
+    const result = await getResourceData({ owner: 'BSOJ', repo: 'ar_tw', ref: 'v1' });
+
+    expect(result).toEqual({
+      type: 'tw',
+      subject: 'Translation Words',
+      language: 'ar',
+      languageTitle: 'العربية',
+      direction: 'rtl',
+      isGatewayLanguage: true,
+    });
+  });
+
+  test('keeps a language or direction the extractor set itself', async () => {
+    const catalogEntry = {
+      subject: 'Translation Words',
+      ingredients: [{ identifier: 'bible' }],
+      metadata_type: 'rc',
+      language: 'ar',
+      language_direction: 'rtl',
+    };
+    axiosGetMock.mockResolvedValueOnce({ data: catalogEntry });
+    extractRcTwDataMock.mockResolvedValueOnce({ type: 'tw', direction: 'ltr' });
+
+    const result = await getResourceData({ owner: 'o', repo: 'r', ref: 'v1' });
+
+    expect(result).toMatchObject({ language: 'ar', direction: 'ltr' });
+  });
+
+  test("an extractor's non-canonical direction does not hide the catalog's", async () => {
+    const catalogEntry = {
+      subject: 'Translation Words',
+      ingredients: [{ identifier: 'bible' }],
+      metadata_type: 'rc',
+      language_direction: 'rtl',
+    };
+    axiosGetMock.mockResolvedValueOnce({ data: catalogEntry });
+    extractRcTwDataMock.mockResolvedValueOnce({ type: 'tw', direction: 'RTL' });
+
+    const result = await getResourceData({ owner: 'o', repo: 'r', ref: 'v1' });
+
+    expect(result.direction).toBe('rtl');
+  });
+
   test('routes RC OBS resources through extractRcSbObsData + formatObsData', async () => {
     const catalogEntry = {
       title: 'OBS',

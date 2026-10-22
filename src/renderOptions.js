@@ -116,8 +116,8 @@ const PAGE_NUMBER_SHOW_DEFAULTS = {
  * Resolve composition options (stage 4, renderHTML) with media-aware defaults.
  *
  * @param {Object} [options] - Raw options (see docs §6)
- * @param {Object} [htmlData] - HtmlData, used to default `direction`
- * @returns {{ media: 'screen'|'print', show: Object, columns: number, direction: string, print: Object }}
+ * @param {Object} [htmlData] - HtmlData, used to default `language` and `direction`
+ * @returns {{ media: 'screen'|'print', show: Object, columns: number, language: string, direction: string, print: Object }}
  */
 export function resolveComposeOptions(options = {}, htmlData = {}) {
   const media = options.media === 'print' ? 'print' : 'screen';
@@ -131,7 +131,10 @@ export function resolveComposeOptions(options = {}, htmlData = {}) {
     media,
     show,
     columns: Number.isFinite(options.columns) ? options.columns : 1,
-    direction: options.direction || htmlData.direction || 'ltr',
+    // `en` when nothing says otherwise: ResourceData cached before it carried a
+    // language would otherwise lose the `lang` it always had.
+    language: options.language || htmlData.language || 'en',
+    direction: (options.direction || htmlData.direction) === 'rtl' ? 'rtl' : 'ltr',
     print: {
       pageSize: print.pageSize || 'A4_PORTRAIT',
       margins: print.margins,

@@ -40,7 +40,7 @@ const tsvQuestionsSubjects = new Set([
  * @param {Object} [options.renderOptions] - Subject-specific rendering options
  * @param {Array<string>|Object} [options.books] - Book selection/ordering: an array of
  *   ids, or a map of `{ id: range }` (used when resourceData has no requestedBooks)
- * @returns {Object} HtmlData: { subject, title, abbreviation, version, direction, sections }
+ * @returns {Object} HtmlData: { subject, title, abbreviation, version, language, direction, sections }
  */
 export function renderHtmlData(resourceData, options = {}) {
   if (!resourceData) {
@@ -98,6 +98,9 @@ export function renderHtmlData(resourceData, options = {}) {
     title: rendered.title ?? resourceData.title,
     abbreviation,
     version: resourceData.version,
+    // The resource's language code (from its catalog entry) and its direction,
+    // for the document's `lang` and `dir`.
+    language: resourceData.language || rendered.language,
     direction: resourceData.direction || rendered.direction || 'ltr',
     sections,
   };
