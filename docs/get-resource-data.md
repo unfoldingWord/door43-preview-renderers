@@ -24,6 +24,10 @@ getResourceData(input, options?)
   - **dcs_api_url** (string): DCS API base URL (default `https://git.door43.org/api/v1`)
   - **quiet** (boolean): suppress progress logging (default `false`)
   - **books** (array): book ids, when `input` does not carry them
+  - **archiveMaxBytes** / **archiveTimeoutMs** (numbers): limits for the repository
+    archives that Translation Academy, Translation Words, Open Bible Stories and tS
+    are read from (default 100 MB and 120 s). The archive must be on the
+    `dcs_api_url` host; redirects are not followed
   - **extraSubjects** (array): blueprint subjects to fetch as extras beyond the ones
     the subject requires, e.g. `['TSV Translation Questions']` so Translation Notes
     can show each verse's questions (see `includeQuestions` in the

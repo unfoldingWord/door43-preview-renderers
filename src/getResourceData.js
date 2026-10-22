@@ -71,6 +71,9 @@ export async function getCatalogEntry(
  *   extras beyond the ones the subject requires, e.g. `['TSV Translation
  *   Questions']` so Translation Notes can show the questions under each verse
  * @param {boolean} [options.isExtra] - Internal: this is a dependency; skip resolving its own deps
+ * @param {number} [options.archiveMaxBytes] - Largest repository archive accepted
+ *   (TA, TW, OBS, tS are read from their archive; default 100 MB)
+ * @param {number} [options.archiveTimeoutMs] - Archive download time limit (default 120 s)
  * @param {Object} [options.contentSource] - Internal: where the files are read
  *   (contentSource.js); DCS unless getResourceDataFromDirectory() set it
  * @returns {Promise<Object>} ResourceData

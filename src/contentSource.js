@@ -30,13 +30,26 @@ export function entryCoords(entry) {
 const LICENSE_FILES = ['LICENSE.md', 'LICENSE', 'LICENSE.txt'];
 const stripDotSlash = (path) => String(path || '').replace(/^\.\//, '');
 
+/** Defaults for a repository archive download: generous (the largest archive the
+ * extractors read today, en_tw, is about 1 MB) but bounded. */
+export const ARCHIVE_LIMITS = { maxBytes: 100 * 1024 * 1024, timeoutMs: 120000 };
+
 /**
  * Read from DCS: the contents API for a file (cached per URL), the repository
  * archive (`zipball_url`) for the whole tree.
  *
+ * The archive URL comes from the catalog entry, so it is held to the DCS host
+ * the caller configured: it must be on the origin of `dcs_api_url`, redirects
+ * are not followed, and the download is limited in time and size.
+ *
  * @param {string} [dcs_api_url='https://git.door43.org/api/v1']
+ * @param {Object} [limits]
+ * @param {number} [limits.maxBytes=ARCHIVE_LIMITS.maxBytes] - Largest archive accepted
+ * @param {number} [limits.timeoutMs=ARCHIVE_LIMITS.timeoutMs] - Download time limit
  */
-export function dcsContentSource(dcs_api_url = 'https://git.door43.org/api/v1') {
+export function dcsContentSource(dcs_api_url = 'https://git.door43.org/api/v1', limits = {}) {
+  const maxBytes = limits.maxBytes > 0 ? limits.maxBytes : ARCHIVE_LIMITS.maxBytes;
+  const timeoutMs = limits.timeoutMs > 0 ? limits.timeoutMs : ARCHIVE_LIMITS.timeoutMs;
   return {
     readFile(entry, path) {
       const { owner, repo, ref } = entryCoords(entry);
@@ -50,7 +63,26 @@ export function dcsContentSource(dcs_api_url = 'https://git.door43.org/api/v1') 
       if (!entry.zipball_url) {
         throw new Error(`Catalog entry ${entryCoords(entry).repo} has no zipball_url.`);
       }
-      const response = await axios.get(entry.zipball_url, { responseType: 'arraybuffer' });
+      let url;
+      try {
+        url = new URL(entry.zipball_url);
+      } catch {
+        throw new Error(`Archive URL ${JSON.stringify(entry.zipball_url)} is not a URL.`);
+      }
+      const host = new URL(dcs_api_url).origin;
+      if (url.origin !== host) {
+        throw new Error(`Archive URL ${url.href} is not on the DCS host ${host}.`);
+      }
+      const response = await axios.get(url.href, {
+        responseType: 'arraybuffer',
+        timeout: timeoutMs,
+        maxContentLength: maxBytes, // enforced while downloading, in Node
+        maxRedirects: 0, // a redirect could leave the host checked above
+      });
+      // Browsers do not enforce maxContentLength; check what arrived.
+      if ((response.data?.byteLength ?? 0) > maxBytes) {
+        throw new Error(`Archive ${url.href} is larger than ${maxBytes} bytes.`);
+      }
       return JSZip.loadAsync(response.data);
     },
   };
@@ -209,7 +241,16 @@ export function directoryContentSource(dirPath) {
   };
 }
 
-/** The content source the options name, or DCS at `dcs_api_url`. */
+/**
+ * The content source the options name, or DCS at `dcs_api_url` with the
+ * archive limits `archiveMaxBytes` / `archiveTimeoutMs`.
+ */
 export function contentSourceFor(options = {}) {
-  return options.contentSource || dcsContentSource(options.dcs_api_url);
+  return (
+    options.contentSource ||
+    dcsContentSource(options.dcs_api_url, {
+      maxBytes: options.archiveMaxBytes,
+      timeoutMs: options.archiveTimeoutMs,
+    })
+  );
 }
