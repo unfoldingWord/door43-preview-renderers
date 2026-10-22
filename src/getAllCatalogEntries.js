@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { loggerFor } from './logger.js';
 import { ResourceError } from './errors.js';
-import { dcsApiUrlFrom } from './options.js';
+import { dcsApiUrlFrom, namesDcsApiUrl } from './options.js';
 import { REQUEST_TIMEOUT_MS } from './dcsApi.js';
 import { resolveResource } from './findResources.js';
 
@@ -34,14 +34,14 @@ function resolveDescriptor(source, options) {
     };
   }
 
-  // Catalog entry: derive the DCS API base from its `url` when present.
-  if (source.url) {
+  // Catalog entry: derive the DCS API base from its `url` when present. A URL
+  // in the options wins, by the same rule as above (any string, '' included).
+  if (!namesDcsApiUrl(options) && source.url) {
     const parts = source.url.split('/');
     if (parts.length >= 5) {
       dcsApiUrl = `${parts[0]}//${parts[2]}/${parts[3]}/${parts[4]}`;
     }
   }
-  if (options.dcsApiUrl || options.dcs_api_url) dcsApiUrl = dcsApiUrlFrom(options);
 
   return {
     owner: source.owner,

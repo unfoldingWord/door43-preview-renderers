@@ -38,7 +38,9 @@ export function dcsApiUrlOf(options = {}, loggerSource = options) {
   return DEFAULT_DCS_API_URL;
 }
 
-const namesUrl = (o) => typeof o?.dcsApiUrl === 'string' || typeof o?.dcs_api_url === 'string';
+/** Whether `o` names a DCS API URL, in either spelling (any string, `''` included). */
+export const namesDcsApiUrl = (o) =>
+  typeof o?.dcsApiUrl === 'string' || typeof o?.dcs_api_url === 'string';
 
 /**
  * The DCS API base URL from the first of `sources` (options first, then e.g. a
@@ -49,7 +51,7 @@ const namesUrl = (o) => typeof o?.dcsApiUrl === 'string' || typeof o?.dcs_api_ur
  * @returns {string}
  */
 export function dcsApiUrlFrom(...sources) {
-  const named = sources.find(namesUrl);
+  const named = sources.find(namesDcsApiUrl);
   if (!named) return DEFAULT_DCS_API_URL;
   return dcsApiUrlOf(named, sources.find((o) => o?.logger) || named);
 }
