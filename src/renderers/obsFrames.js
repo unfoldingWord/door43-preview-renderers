@@ -1,7 +1,7 @@
 /**
  * Shared Open Bible Stories helpers for the TSV renderers.
  *
- * The OBS-based TSV resources — obs-tn, obs-tq, obs-sn, obs-sq — are laid out
+ * The OBS-based TSV resources — obs-tn, obs-tq, obs-sn, obs-sq, obs-twl — are laid out
  * like their Bible counterparts with one substitution: where a Bible resource
  * shows the verse as parallel scripture columns, an OBS resource shows the story
  * frame the notes or questions are about. A "chapter" is a story and a "verse" is
@@ -22,6 +22,7 @@ export const OBS_TSV_SUBJECTS = new Set([
   'TSV OBS Translation Questions',
   'TSV OBS Study Notes',
   'TSV OBS Study Questions',
+  'TSV OBS Translation Words Links',
 ]);
 
 /**

@@ -426,9 +426,10 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
   const isObs = isObsSubject(resourceData.subject);
   const resolution = options.resolution || 'none';
   const obsData = isObs ? findObsExtra(extras) : null;
-  // The Translation Words Links extra is keyed by repo identifier: `twl` for the
-  // Bible notes, `obs-twl` for the OBS notes.
-  const twlExtra = extras.twl || extras['obs-twl'];
+  // The Translation Words Links extra, found by subject (extras are keyed by
+  // repo identifier, `twl` for the Bible notes and `obs-twl` for the OBS notes).
+  const twlSubject = isObs ? 'TSV OBS Translation Words Links' : 'TSV Translation Words Links';
+  const twlExtra = Object.values(extras).find((e) => e?.subject === twlSubject);
   // Parse aligned-Bible USFM once up front so per-verse scripture lookups are cheap.
   const parsedScriptureExtras = isObs
     ? {}
