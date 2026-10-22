@@ -671,6 +671,21 @@ describe('renderTranslationNotesHtml — Translation Questions (#23)', () => {
     );
   });
 
+  test('a chapter with questions and no notes is rendered, in order, each question once', () => {
+    const data = withQuestions();
+    data.extras.tq.books.tit.chapters[2] = {
+      verses: { 1: [{ ID: 'q4', Question: 'What should older men be?', Response: 'Sober.' }] },
+    };
+    expect(data.books.tit.chapters[2]).toBeUndefined();
+    const { body } = renderTranslationNotesHtml(data).sections;
+    expect(body.match(/id="nav-tit-2-1-tq-q4"/g)).toHaveLength(1);
+    expect(body.indexOf('id="nav-tit-2"')).toBeGreaterThan(body.indexOf('id="nav-tit-1-3"'));
+    expect(body.indexOf('id="nav-tit-2-1"')).toBeGreaterThan(body.indexOf('id="nav-tit-2"'));
+    // includeQuestions: false leaves the question-only chapter out.
+    const off = renderTranslationNotesHtml(data, { includeQuestions: false }).sections.body;
+    expect(off).not.toContain('id="nav-tit-2"');
+  });
+
   test('includeQuestions: false renders exactly what a render without the extra does', () => {
     const plain = renderTranslationNotesHtml(buildResourceData()).sections;
     const off = renderTranslationNotesHtml(withQuestions(), { includeQuestions: false }).sections;

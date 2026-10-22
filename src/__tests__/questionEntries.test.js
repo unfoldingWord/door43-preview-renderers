@@ -22,6 +22,11 @@ describe('placeQuestions', () => {
     expect(groups(placed)).toEqual({ '2-4': ['3', '1-4'] });
   });
 
+  test('of overlapping note ranges covering its last verse, the one read last wins', () => {
+    const placed = placeQuestions(['1-5', '3-6'], { 4: q('a') });
+    expect(groups(placed)).toEqual({ '3-6': ['4'] });
+  });
+
   test('a question on verses without notes gets its own block, in reading order', () => {
     const placed = placeQuestions(['intro', '1', '5', '9'], {
       3: q('a'),
@@ -79,5 +84,21 @@ describe('renderQuestionArticle', () => {
       '<input type="checkbox" class="response-show-checkbox" id="chk-nav-tit-1-1-x1">'
     );
     expect(html).toContain('<div class="tq-entry-response"><p>Paul &amp; Timothy.</p>');
+  });
+
+  test('the anchor is encoded in every attribute and the heading tag is h1-h6 only', () => {
+    const html = renderQuestionArticle(row, {
+      ...ctx,
+      anchor: 'nav-x" onclick="alert(1)<b>',
+      headingTag: 'script',
+    });
+    const safe = 'nav-x&quot; onclick=&quot;alert(1)&lt;b&gt;';
+    expect(html).not.toContain('onclick="');
+    expect(html).toContain(`<article class="tq-question" id="${safe}">`);
+    expect(html).toContain(`href="#${safe}"`);
+    expect(html).toContain(`id="chk-${safe}"`);
+    expect(html).toContain(`for="chk-${safe}"`);
+    expect(html.match(/<article/g)).toHaveLength(1);
+    expect(html).toContain('<h4 class="tq-entry-question">');
   });
 });

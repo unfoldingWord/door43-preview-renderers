@@ -101,8 +101,11 @@ export const questionEntryPrintCss = `article.tq-question {
  */
 export function renderQuestionArticle(
   row,
-  { anchor, bookId, chapterKey, bibles, isObs, headingTag = 'h4' }
+  { anchor: rawAnchor, bookId, chapterKey, bibles, isObs, headingTag: rawHeadingTag = 'h4' }
 ) {
+  // The anchor carries content (row ID, verse key): encode it for the attributes.
+  const anchor = escapeHtml(rawAnchor);
+  const headingTag = /^h[1-6]$/.test(rawHeadingTag) ? rawHeadingTag : 'h4';
   let html = `<article class="tq-question" id="${anchor}">\n`;
 
   // Quote header (study questions / study notes that target a scripture quote).
@@ -192,10 +195,12 @@ export function placeQuestions(noteKeys, questionVerses = {}) {
       attach(q.key, q.key, q.rows);
       continue;
     }
-    const cover = noteKeys.find((k) => {
-      const s = verseSpan(k);
-      return s && s.start <= q.span.end && q.span.end <= s.end;
-    });
+    // Of the note ranges covering its last verse, the one read last (latest
+    // end, then the tightest), so no covering notes follow the question.
+    const cover = noteKeys
+      .map((k) => ({ k, s: verseSpan(k) }))
+      .filter(({ s }) => s && s.start <= q.span.end && q.span.end <= s.end)
+      .sort((a, b) => b.s.end - a.s.end || b.s.start - a.s.start)[0]?.k;
     if (cover) {
       attach(cover, q.key, q.rows);
       continue;

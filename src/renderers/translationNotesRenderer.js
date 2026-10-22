@@ -382,7 +382,8 @@ hr.note-divider {
 }
 `;
 
-// Added only when the questions are shown, so a render without them is unchanged.
+// Added whenever a questions extra is shown (even one with no rows for these
+// books), so a render without the extra, or with includeQuestions: false, is unchanged.
 const tnQuestionsWebCss = `
 .tn-verse-questions-header {
   font-size: 0.85em;
@@ -543,15 +544,26 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
           : '')
     );
 
+    // With questions, a chapter that has questions but no notes is visited too,
+    // so none of its questions is dropped.
+    const questionChapters = includeQuestions
+      ? Object.entries(questionsExtra.books?.[bookId]?.chapters || {})
+          .filter(([, ch]) =>
+            Object.values(ch?.verses || {}).some((rows) => Array.isArray(rows) && rows.length)
+          )
+          .map(([key]) => key)
+      : [];
     // Sort chapters numerically (handle 'front' as 0)
-    const chapterKeys = Object.keys(book.chapters || {}).sort((a, b) => {
+    const chapterKeys = [
+      ...new Set([...Object.keys(book.chapters || {}), ...questionChapters]),
+    ].sort((a, b) => {
       if (a === 'front') return -1;
       if (b === 'front') return 1;
       return parseInt(a, 10) - parseInt(b, 10);
     });
 
     for (const chapterKey of chapterKeys) {
-      const chapter = book.chapters[chapterKey];
+      const chapter = book.chapters?.[chapterKey] || { verses: {} };
       const isFront = chapterKey === 'front';
       const story = isObs ? findObsStory(obsData, chapterKey) : null;
       const chapterLabel = isFront
