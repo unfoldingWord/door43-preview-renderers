@@ -711,4 +711,21 @@ describe('renderTranslationNotesHtml — Translation Questions (#23)', () => {
       renderHtmlData(data, { renderOptions: { includeQuestions: false } }).sections.body
     ).not.toContain('tq-question');
   });
+
+  test('a reference range narrows the questions too (#67 review)', async () => {
+    const { renderHtmlData } = await import('../renderHtmlData.js');
+    const data = { ...withQuestions(), abbreviation: 'tn' };
+    data.extras.tq.books.tit.chapters[2] = {
+      verses: { 1: [{ ID: 'q4', Question: 'A chapter 2 question?', Response: 'Yes.' }] },
+    };
+    const only11 = renderHtmlData(data, { books: { tit: '1:1' } }).sections.body;
+    expect(only11).toContain('id="tn-tit-1-1-tq-q1"');
+    expect(only11).not.toContain('How was the word revealed?'); // 1:3
+    expect(only11).not.toContain('A chapter 2 question?');
+    expect(only11).not.toContain('id="tn-tit-2"');
+    // In range, a question on a verse without notes still shows.
+    const upTo13 = renderHtmlData(data, { books: { tit: '1:1-3' } }).sections.body;
+    expect(upTo13).toContain('How was the word revealed?');
+    expect(upTo13).not.toContain('A chapter 2 question?');
+  });
 });
