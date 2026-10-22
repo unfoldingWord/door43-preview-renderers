@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { loggerFor } from './logger.js';
+import { ResourceError } from './errors.js';
 import { REQUEST_TIMEOUT_MS } from './dcsApi.js';
 import { resolveResource } from './findResources.js';
 
@@ -122,12 +123,18 @@ export async function getAllCatalogEntries(source, options = {}) {
     const response = await axios.get(bpUrl, { timeout: REQUEST_TIMEOUT_MS });
 
     if (!response.data || !response.data.data) {
-      throw new Error('Invalid response from /catalog/bp endpoint');
+      throw new ResourceError('Invalid response from /catalog/bp endpoint', {
+        code: 'HTTP',
+        url: bpUrl,
+      });
     }
 
     let catalogEntries = response.data.data;
     if (!Array.isArray(catalogEntries) || catalogEntries.length === 0) {
-      throw new Error('No catalog entries returned from /catalog/bp endpoint');
+      throw new ResourceError('No catalog entries returned from /catalog/bp endpoint', {
+        code: 'NOT_FOUND',
+        url: bpUrl,
+      });
     }
 
     // Downstream treats the first entry as the resource to render. DCS lists
@@ -155,11 +162,13 @@ export async function getAllCatalogEntries(source, options = {}) {
       source: { owner, repo, ref, books, dcsApiUrl },
     };
   } catch (error) {
+    if (error instanceof ResourceError) throw error;
     if (error.response) {
-      throw new Error(
-        `Failed to fetch catalog entries: ${error.response.status} ${error.response.statusText}`
+      throw new ResourceError(
+        `Failed to fetch catalog entries: ${error.response.status} ${error.response.statusText}`,
+        { status: error.response.status, url: bpUrl, cause: error }
       );
     }
-    throw error;
+    throw ResourceError.fromRequest('Failed to fetch catalog entries', error, bpUrl);
   }
 }

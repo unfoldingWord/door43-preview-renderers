@@ -1,4 +1,5 @@
 import { contentSourceFor, entryCoords } from './contentSource.js';
+import { ResourceError } from './errors.js';
 import { loggerFor } from './logger.js';
 import { applyTwlQuoteTrimming } from './twlQuoteTrimming.js';
 import { BibleBookData } from './constants.js';
@@ -291,9 +292,11 @@ export async function extractRcTsvData(catalogEntry, books, options = {}, catalo
 
     // Look up the GL quotes if aligned bibles are available and there is
     // anything to convert (Translation Questions rows carry no Quote).
+    let glQuoteMisses = [];
     if (bibleLinks.length > 0 && hasQuotes(normalizedRows)) {
       try {
-        await convertQuotes(normalizedRows, bookId, bibleEntriesForGl, options);
+        glQuoteMisses =
+          (await convertQuotes(normalizedRows, bookId, bibleEntriesForGl, options)).missed || [];
       } catch (e) {
         loggerFor(options).warn(`GL quote lookup failed for ${bookId}: ${e.message}`);
       }
@@ -307,11 +310,16 @@ export async function extractRcTsvData(catalogEntry, books, options = {}, catalo
       identifier: ingredient.identifier,
       sort: ingredient.sort,
       chapters: chapters,
+      // Quotes whose aligned words were not found for a Bible: those rows fall
+      // back to the original-language quote. Listed so an app can say why.
+      ...(glQuoteMisses.length ? { glQuoteMisses } : {}),
     };
   }
 
   if (Object.keys(result.books).length === 0) {
-    throw new Error('No valid books were processed from the TSV data');
+    throw new ResourceError('No valid books were processed from the TSV data', {
+      code: 'NO_CONTENT',
+    });
   }
 
   // Use the already-resolved catalogEntries instead of fetching separately

@@ -74,6 +74,29 @@ covers the TSV, the aligned Bibles and Greek New Testament (GL quotes included),
 TA, TW and TWL. A Scripture Burrito, tC or tS repository is read the same way (a file by its
 ingredient path, or the whole tree), but has not been compared with DCS.
 
+## Errors
+
+The stages throw a **`ResourceError`** (exported), so a caller can tell the cases
+apart without reading messages:
+
+| `code` | When |
+|---|---|
+| `NOT_FOUND` | DCS answered 404, or nothing is published (stage 0) |
+| `HTTP` | DCS answered another error status |
+| `NETWORK` | no answer: unreachable or timed out |
+| `INVALID_INPUT` | the arguments or the catalog entry can't be used |
+| `UNSUPPORTED` | a subject, metadata type or flavor that isn't handled |
+| `NO_CONTENT` | the resource has none of the requested books |
+
+It also carries `status` and `url` when there was a request, and `cause` when it
+wraps another error.
+
+One exception in 1.x: when the catalog lookup for an `{ owner, repo, ref }`
+descriptor fails, `getResourceData` **returns** `{ error, code, status, url }`
+instead of throwing (and `renderHtmlData` throws it if passed on). Pass
+`throwOnError: true` to get the `ResourceError` thrown instead. The returned form
+is deprecated; 2.0 will always throw.
+
 ## Returns
 
 A Promise resolving to a **ResourceData** object. Every shape carries `type`,
@@ -97,7 +120,9 @@ the aligned Bibles and the original-language Bible of that book's testament are
 fetched once through the request cache, indexed, and each quote is matched to the
 Gateway Language words aligned to it. A quote that cannot be matched leaves that
 Bible out of the row's `GLQuotes`, and the renderers show the original-language
-quote instead; without the original-language Bible no `GLQuotes` are added. A row
+quote instead. Such quotes are listed on the book as
+`glQuoteMisses: [{ reference, quote, repo }]` (only when there are any), so an app
+can say why a quote fell back; without the original-language Bible no `GLQuotes` are added. A row
 that already has a GL quote for a Bible keeps it.
 
 ## Usage

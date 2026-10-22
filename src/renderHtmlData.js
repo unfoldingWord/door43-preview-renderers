@@ -1,4 +1,5 @@
 import { renderAlignedBibleHtml } from './renderers/alignedBibleRenderer.js';
+import { ResourceError } from './errors.js';
 import { renderTranslationAcademyHtml } from './renderers/translationAcademyRenderer.js';
 import { renderTranslationWordsHtml } from './renderers/translationWordsRenderer.js';
 import { renderObsHtml } from './renderers/obsRenderer.js';
@@ -44,10 +45,19 @@ const tsvQuestionsSubjects = new Set([
  */
 export function renderHtmlData(resourceData, options = {}) {
   if (!resourceData) {
-    throw new Error('renderHtmlData: resourceData is required (the output of getResourceData()).');
+    throw new ResourceError(
+      'renderHtmlData: resourceData is required (the output of getResourceData()).',
+      { code: 'INVALID_INPUT' }
+    );
   }
   if (resourceData.error) {
-    throw new Error(resourceData.error);
+    // getResourceData's 1.x `{ error }` return: throw it as the ResourceError
+    // it was, with its code, status and URL.
+    throw new ResourceError(resourceData.error, {
+      code: resourceData.code,
+      status: resourceData.status,
+      url: resourceData.url,
+    });
   }
 
   const { renderOptions = {} } = options;
@@ -81,7 +91,10 @@ export function renderHtmlData(resourceData, options = {}) {
   } else if (translationWordsLinksSubjects.has(data.subject)) {
     rendered = renderTranslationWordsLinksHtml(data, renderOptions);
   } else {
-    throw new Error(`HTML rendering is not implemented yet for subject \`${data.subject}\`.`);
+    throw new ResourceError(
+      `HTML rendering is not implemented yet for subject \`${data.subject}\`.`,
+      { code: 'UNSUPPORTED' }
+    );
   }
 
   // Apply the resource-scoped anchor scheme (nav- -> `${abbreviation}-`) so the

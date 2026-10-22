@@ -1,3 +1,4 @@
+import { ResourceError } from './errors.js';
 import {
   extractRcSbObsData,
   extractTsObsData,
@@ -34,13 +35,13 @@ export async function getCatalogEntry(
   quiet = false,
   logger
 ) {
+  const url = `${dcs_api_url}/catalog/entry/${owner}/${repo}/${ref}`;
   try {
-    const url = `${dcs_api_url}/catalog/entry/${owner}/${repo}/${ref}`;
     loggerFor({ quiet, logger }).info(url);
     const response = await axios.get(url, { timeout: REQUEST_TIMEOUT_MS });
     return response.data;
   } catch (error) {
-    throw new Error(`Failed to get catalog entry: ${error.message}`);
+    throw ResourceError.fromRequest('Failed to get catalog entry', error, url);
   }
 }
 
@@ -108,20 +109,29 @@ export async function getResourceData(input, options = {}) {
         options.logger
       );
     } catch (e) {
+      // 1.x: return `{ error }` unless the caller asks for the thrown
+      // ResourceError (2.0 will always throw). The status and URL are kept.
+      if (options.throwOnError) throw e;
       loggerFor(options).warn(e.message);
-      return { error: e.message };
+      return {
+        error: e.message,
+        ...(e.code ? { code: e.code } : {}),
+        ...(e.status ? { status: e.status } : {}),
+        ...(e.url ? { url: e.url } : {}),
+      };
     }
   } else if (input && (input.name || input.branch_or_tag_name || input.ingredients)) {
     // A catalog entry object
     catalogEntry = input;
   } else {
-    throw new Error(
-      'getResourceData: input must be { owner, repo, ref }, a catalog entry, a CatalogSet, or ResourceData.'
+    throw new ResourceError(
+      'getResourceData: input must be { owner, repo, ref }, a catalog entry, a CatalogSet, or ResourceData.',
+      { code: 'INVALID_INPUT' }
     );
   }
 
   if (!catalogEntry) {
-    throw new Error('Catalog entry not found.');
+    throw new ResourceError('Catalog entry not found.', { code: 'NOT_FOUND' });
   }
 
   return withLanguage(await extractResourceData(catalogEntry, books, options), catalogEntry);
@@ -150,12 +160,15 @@ export async function getResourceData(input, options = {}) {
 export async function getResourceDataFromDirectory(catalogEntries, dirPath, options = {}) {
   const set = Array.isArray(catalogEntries) ? { catalogEntries } : catalogEntries;
   if (!set || !Array.isArray(set.catalogEntries) || set.catalogEntries.length === 0) {
-    throw new Error(
-      'getResourceDataFromDirectory: pass the catalog entries (main resource first) or a CatalogSet.'
+    throw new ResourceError(
+      'getResourceDataFromDirectory: pass the catalog entries (main resource first) or a CatalogSet.',
+      { code: 'INVALID_INPUT' }
     );
   }
   if (typeof dirPath !== 'string' || !dirPath) {
-    throw new Error('getResourceDataFromDirectory: dirPath must name a directory.');
+    throw new ResourceError('getResourceDataFromDirectory: dirPath must name a directory.', {
+      code: 'INVALID_INPUT',
+    });
   }
   return getResourceData(
     { catalogEntries: set.catalogEntries, source: set.source },
@@ -210,8 +223,9 @@ async function extractResourceData(catalogEntry, books, options) {
       catalogEntry.flavor_type = catalogEntry.repo.flavor_type;
       catalogEntry.flavor = catalogEntry.repo.flavor;
     } else {
-      throw new Error(
-        `This references an invalid ${catalogEntry.ref_type ? catalogEntry.ref_type : 'entry'}. Unable to determine its type and/or ingredients.`
+      throw new ResourceError(
+        `This references an invalid ${catalogEntry.ref_type ? catalogEntry.ref_type : 'entry'}. Unable to determine its type and/or ingredients.`,
+        { code: 'INVALID_INPUT' }
       );
     }
   }
@@ -222,7 +236,9 @@ async function extractResourceData(catalogEntry, books, options) {
 
   if (metadataType && subject) {
     if (!['rc', 'sb', 'ts', 'tc'].includes(metadataType)) {
-      throw new Error(`Not a valid repository that can be convert.`);
+      throw new ResourceError(`Not a valid repository that can be convert.`, {
+        code: 'UNSUPPORTED',
+      });
     }
     switch (metadataType) {
       case 'rc':
@@ -259,7 +275,10 @@ async function extractResourceData(catalogEntry, books, options) {
           case 'TSV OBS Translation Words Links':
             return getRcTsvObsTranslationWordsLinksData(catalogEntry, options);
           default:
-            throw new Error(`Conversion of \`${subject}\` resources is currently not supported.`);
+            throw new ResourceError(
+              `Conversion of \`${subject}\` resources is currently not supported.`,
+              { code: 'UNSUPPORTED' }
+            );
         }
       case 'sb':
         switch (flavorType) {
@@ -268,8 +287,9 @@ async function extractResourceData(catalogEntry, books, options) {
               case 'textTranslation':
                 return getSbBibleData(catalogEntry, books, options);
               default:
-                throw new Error(
-                  `Conversion of SB flavor \`${flavor}\` is not currently supported.`
+                throw new ResourceError(
+                  `Conversion of SB flavor \`${flavor}\` is not currently supported.`,
+                  { code: 'UNSUPPORTED' }
                 );
             }
           case 'gloss':
@@ -277,13 +297,15 @@ async function extractResourceData(catalogEntry, books, options) {
               case 'textStories':
                 return getSbObsData(catalogEntry, options);
               default:
-                throw new Error(
-                  `Conversion of SB gloss flavor \`${catalogEntry.flavor}\` is not currently supported.`
+                throw new ResourceError(
+                  `Conversion of SB gloss flavor \`${catalogEntry.flavor}\` is not currently supported.`,
+                  { code: 'UNSUPPORTED' }
                 );
             }
           default:
-            throw new Error(
-              `Conversion of SB flavor type \`${flavorType}\` is not currently supported.`
+            throw new ResourceError(
+              `Conversion of SB flavor type \`${flavorType}\` is not currently supported.`,
+              { code: 'UNSUPPORTED' }
             );
         }
       case 'ts':
@@ -293,8 +315,9 @@ async function extractResourceData(catalogEntry, books, options) {
           case 'Bible':
             return getTsBibleData(catalogEntry, books, options);
           default:
-            throw new Error(
-              'Conversion of translationStudio repositories is currently not supported.'
+            throw new ResourceError(
+              'Conversion of translationStudio repositories is currently not supported.',
+              { code: 'UNSUPPORTED' }
             );
         }
       case 'tc':
@@ -303,17 +326,21 @@ async function extractResourceData(catalogEntry, books, options) {
           case 'Bible':
             return getTcBibleData(catalogEntry, books, options);
           default:
-            throw new Error(
-              `Conversion of translationCore \`${subject}\` repositories is currently not supported.`
+            throw new ResourceError(
+              `Conversion of translationCore \`${subject}\` repositories is currently not supported.`,
+              { code: 'UNSUPPORTED' }
             );
         }
       default:
-        throw new Error(
-          `Conversion of \`${metadataType}\` repositories is currently not supported.`
+        throw new ResourceError(
+          `Conversion of \`${metadataType}\` repositories is currently not supported.`,
+          { code: 'UNSUPPORTED' }
         );
     }
   } else {
-    throw new Error('Catalog entry is missing required metadata.');
+    throw new ResourceError('Catalog entry is missing required metadata.', {
+      code: 'INVALID_INPUT',
+    });
   }
 }
 
@@ -329,7 +356,7 @@ async function getRcAlignedBibleData(catalogEntry, books, options) {
  */
 async function getRcObsData(catalogEntry, options) {
   if (!catalogEntry.ingredients?.length) {
-    throw new Error('No ingredients found in catalog entry');
+    throw new ResourceError('No ingredients found in catalog entry', { code: 'INVALID_INPUT' });
   }
 
   const data = await extractRcSbObsData(
@@ -503,7 +530,7 @@ async function getSbBibleData(catalogEntry, books, options) {
  */
 async function getSbObsData(catalogEntry, options) {
   if (!catalogEntry.ingredients?.length) {
-    throw new Error('No ingredients found in catalog entry');
+    throw new ResourceError('No ingredients found in catalog entry', { code: 'INVALID_INPUT' });
   }
 
   const data = await extractRcSbObsData(
@@ -518,7 +545,7 @@ async function getSbObsData(catalogEntry, options) {
  */
 async function getTsObsData(catalogEntry, options) {
   if (!catalogEntry.ingredients?.length) {
-    throw new Error('No ingredients found in catalog entry');
+    throw new ResourceError('No ingredients found in catalog entry', { code: 'INVALID_INPUT' });
   }
 
   const data = await extractTsObsData(

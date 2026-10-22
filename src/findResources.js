@@ -1,4 +1,5 @@
 import { fetchJson } from './dcsApi.js';
+import { ResourceError } from './errors.js';
 import { requiredSubjectsMap } from './constants.js';
 import { filterCatalogEntries, testamentOf } from './catalogSelection.js';
 
@@ -48,7 +49,7 @@ function isNotFound(err) {
  * @returns {Promise<Array<Object>>} Catalog entries as DCS returns them
  */
 export async function findResources({ lang, subject, owner, stage = 'prod' } = {}, options = {}) {
-  if (!lang) throw new Error('findResources: lang is required.');
+  if (!lang) throw new ResourceError('findResources: lang is required.', { code: 'INVALID_INPUT' });
   const api = apiBase(options);
   const params = [`lang=${enc(lang)}`, `stage=${enc(stage)}`, `limit=${PAGE_SIZE}`];
   if (subject) params.push(`subject=${enc(subject)}`);
@@ -57,8 +58,9 @@ export async function findResources({ lang, subject, owner, stage = 'prod' } = {
   const entries = [];
   for (let page = 1; ; page++) {
     if (page > MAX_PAGES) {
-      throw new Error(
-        `findResources: ${api}/catalog/search kept returning full pages after ${MAX_PAGES} pages.`
+      throw new ResourceError(
+        `findResources: ${api}/catalog/search kept returning full pages after ${MAX_PAGES} pages.`,
+        { code: 'HTTP' }
       );
     }
     const url = `${api}/catalog/search?${params.join('&')}&page=${page}`;
@@ -82,7 +84,8 @@ export async function findResources({ lang, subject, owner, stage = 'prod' } = {
  * @returns {Promise<{ref: string, isRelease: boolean}>}
  */
 export async function resolveRef({ owner, repo, ref = '' } = {}, options = {}) {
-  if (!owner || !repo) throw new Error('resolveRef: owner and repo are required.');
+  if (!owner || !repo)
+    throw new ResourceError('resolveRef: owner and repo are required.', { code: 'INVALID_INPUT' });
   const api = apiBase(options);
   if (ref) {
     return { ref, isRelease: isReleaseTag(ref) };
@@ -238,11 +241,16 @@ export async function resolveResource(
   { lang, subject, books = [], owner, stage = 'prod', ref: pinnedRef = '' } = {},
   options = {}
 ) {
-  if (!lang || !subject) throw new Error('resolveResource: lang and subject are required.');
+  if (!lang || !subject)
+    throw new ResourceError('resolveResource: lang and subject are required.', {
+      code: 'INVALID_INPUT',
+    });
   const api = apiBase(options);
   const candidates = rankCandidates(await findResources({ lang, subject, stage }, options), owner);
   if (!candidates.length) {
-    throw new Error(`No ${subject} published for language "${lang}" (stage ${stage}).`);
+    throw new ResourceError(`No ${subject} published for language "${lang}" (stage ${stage}).`, {
+      code: 'NOT_FOUND',
+    });
   }
 
   // A book-scoped blueprint only lists that book's dependencies, so scope it
@@ -324,9 +332,10 @@ export async function resolveResource(
     }
     return { owner: entry.owner, repo: entry.name, ref, entry, catalogEntries };
   }
-  throw new Error(
+  throw new ResourceError(
     `No complete book package for ${subject} in "${lang}"` +
-      (lastReason ? ` (last tried ${lastReason})` : '.')
+      (lastReason ? ` (last tried ${lastReason})` : '.'),
+    { code: 'NOT_FOUND' }
   );
 }
 
@@ -350,7 +359,9 @@ export async function resolveTarget(
     return { owner: found.owner, repo: found.repo, ref: found.ref, resolved: found };
   }
   if (!owner || !repo)
-    throw new Error('resolveTarget: owner and repo, or lang and subject, are required.');
+    throw new ResourceError('resolveTarget: owner and repo, or lang and subject, are required.', {
+      code: 'INVALID_INPUT',
+    });
   if (ref) return { owner, repo, ref };
   const latest = await resolveRef({ owner, repo }, options);
   return { owner, repo, ref: latest.ref };
