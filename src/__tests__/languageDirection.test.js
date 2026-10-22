@@ -74,6 +74,12 @@ describe('an RTL resource through renderHtmlData and renderHTML', () => {
     );
   });
 
+  test('a direction option other than ltr/rtl cannot reach the dir attribute', () => {
+    const html = renderHTML(htmlData, { direction: 'rtl" onload="x' });
+    expect(html).toContain('<html lang="ar" dir="ltr">');
+    expect(html).not.toContain('onload');
+  });
+
   test('a resource with no language keeps lang="en" dir="ltr"', () => {
     const { language, direction, ...unknown } = arabicNotes();
     void language;
@@ -113,6 +119,8 @@ describe('mixed-direction quotes', () => {
     expect(textDirection('Παῦλος')).toBe('ltr');
     expect(textDirection('… Paul')).toBe('ltr');
     expect(textDirection('1:1 — ')).toBe('');
+    // U+FEFF (a byte-order mark) is not a letter of a right-to-left script.
+    expect(textDirection('\uFEFFParis')).toBe('ltr');
   });
 
   test('isolatedQuoteHtml wraps only a quote that runs the other way', () => {

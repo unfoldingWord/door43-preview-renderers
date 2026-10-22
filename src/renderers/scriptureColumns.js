@@ -127,7 +127,7 @@ export function quoteForDisplay(quote) {
 
 // Hebrew, Arabic, Syriac, Thaana, N'Ko, Samaritan, Mandaic and their
 // presentation forms: the scripts written right to left.
-const RTL_CHAR = /[\u0590-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFF]/;
+const RTL_CHAR = /[\u0590-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFC]/;
 
 /**
  * The direction a text runs in, by its first letter: 'rtl' for a right-to-left

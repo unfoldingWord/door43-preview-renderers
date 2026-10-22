@@ -557,7 +557,7 @@ export function renderTsvQuestionsHtml(resourceData, options = {}) {
     title,
     tqWebCss + tqPrintCss + coverCss + runningMarkerWebCss,
     `<div class="section cover-page">${cover}</div>\n${body}`,
-    htmlRootAttributes(resourceData)
+    resourceData
   );
 
   return {
@@ -576,9 +576,9 @@ export function renderTsvQuestionsHtml(resourceData, options = {}) {
   };
 }
 
-function buildFullHtmlDocument(title, css, content, rootAttributes = 'lang="en" dir="ltr"') {
+function buildFullHtmlDocument(title, css, content, resource = {}) {
   return `<!DOCTYPE html>
-<html ${rootAttributes}>
+<html ${htmlRootAttributes(resource)}>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">

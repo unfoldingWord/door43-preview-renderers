@@ -134,7 +134,7 @@ export function resolveComposeOptions(options = {}, htmlData = {}) {
     // `en` when nothing says otherwise: ResourceData cached before it carried a
     // language would otherwise lose the `lang` it always had.
     language: options.language || htmlData.language || 'en',
-    direction: options.direction || htmlData.direction || 'ltr',
+    direction: (options.direction || htmlData.direction) === 'rtl' ? 'rtl' : 'ltr',
     print: {
       pageSize: print.pageSize || 'A4_PORTRAIT',
       margins: print.margins,

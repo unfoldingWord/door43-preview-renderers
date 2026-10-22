@@ -195,9 +195,9 @@ function buildBooksMap(resourceData, requestedBooks = []) {
   return output;
 }
 
-function buildFullHtmlDocument(title, css, content, rootAttributes = 'lang="en" dir="ltr"') {
+function buildFullHtmlDocument(title, css, content, resource = {}) {
   return `<!DOCTYPE html>
-<html ${rootAttributes}>
+<html ${htmlRootAttributes(resource)}>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -323,6 +323,6 @@ export function renderAlignedBibleHtml(resourceData, options = {}) {
       webView: includeRawUsfmView ? buildRawUsfmWebView(booksMap) : null,
     },
     renderedBooks,
-    fullHtml: buildFullHtmlDocument(coverTitle, webCss, pageBody, htmlRootAttributes(resourceData)),
+    fullHtml: buildFullHtmlDocument(coverTitle, webCss, pageBody, resourceData),
   };
 }

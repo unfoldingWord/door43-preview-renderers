@@ -8,7 +8,6 @@ import {
   manualWebCss,
   renderManualsToHtml,
 } from './manualResourceRenderer.js';
-import { htmlRootAttributes } from './scriptureColumns.js';
 
 function convertTaMarkdownToHtml(markdown = '') {
   let html = convertMarkdown(markdown);
@@ -138,6 +137,6 @@ export function renderTranslationAcademyHtml(resourceData, options = {}) {
       },
     },
     manuals,
-    fullHtml: buildFullHtmlDocument(title, cssWeb, pageBody, htmlRootAttributes(resourceData)),
+    fullHtml: buildFullHtmlDocument(title, cssWeb, pageBody, resourceData),
   };
 }

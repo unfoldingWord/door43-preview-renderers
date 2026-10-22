@@ -140,7 +140,9 @@ function withLanguage(data, catalogEntry) {
   if (direction === 'rtl' || direction === 'ltr') fields.direction = direction;
   if (typeof pick('language_is_gl') === 'boolean')
     fields.isGatewayLanguage = pick('language_is_gl');
-  const missing = Object.entries(fields).filter(([key]) => data[key] == null);
+  const unset = (key) =>
+    data[key] == null || (key === 'direction' && data[key] !== 'ltr' && data[key] !== 'rtl');
+  const missing = Object.entries(fields).filter(([key]) => unset(key));
   return missing.length ? { ...data, ...Object.fromEntries(missing) } : data;
 }
 

@@ -7,7 +7,6 @@ import {
   manualWebCss,
   renderManualsToHtml,
 } from './manualResourceRenderer.js';
-import { htmlRootAttributes } from './scriptureColumns.js';
 
 const defaultManualTitles = {
   kt: 'Key Terms',
@@ -132,6 +131,6 @@ export function renderTranslationWordsHtml(resourceData, options = {}) {
       },
     },
     manuals,
-    fullHtml: buildFullHtmlDocument(title, cssWeb, pageBody, htmlRootAttributes(resourceData)),
+    fullHtml: buildFullHtmlDocument(title, cssWeb, pageBody, resourceData),
   };
 }
