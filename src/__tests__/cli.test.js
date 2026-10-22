@@ -1,4 +1,6 @@
+import fs from 'fs';
 import http from 'http';
+import os from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { execFile } from 'child_process';
@@ -152,6 +154,77 @@ describe('door43-renderers CLI, stage 0 → CatalogSet hand-off', () => {
     expect(data.version).toBe('v66');
     expect(data.books.tit.chapters['1'].verses['1'][0].Note).toBe('Una nota.');
     expect(requests.filter((u) => u.includes('/catalog/bp/'))).toHaveLength(1);
+  });
+
+  test('--catalog with --dir renders from a saved CatalogSet and local checkouts, offline', async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'd43-cli-'));
+    try {
+      fs.mkdirSync(path.join(dir, 'es-419_tn'));
+      fs.writeFileSync(
+        path.join(dir, 'es-419_tn', 'tn_TIT.tsv'),
+        TSV.replace('Una nota.', 'Una nota local.')
+      );
+      const setFile = path.join(dir, 'set.json');
+      fs.writeFileSync(
+        setFile,
+        JSON.stringify({
+          resourceVersion: 'v66',
+          catalogEntries: dependencyFirst('v66').slice(1, 2), // the resource alone
+          source: { owner: 'es-419_gl', repo: 'es-419_tn', ref: 'v66', books: ['tit'] },
+        })
+      );
+      const { code, stdout, stderr } = await run([
+        'getResourceData',
+        '--catalog',
+        setFile,
+        '--dir',
+        dir,
+      ]);
+      expect(stderr).toBe('');
+      expect(code).toBe(0);
+      expect(JSON.parse(stdout).books.tit.chapters['1'].verses['1'][0].Note).toBe(
+        'Una nota local.'
+      );
+      expect(requests).toEqual([]); // nothing asked of DCS
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test('--include-questions with --catalog and --dir reads the questions from disk too', async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'd43-cli-'));
+    try {
+      fs.mkdirSync(path.join(dir, 'es-419_tn'));
+      fs.writeFileSync(path.join(dir, 'es-419_tn', 'tn_TIT.tsv'), TSV);
+      fs.mkdirSync(path.join(dir, 'es-419_tq'));
+      fs.writeFileSync(
+        path.join(dir, 'es-419_tq', 'tq_TIT.tsv'),
+        TQ_TSV.replace('¿Quién escribió?', '¿Quién escribió? (local)')
+      );
+      const setFile = path.join(dir, 'set.json');
+      fs.writeFileSync(
+        setFile,
+        JSON.stringify({
+          resourceVersion: 'v66',
+          catalogEntries: [{ ...tn, branch_or_tag_name: 'v66' }, tq],
+          source: { owner: 'es-419_gl', repo: 'es-419_tn', ref: 'v66', books: ['tit'] },
+        })
+      );
+      const { code, stdout, stderr } = await run([
+        'renderHtml',
+        '--catalog',
+        setFile,
+        '--dir',
+        dir,
+        '--include-questions',
+      ]);
+      expect(stderr).toBe('');
+      expect(code).toBe(0);
+      expect(JSON.parse(stdout).sections.body).toContain('¿Quién escribió? (local)');
+      expect(requests).toEqual([]);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
   });
 
   test('renderHtml --include-questions fetches the Translation Questions and shows them (#23)', async () => {

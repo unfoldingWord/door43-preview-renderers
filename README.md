@@ -15,7 +15,7 @@ A headless JavaScript library for fetching unfoldingWord Bible translation resou
 
 ## Pipeline at a glance
 
-The renderer is a **composable chain**. Each stage takes the previous stage's output, so you can run the whole thing or resume from any cached intermediate (a local-directory source, `getResourceDataFromDirectory`, is still planned):
+The renderer is a **composable chain**. Each stage takes the previous stage's output, so you can run the whole thing or resume from any cached intermediate. Stage 2 can also read repositories checked out on disk (`getResourceDataFromDirectory`):
 
 ```
 resolveResource(query, opts)         → owner/repo/ref  (network; optional stage 0: language + subject → publisher + release)
@@ -200,6 +200,10 @@ console.log(Object.keys(resourceData.books)); // ['gen', 'exo']
 ```
 
 The shape depends on `type` (`usfm`, `tsv`, `obs`, `ta`, `tw`); TSV resources carry their supporting resources in `extras` and GL quotes per aligned Bible in each row's `GLQuotes`. The GL quotes are computed locally (`src/quotes/`) from the aligned Bibles and the original-language Bible; a quote that cannot be matched falls back to the original-language quote. [More →](docs/get-resource-data.md)
+
+### `getResourceDataFromDirectory(catalogEntries, dirPath, options?)`
+
+Stage 2 from repositories checked out on disk, one folder per repository (`en_tn`, `en_ult`, …): the same ResourceData, no DCS requests for content. Pass the CatalogSet from `getAllCatalogEntries()` (or one saved earlier). On the command line: `--dir <path>`, with `--catalog <file>` to skip the catalog request too. [More →](docs/get-resource-data.md)
 
 ### `renderHtmlData(resourceData, options?)`
 

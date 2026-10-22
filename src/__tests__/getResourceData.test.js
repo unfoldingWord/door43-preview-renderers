@@ -351,7 +351,11 @@ describe('getResourceData', () => {
     );
 
     expect(getObsContentPathMock).toHaveBeenCalledWith(catalogEntry);
-    expect(extractRcSbObsDataMock).toHaveBeenCalledWith(catalogEntry, { path: './stories-folder' });
+    expect(extractRcSbObsDataMock).toHaveBeenCalledWith(
+      catalogEntry,
+      { path: './stories-folder' },
+      expect.any(Object) // the options, which carry the content source
+    );
     expect(formatObsDataMock).toHaveBeenCalledWith(obsData, catalogEntry);
     expect(result).toEqual(formatted);
   });
@@ -456,7 +460,11 @@ describe('getResourceData', () => {
     );
 
     expect(getObsContentPathMock).toHaveBeenCalledWith(catalogEntry);
-    expect(extractRcSbObsDataMock).toHaveBeenCalledWith(catalogEntry, { path: './stories-folder' });
+    expect(extractRcSbObsDataMock).toHaveBeenCalledWith(
+      catalogEntry,
+      { path: './stories-folder' },
+      expect.any(Object) // the options, which carry the content source
+    );
     expect(result).toEqual(formatted);
   });
 
@@ -497,7 +505,11 @@ describe('getResourceData', () => {
     );
 
     expect(getObsContentPathMock).toHaveBeenCalledWith(catalogEntry);
-    expect(extractTsObsDataMock).toHaveBeenCalledWith(catalogEntry, { path: './stories-folder' });
+    expect(extractTsObsDataMock).toHaveBeenCalledWith(
+      catalogEntry,
+      { path: './stories-folder' },
+      expect.any(Object) // the options, which carry the content source
+    );
     expect(result).toEqual(formatted);
   });
 

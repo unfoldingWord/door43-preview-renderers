@@ -58,8 +58,15 @@ catalog entry object, or an existing `resourceData` (returned unchanged).
 | `options.books` | string[] | `[]` | ✅ | Books, when `input` does not carry them (catalog-entry form). |
 | `options.extraSubjects` | string[] | `[]` | ✅ | Blueprint subjects to fetch as extras beyond the ones the subject requires. `['TSV Translation Questions']` on Translation Notes (`['TSV OBS Translation Questions']` on OBS Translation Notes) fetches the package's questions, which the notes then show under each verse or frame (`includeQuestions`). A subject the blueprint lacks is ignored. |
 
-> The local/CLI sibling `getResourceDataFromDirectory(catalogEntries, dirPath, options)`
-> (reads checked-out repos from disk instead of DCS, same output shape) is 🚧 planned.
+### `getResourceDataFromDirectory(catalogEntries, dirPath, options?)`
+
+The same ResourceData, read from repositories checked out on disk instead of DCS
+(Node only). Takes `getResourceData`'s options.
+
+| Argument | Type | Status | Description |
+|---|---|---|---|
+| `catalogEntries` | object[] \| CatalogSet | ✅ | Full catalog entries, main resource first (or a CatalogSet from `getAllCatalogEntries()`, whose `source.books` it uses). They name each repository and its ingredient paths; no manifest is read. |
+| `dirPath` | string | ✅ | A folder holding one folder per repository, named as its entry names it (`en_tn`, `en_ult`, `el-x-koine_ugnt`, …), checked out at the entry's version. A supporting resource that is not there is skipped, as an unreachable one is online. |
 
 ---
 
