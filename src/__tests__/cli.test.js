@@ -38,6 +38,14 @@ const dep = (owner, name, ref, subject) => ({
   ingredients: [{ identifier: 'tit', path: './57-TIT.usfm' }],
   repo: { name, owner: { username: owner } },
 });
+// The package's Translation Questions: not required, fetched only on request.
+const tq = {
+  ...dep('es-419_gl', 'es-419_tq', 'v20', 'TSV Translation Questions'),
+  title: 'Preguntas de traducción',
+  language: 'es-419',
+  metadata_type: 'rc',
+  ingredients: [{ identifier: 'tit', path: './tq_TIT.tsv', title: 'Tito', sort: 57 }],
+};
 // A complete package for Titus, with a dependency listed before the resource.
 const dependencyFirst = (mainRef) => [
   dep('unfoldingWord', 'el-x-koine_ugnt', 'v0.34', 'Greek New Testament'),
@@ -46,9 +54,12 @@ const dependencyFirst = (mainRef) => [
   dep('es-419_gl', 'es-419_ta', 'v4', 'Translation Academy'),
   dep('es-419_gl', 'es-419_tw', 'v37', 'Translation Words'),
   dep('es-419_gl', 'es-419_twl', 'v18', 'TSV Translation Words Links'),
+  tq,
 ];
 const TSV =
   'Reference\tID\tTags\tSupportReference\tQuote\tOccurrence\tNote\n1:1\ta1\t\t\t\t0\tUna nota.';
+const TQ_TSV =
+  'Reference\tID\tTags\tQuote\tOccurrence\tQuestion\tResponse\n1:1\tq1\t\t\t0\t¿Quién escribió?\tPablo.';
 
 let server;
 let api;
@@ -70,6 +81,9 @@ beforeAll(async () => {
     }
     if (u.pathname === '/api/v1/repos/es-419_gl/es-419_tn/contents/tn_TIT.tsv') {
       return send(200, { content: b64(TSV) });
+    }
+    if (u.pathname === '/api/v1/repos/es-419_gl/es-419_tq/contents/tq_TIT.tsv') {
+      return send(200, { content: b64(TQ_TSV) });
     }
     return send(404, { message: 'not found' });
   });
@@ -138,6 +152,22 @@ describe('door43-renderers CLI, stage 0 → CatalogSet hand-off', () => {
     expect(data.version).toBe('v66');
     expect(data.books.tit.chapters['1'].verses['1'][0].Note).toBe('Una nota.');
     expect(requests.filter((u) => u.includes('/catalog/bp/'))).toHaveLength(1);
+  });
+
+  test('renderHtml --include-questions fetches the Translation Questions and shows them (#23)', async () => {
+    const args = ['renderHtml', '--lang', 'es-419', '--subject', 'TSV Translation Notes'];
+    const without = await run([...args, '--book', 'tit']);
+    expect(without.code).toBe(0);
+    expect(JSON.parse(without.stdout).sections.body).not.toContain('tq-question');
+    expect(requests.some((u) => u.includes('es-419_tq'))).toBe(false);
+
+    const withQuestions = await run([...args, '--include-questions', '--book', 'tit']);
+    expect(withQuestions.stderr).toBe('');
+    expect(withQuestions.code).toBe(0);
+    const { body } = JSON.parse(withQuestions.stdout).sections;
+    expect(body).toContain('¿Quién escribió?');
+    expect(body).toContain('id="tn-tit-1-1-tq-q1"');
+    expect(body.indexOf('¿Quién escribió?')).toBeGreaterThan(body.indexOf('Una nota.'));
   });
 
   test('an explicit --ref with --lang is kept and its own blueprint is fetched', async () => {

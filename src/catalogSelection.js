@@ -51,7 +51,9 @@ export function selectAlignedBibles(entries) {
  * Filter a blueprint's catalog entries to the ones a render of the main entry
  * (`catalogEntries[0]`) needs, per requiredSubjectsMap:
  *
- *  - entries whose subject the main subject does not require are dropped;
+ *  - entries whose subject the main subject does not require are dropped,
+ *    unless the caller asks for that subject too (`extraSubjects`, e.g.
+ *    `['TSV Translation Questions']` for Translation Notes with questions);
  *  - of the Aligned Bibles, at most two are kept (see selectAlignedBibles);
  *  - when `books` is given, the original-language Bible of a testament none of
  *    the books belongs to is dropped (a New Testament render has no use for the
@@ -60,20 +62,26 @@ export function selectAlignedBibles(entries) {
  * The result is `[main, ...selectedAlignedBibles, ...otherRequiredEntries]`:
  * the Aligned Bible pair in preference order (literal first, then simplified;
  * see selectAlignedBibles), the remaining required entries in blueprint order.
- * A main subject with no required subjects returns the entries unchanged.
+ * A main subject with no required subjects, and no `extraSubjects`, returns the
+ * entries unchanged.
  *
  * @param {Array} catalogEntries - Blueprint entries, main entry first
  * @param {Object} [options]
  * @param {string} [options.subject] - Main subject (default: `catalogEntries[0].subject`)
  * @param {Array<string>} [options.books] - Book ids the render covers
+ * @param {Array<string>} [options.extraSubjects] - Subjects to keep beyond the
+ *   main subject's required ones
  * @returns {Array}
  */
-export function filterCatalogEntries(catalogEntries, { subject, books } = {}) {
+export function filterCatalogEntries(catalogEntries, { subject, books, extraSubjects } = {}) {
   if (!Array.isArray(catalogEntries) || catalogEntries.length === 0) return [];
 
   const main = catalogEntries[0];
-  const requiredSubjects = requiredSubjectsMap[subject || main?.subject];
-  if (!requiredSubjects || requiredSubjects.length === 0) {
+  const extras = Array.isArray(extraSubjects)
+    ? extraSubjects.filter((s) => typeof s === 'string' && s)
+    : [];
+  const requiredSubjects = [...(requiredSubjectsMap[subject || main?.subject] || []), ...extras];
+  if (requiredSubjects.length === 0) {
     return catalogEntries;
   }
 

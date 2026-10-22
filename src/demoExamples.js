@@ -16,6 +16,7 @@
  * @property {string} ref - Tag or branch
  * @property {string} books - Comma-separated book ids; '' for whole-resource subjects
  * @property {Object} [renderOptions] - `renderHtmlData` render options the example needs
+ * @property {Object} [options] - `getResourceData` options the example needs (e.g. `extraSubjects`)
  */
 
 /** Release tag of the unfoldingWord English resources (ULT, UST, TN, TQ, TWL, TA, TW). */
@@ -32,13 +33,14 @@ export const RELEASES = {
   ugnt: 'v0.34',
 };
 
-const uw = (label, repo, ref, books = '', renderOptions) => ({
+const uw = (label, repo, ref, books = '', renderOptions, options) => ({
   label,
   owner: 'unfoldingWord',
   repo,
   ref,
   books,
   ...(renderOptions ? { renderOptions } : {}),
+  ...(options ? { options } : {}),
 });
 
 /** @type {Array<{ group: string, examples: DemoExample[] }>} */
@@ -75,6 +77,14 @@ export const EXAMPLE_GROUPS = [
     group: 'TSV Bible helps',
     examples: [
       uw(`Translation Notes — Titus (${EN_RELEASE})`, 'en_tn', EN_RELEASE, 'tit'),
+      uw(
+        `Translation Notes with Translation Questions — Titus (${EN_RELEASE})`,
+        'en_tn',
+        EN_RELEASE,
+        'tit',
+        undefined,
+        { extraSubjects: ['TSV Translation Questions'] }
+      ),
       uw(
         `Translation Notes — Ruth + Titus, mixed OT/NT (${EN_RELEASE})`,
         'en_tn',
@@ -171,10 +181,13 @@ export const ALL_EXAMPLES = EXAMPLE_GROUPS.flatMap(({ group, examples }) =>
   examples.map((example) => ({ ...example, group }))
 );
 
-/** Stable key for an example (owner/repo/ref/books + layout). */
+/** Stable key for an example (owner/repo/ref/books + layout + extra subjects). */
 export function exampleKey(example) {
   const layout = example.renderOptions?.layout ? `#${example.renderOptions.layout}` : '';
-  return `${example.owner}/${example.repo}/${example.ref}/${example.books}${layout}`;
+  const extra = example.options?.extraSubjects?.length
+    ? `+${example.options.extraSubjects.join('+')}`
+    : '';
+  return `${example.owner}/${example.repo}/${example.ref}/${example.books}${layout}${extra}`;
 }
 
 /** Books as the array `getResourceData` takes. */

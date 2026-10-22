@@ -21,6 +21,8 @@ export default function GetResourceDataDemo() {
     setRepo(example.repo);
     setRef(example.ref);
     setBooks(exampleBooks(example));
+    // An example's own getResourceData options (e.g. extraSubjects), or none.
+    setOptions(example.options ? JSON.stringify(example.options, null, 2) : '');
   };
 
   const handleSubmit = async (e) => {

@@ -24,6 +24,10 @@ getResourceData(input, options?)
   - **dcs_api_url** (string): DCS API base URL (default `https://git.door43.org/api/v1`)
   - **quiet** (boolean): suppress progress logging (default `false`)
   - **books** (array): book ids, when `input` does not carry them
+  - **extraSubjects** (array): blueprint subjects to fetch as extras beyond the ones
+    the subject requires, e.g. `['TSV Translation Questions']` so Translation Notes
+    can show each verse's questions (see `includeQuestions` in the
+    [options reference](./options.md))
 
 `books` selects which books to fetch (e.g. `['tit']`); what an empty list means, and
 which subjects ignore it, is [the `books` rule](https://github.com/unfoldingWord/door43-preview-renderers/blob/main/skills/door43-renderers-maintainer/references/contracts.md#books-at-stage-2). Book-scoped supporting resources are fetched for the same
@@ -36,7 +40,7 @@ holds (see `renderHtmlData()` for ordering).
 
 The pure filtering `getResourceData()` applies to a blueprint is exported, so a
 caller can compute the same set (for a cache key, for instance) without fetching:
-`filterCatalogEntries(catalogEntries, { subject?, books? })`,
+`filterCatalogEntries(catalogEntries, { subject?, books?, extraSubjects? })`,
 `selectAlignedBibles(entries)` and `testamentOf(bookId)`. Their rules are in the
 [options reference](./options.md#catalog-selection-helpers).
 

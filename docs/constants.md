@@ -66,7 +66,7 @@ console.log(ntBooks.length); // 27
 
 ## requiredSubjectsMap
 
-Maps catalog entry subjects to their required supplementary subjects. `getResourceData()` applies it to the `/catalog/bp/` entries through `filterCatalogEntries(catalogEntries, { subject, books })` (exported, with `selectAlignedBibles()`), which also keeps at most two Aligned Bibles and drops the original-language Bible of a testament the requested books do not touch.
+Maps catalog entry subjects to their required supplementary subjects. `getResourceData()` applies it to the `/catalog/bp/` entries through `filterCatalogEntries(catalogEntries, { subject, books, extraSubjects })` (exported, with `selectAlignedBibles()`), which also keeps any `extraSubjects` the caller asks for (e.g. Translation Questions for Translation Notes), at most two Aligned Bibles and drops the original-language Bible of a testament the requested books do not touch.
 
 ### Structure
 

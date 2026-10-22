@@ -153,8 +153,9 @@ function sliceChapterVerses(block, vStart, vEnd) {
 
 /**
  * Return a copy of resourceData with the given per-book ranges applied. Books
- * without a range (or with an unparseable one) are kept whole. Returns the
- * original object when nothing changes.
+ * without a range (or with an unparseable one) are kept whole. A TSV resource's
+ * TSV extras are narrowed the same way. Returns the original object when
+ * nothing changes.
  *
  * @param {Object} resourceData
  * @param {Object<string,string>} ranges - { bookId: rangeStr }
@@ -182,5 +183,21 @@ export function filterResourceDataByRanges(resourceData, ranges) {
     changed = true;
   }
 
-  return changed ? { ...resourceData, books } : resourceData;
+  if (!changed) return resourceData;
+
+  // A TSV resource's TSV extras (Translation Questions, Translation Words
+  // Links) are keyed by the same chapters and verses and are shown alongside
+  // them, so the same ranges apply: a question outside the range must not
+  // bring its verse back. Bible and manual extras are looked up per rendered
+  // verse or article and are left whole.
+  let extras = resourceData.extras;
+  if (resourceData.type === 'tsv' && extras && typeof extras === 'object') {
+    extras = Object.fromEntries(
+      Object.entries(extras).map(([key, extra]) => [
+        key,
+        extra?.type === 'tsv' ? filterResourceDataByRanges(extra, ranges) : extra,
+      ])
+    );
+  }
+  return { ...resourceData, books, extras };
 }
