@@ -1,55 +1,46 @@
 # API Client
 
-The API client provides methods for fetching content from remote repositories.
+The library talks to the Door43 Content Service through its own internal module
+(`src/dcsApi.js`: catalog entries, file contents, licenses, with request-level
+caching). You do not call that directly; `getAllCatalogEntries()` and
+`getResourceData()` do.
+
+One small helper for **GitHub** repositories is exported for callers that need
+it:
 
 ## Fetch Resource
 
-Fetch repository content using the GitHub API:
+Fetch repository content through the GitHub API (`api.github.com`):
 
 ```js static
-import { fetchResource } from 'door43-preview-renderers';
+import { fetchResource } from '@unfoldingword/door43-preview-renderers';
 
 const content = await fetchResource({
   owner: 'unfoldingWord',
-  repo: 'en_ult',
-  ref: 'master',
-  path: 'manifest.yaml', // optional
+  repo: 'door43-preview-renderers',
+  ref: 'main',
+  path: 'package.json', // optional; a directory lists its entries
 });
 ```
 
 ### Parameters
 
-- `owner` (string, required): Repository owner
-- `repo` (string, required): Repository name
-- `ref` (string, required): Git reference (branch, tag, or commit SHA)
-- `path` (string, optional): Path to specific file or directory
+- `owner` (string, required): repository owner
+- `repo` (string, required): repository name
+- `ref` (string, required): git reference (branch, tag, or commit SHA)
+- `path` (string, optional): path to a file or directory
 
-## Fetch Raw Content
+### Returns
 
-Get raw file content directly:
-
-```js static
-import { fetchRawContent } from 'door43-preview-renderers';
-
-const rawContent = await fetchRawContent({
-  owner: 'unfoldingWord',
-  repo: 'en_ult',
-  ref: 'master',
-  path: 'README.md',
-});
-```
+The GitHub contents API response (an object for a file, an array for a directory).
 
 ## Error Handling
 
-All API methods throw descriptive errors:
+The helper throws a descriptive error:
 
 ```js static
 try {
-  const content = await fetchResource({
-    owner: 'invalid',
-    repo: 'nonexistent',
-    ref: 'master',
-  });
+  const content = await fetchResource({ owner: 'invalid', repo: 'nonexistent', ref: 'main' });
 } catch (error) {
   console.error('Failed to fetch:', error.message);
 }

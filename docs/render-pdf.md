@@ -15,10 +15,10 @@ side by side so you can compare:
 ## `renderPdf()` (WeasyPrint, Node/CLI)
 
 ```js static
-import { getResourceData, renderHtmlData, renderPdf } from 'door43-preview-renderers';
+import { getResourceData, renderHtmlData, renderPdf } from '@unfoldingword/door43-preview-renderers';
 
 const resourceData = await getResourceData(
-  { owner: 'unfoldingWord', repo: 'en_tn', ref: 'v89', books: ['tit'] }
+  { owner: 'unfoldingWord', repo: 'en_tn', ref: 'v91', books: ['tit'] }
 );
 const htmlData = renderHtmlData(resourceData);
 
@@ -29,7 +29,7 @@ const pdf = await renderPdf(htmlData, { pageSize: 'A4_PORTRAIT' });
 Or straight from the command line (headless, no browser, no server):
 
 ```
-node src/cli.js generatePdf --owner unfoldingWord --repo en_tn --ref v89 --book tit --output tit.pdf
+node src/cli.js generatePdf --owner unfoldingWord --repo en_tn --ref v91 --book tit --output tit.pdf
 ```
 
 ### Offload WeasyPrint to a hosted service (`pdfServiceUrl`)
@@ -38,14 +38,16 @@ For hosts that can't install the `weasyprint` binary (or to let the **browser**
 get a real WeasyPrint PDF on a static deploy), run a WeasyPrint HTTP service —
 e.g. the [weasyprint-service](https://github.com/unfoldingWord/door43-preview-app/tree/develop/weasyprint-service)
 in door43-preview-app — and pass its URL. `renderPdf()` then assembles the HTML
-locally and POSTs it to the service instead of spawning the binary:
+locally and POSTs it to the service instead of spawning the binary. The service
+receives the complete document — every section, text included — so point it only
+at a host you trust:
 
 ```js static
 await renderPdf(htmlData, { pdfServiceUrl: 'https://weasyprint-pdf.example.com', outputPath: 'tit.pdf' });
 ```
 
 ```
-node src/cli.js generatePdf --owner unfoldingWord --repo en_tn --ref v89 --book tit \
+node src/cli.js generatePdf --owner unfoldingWord --repo en_tn --ref v91 --book tit \
   --pdf-service-url https://weasyprint-pdf.example.com --output tit.pdf
 ```
 
