@@ -1,8 +1,9 @@
 # CLI Tool
 
 The package ships a command line, `door43-renderers`, that runs the same staged
-pipeline as the library: fetch the catalog, fetch and parse a resource, render it
-to HTML sections, compose a print document, or produce a PDF.
+pipeline as the library: find what a language publishes, fetch the catalog, fetch
+and parse a resource, render it to HTML sections, compose a print document, or
+produce a PDF.
 
 ## Installation
 
@@ -11,7 +12,9 @@ npm install -g @unfoldingword/door43-preview-renderers
 door43-renderers --help
 ```
 
-From a checkout, the CLI imports the built library, so run `pnpm build` once, then:
+From a checkout, run it with `pnpm cli` or `node src/cli.js`. It uses the built
+library in `dist/` when there is one and the source in `src/` when there is not, so
+after changing `src/` run `pnpm build` (or delete `dist/`) before trying the CLI:
 
 ```bash
 pnpm cli getResourceData --owner unfoldingWord --repo en_tn --ref v91 --book tit
@@ -23,6 +26,7 @@ node src/cli.js getResourceData --owner unfoldingWord --repo en_tn --ref v91 --b
 
 | Command | What it runs | Output |
 |---|---|---|
+| `findResources` | `findResources()` | a summary of each catalog entry a language publishes, as JSON |
 | `getAllCatalogEntries` | `getAllCatalogEntries()` | CatalogSet JSON |
 | `getResourceData` | `getResourceData()` | ResourceData JSON |
 | `renderHtml` | `getResourceData()` → `renderHtmlData()` | HtmlData JSON (sections + identity) |
@@ -31,9 +35,17 @@ node src/cli.js getResourceData --owner unfoldingWord --repo en_tn --ref v91 --b
 
 ## Options
 
-- `--owner <owner>` — repository owner (required)
-- `--repo <repo>` — repository name (required)
-- `--ref <ref>` — git tag, branch, or commit (required by every command; there is no default)
+Name the resource either by repository or by language:
+
+- `--owner <owner>` — repository owner (required unless `--lang` and `--subject` are given; with them, a preferred publisher)
+- `--repo <repo>` — repository name (required unless `--lang` and `--subject` are given)
+- `--lang <code>` — language code, e.g. `en`, `es-419`; with `--subject`, the publisher and release are found for you ([stage 0](./find-resources.md)). `findResources` needs only `--lang`
+- `--subject <subject>` — catalog subject, e.g. `"TSV Translation Notes"`
+- `--stage <stage>` — catalog stage for `--lang` lookups: `prod` (default), `preprod`, `latest`, `branch`
+- `--ref <ref>` — git tag, branch, or commit. Omitted: the latest release (the default branch if there is none). With `--lang`, a given ref is the one each publisher's package is checked at
+
+The rest apply to every command:
+
 - `--book <bookId>` — one book id (e.g. `gen`, `tit`, `1jn`); omit for whole-resource output (OBS, TA, TW)
 - `--dcs-api-url <url>` — DCS API base (default `https://git.door43.org/api/v1`)
 - `--output <file>` — write to a file instead of stdout
@@ -45,6 +57,13 @@ node src/cli.js getResourceData --owner unfoldingWord --repo en_tn --ref v91 --b
 ## Examples
 
 ```bash
+# What a language publishes, and the Translation Notes for Titus found from it
+door43-renderers findResources --lang es-419 --quiet
+door43-renderers renderHtml --lang es-419 --subject "TSV Translation Notes" --book tit --quiet
+
+# The latest release of a repository (no --ref)
+door43-renderers getResourceData --owner unfoldingWord --repo en_tn --book tit --quiet
+
 # The book package for Titus, as JSON
 door43-renderers getAllCatalogEntries --owner unfoldingWord --repo en_tn --ref v91 --book tit --quiet | jq '.catalogEntries[] | {owner, repo: .name, subject}'
 
@@ -75,13 +94,28 @@ door43-renderers getAllCatalogEntries --owner BSOJ --repo ar_twl --ref v5 --book
 ```json
 {
   "resourceVersion": "v91",
-  "libraryVersion": "1.5.6",
+  "libraryVersion": "1.6.0",
   "catalogEntries": [ { "name": "en_tn", "owner": "unfoldingWord", "subject": "TSV Translation Notes", "...": "..." } ],
   "source": { "owner": "unfoldingWord", "repo": "en_tn", "ref": "v91", "books": ["tit"], "dcsApiUrl": "https://git.door43.org/api/v1" }
 }
 ```
 
 The main entry is first, followed by every related resource in the book package.
+With `--lang`/`--subject`, `source` also carries `lang` and `subject`, and
+`owner`/`repo`/`ref` are the publisher and release that were found.
+
+### findResources
+
+One summary per published entry, in the order the catalog search returns them:
+
+```json
+[
+  { "owner": "es-419_gl", "repo": "es-419_tn", "ref": "v66", "subject": "TSV Translation Notes",
+    "title": "…", "released": "2024-07-17T20:13:08Z", "language_is_gl": true, "language_direction": "ltr" }
+]
+```
+
+The library's `findResources()` returns the full catalog entries instead.
 
 ### getResourceData / renderHtml
 

@@ -25,8 +25,11 @@ getResourceData(input, options?)
   - **quiet** (boolean): suppress progress logging (default `false`)
   - **books** (array): book ids, when `input` does not carry them
 
-`books` selects which books to fetch (e.g. `['tit']`); an empty list means every
-book the resource has. Book-scoped supporting resources are fetched for the same
+`books` selects which books to fetch (e.g. `['tit']`). For the USFM subjects an
+empty list means every book the resource lists; the TSV subjects need at least one
+book (an empty list fails with `No valid books were processed from the TSV data`);
+Open Bible Stories, Translation Academy and Translation Words ignore it and fetch
+everything. Book-scoped supporting resources are fetched for the same
 books, and a testament mismatch (a New Testament book requested from the Hebrew Old
 Testament, or the reverse) is skipped rather than treated as an error. The list
 is not recorded on the result: the renderers work from whatever `books` the data
@@ -56,13 +59,18 @@ by `type`:
 
 TSV rows with an original-language `Quote` also carry `GLQuotes`, keyed by the
 aligned Bible repository (e.g. `en_ult`), with the Gateway Language quote and
-occurrence for that Bible.
+occurrence for that Bible. They are computed locally (`src/quotes/`): for each book,
+the aligned Bibles and the original-language Bible of that book's testament are
+fetched once through the request cache, indexed, and each quote is matched to the
+Gateway Language words aligned to it. A quote that cannot be matched leaves that
+Bible out of the row's `GLQuotes`, and the renderers show the original-language
+quote instead; without the original-language Bible no `GLQuotes` are added. A row
+that already has a GL quote for a Bible keeps it.
 
 Not extracted yet: **`TSV OBS Translation Words Links`**. `getResourceData()`
 returns only its catalog metadata (no `type`, `books`, or `extras`), so it cannot
 be rendered, and the OBS Translation Notes renderer does not get a words list from
 it. Tracked in [#21](https://github.com/unfoldingWord/door43-preview-renderers/issues/21).
-The scripture flavor of Scripture Burrito (`sb`) is a stub for the same reason.
 
 ## Usage
 
@@ -92,7 +100,7 @@ const resourceData = await getResourceData(set);
 | Metadata type | Description |
 |---|---|
 | `rc` | Resource Container (the unfoldingWord standard) |
-| `sb` | Scripture Burrito (OBS; the scripture flavor is not implemented yet) |
+| `sb` | Scripture Burrito: Bibles of the `textTranslation` flavor (one USFM file per book, read like an RC Bible) and OBS (`textStories`) |
 | `ts` | translationStudio projects (single-book Bibles, OBS) |
 | `tc` | translationCore projects (aligned Bibles with an exported USFM) |
 

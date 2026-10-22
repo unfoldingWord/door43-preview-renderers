@@ -10,6 +10,7 @@ Use this skill when implementing or extending rendering logic for subjects (Alig
 ## The pipeline
 
 ```
+resolveResource(query, opts)         → owner/repo/ref  (network; optional stage 0: language + subject)
 getAllCatalogEntries(source, opts)   → CatalogSet      (network)
 getResourceData(input, opts)         → ResourceData    (network; or a cached ResourceData passed through)
 renderHtmlData(resourceData, opts)   → HtmlData        (pure, no I/O)
@@ -61,7 +62,7 @@ No document string: `renderHTML(htmlData, { media })` builds it.
 
 ## Reviews
 
-Pull requests target `main`; request `uwreview`. Frank and George review every push; the fix lane handles blocking findings on the branch (pull before pushing, never force-push); Low notes are the author's follow-up after the round, in one push or an issue.
+Pull requests target `main`; request `uwreview`. Frank and George review every push; the fix lane handles blocking findings on the branch (pull before pushing, never force-push); Low notes are the author's follow-up after the round, in one push or an issue. Run `pnpm format` and `pnpm lint` before pushing (CI checks both), and keep fixtures small so the reviewers can read the source. Round caps and escalation: `AGENTS.md`, section Reviews.
 
 ## References
 
