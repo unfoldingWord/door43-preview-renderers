@@ -22,7 +22,8 @@ getResourceData(input, options?)
   - an existing **ResourceData** object (returned unchanged — passthrough)
 - **options** (object, optional):
   - **dcs_api_url** (string): DCS API base URL (default `https://git.door43.org/api/v1`)
-  - **quiet** (boolean): suppress progress logging (default `false`)
+  - **quiet** (boolean): suppress progress logging (default `false`); warnings are still reported
+  - **logger** (object): `{ info, warn }` to receive progress and warnings instead of the console
   - **books** (array): book ids, when `input` does not carry them
   - **extraSubjects** (array): blueprint subjects to fetch as extras beyond the ones
     the subject requires, e.g. `['TSV Translation Questions']` so Translation Notes

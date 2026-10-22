@@ -185,7 +185,7 @@ The blueprint is the single source of truth for which resources and versions bel
 Stage 2. Fetches one resource, parses it, fetches the supporting resources its subject needs, and returns normalized **ResourceData**.
 
 - `input`: a descriptor `{ owner, repo, ref, books? }`, a CatalogSet (reused, no second blueprint call; this is how the language form reaches stage 2), a catalog entry object, or existing ResourceData (returned unchanged)
-- `options.dcs_api_url`, `options.quiet`, `options.books`, `options.extraSubjects` (blueprint subjects to fetch beyond the required ones, e.g. `['TSV Translation Questions']` for Translation Notes with questions)
+- `options.dcs_api_url`, `options.quiet` (progress only; warnings still show), `options.logger` (`{ info, warn }`), `options.books`, `options.extraSubjects` (blueprint subjects to fetch beyond the required ones, e.g. `['TSV Translation Questions']` for Translation Notes with questions)
 - `books`: the books to fetch; what an empty list means, and which subjects ignore it, is [the `books` rule](skills/door43-renderers-maintainer/references/contracts.md#books-at-stage-2)
 
 ```javascript

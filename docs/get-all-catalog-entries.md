@@ -25,7 +25,8 @@ getAllCatalogEntries(source, options?)
   - an existing **CatalogSet** (returned unchanged — passthrough)
 - **options** (object, optional):
   - **dcs_api_url** (string): DCS API base URL (default `https://git.door43.org/api/v1`)
-  - **quiet** (boolean): suppress logging
+  - **quiet** (boolean): suppress progress logging (warnings are still reported)
+  - **logger** (object): `{ info, warn }` in place of the console
   - **books** (array): books, when using the catalog-entry source form
 
 ## Returns
