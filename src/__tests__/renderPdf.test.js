@@ -73,4 +73,21 @@ describe('renderPdf', () => {
     const out = await renderPdf(sampleRenderResult(), { weasyprintPath: 'cat' });
     expect(out.toString('utf8')).toContain('size: 210mm 297mm');
   });
+  test("prints in the resource's own language and direction", async () => {
+    const rtl = { ...sampleRenderResult(), language: 'ar', direction: 'rtl' };
+    const html = (await renderPdf(rtl, { weasyprintPath: 'cat' })).toString('utf8');
+    // dir on the root is what makes WeasyPrint start the book on a left-hand page.
+    expect(html).toContain('<html lang="ar" dir="rtl">');
+    expect(html).toContain('data-direction="rtl"');
+  });
+
+  test('an explicit language or direction option wins', async () => {
+    const rtl = { ...sampleRenderResult(), language: 'ar', direction: 'rtl' };
+    const out = await renderPdf(rtl, {
+      weasyprintPath: 'cat',
+      language: 'ar-EG',
+      direction: 'ltr',
+    });
+    expect(out.toString('utf8')).toContain('<html lang="ar-EG" dir="ltr">');
+  });
 });

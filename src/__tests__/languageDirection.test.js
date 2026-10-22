@@ -1,6 +1,6 @@
 import { renderHtmlData } from '../renderHtmlData.js';
 import { renderHTML } from '../renderHTML.js';
-import { getPrintCss } from '../renderers/printDocumentAssembler.js';
+import { getPrintCss, assemblePrintDocument } from '../renderers/printDocumentAssembler.js';
 import { renderTranslationNotesHtml } from '../renderers/translationNotesRenderer.js';
 import {
   textDirection,
@@ -86,6 +86,13 @@ describe('an RTL resource through renderHtmlData and renderHTML', () => {
       expect(html).toContain('<html lang="ar&quot; onload=&quot;x" dir="rtl">');
       expect(html).not.toContain('onload="x"');
     }
+  });
+
+  test('a direction other than ltr/rtl cannot reach the print container either', () => {
+    // assemblePrintDocument is public too, and does not go through resolveComposeOptions.
+    const { html } = assemblePrintDocument(htmlData.sections, { direction: 'rtl" onload="x' });
+    expect(html).toContain('data-direction="ltr"');
+    expect(html).not.toContain('onload');
   });
 
   test('a resource with no language keeps lang="en" dir="ltr"', () => {

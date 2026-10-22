@@ -791,7 +791,7 @@ export function assemblePrintDocument(sections, options = {}) {
     pageWidth = '210mm',
     pageHeight = '297mm',
     columns = 1,
-    direction = 'ltr',
+    direction: requestedDirection,
     language = 'en',
     // 'weasyprint' (or 'prince'): native paged-media engine, no JS polyfill.
     // 'pagedjs': inject the PagedJS polyfill for in-browser preview/PDF.
@@ -806,6 +806,9 @@ export function assemblePrintDocument(sections, options = {}) {
     pageNumberPosition = 'bottom',
     runningHeader = true,
   } = options;
+  // Allowlisted once: it reaches the root's dir, the print container's style and
+  // data-direction, and the print CSS.
+  const direction = requestedDirection === 'rtl' ? 'rtl' : 'ltr';
 
   const showCover = show.cover !== false;
   const showCopyright = show.copyright !== false;
@@ -871,7 +874,7 @@ ${coverHtml}${copyrightHtml}${tocHtmlBlock}  ${body}
   // dir on the root element is what sets the page progression (an RTL book
   // starts on a left-hand page), not only the text direction.
   const fullHtml = `<!DOCTYPE html>
-<html lang="${escapeHtml(language)}" dir="${direction === 'rtl' ? 'rtl' : 'ltr'}">
+<html lang="${escapeHtml(language)}" dir="${direction}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
