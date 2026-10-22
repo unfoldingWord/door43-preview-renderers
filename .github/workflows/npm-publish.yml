@@ -1,33 +1,44 @@
 name: Publish to npm
 
 # Publishes @unfoldingword/door43-preview-renderers to npm when a GitHub release
-# is published, with npm trusted publishing (OIDC): no npm token is stored. The
-# package's Trusted Publisher on npmjs.com names this repository and this
-# workflow file (npm-publish.yml); npm accepts a publish only from here. With
-# trusted publishing from a public repository, npm adds provenance itself.
+# is published, with npm trusted publishing (OIDC): this workflow uses no npm
+# token. The package's Trusted Publisher on npmjs.com names this repository and
+# this workflow file (npm-publish.yml); npm accepts a publish only from here.
+# With trusted publishing from a public repository, npm adds provenance itself.
 # Requires npm >= 11.5.1 and Node >= 22.14 (docs.npmjs.com/trusted-publishers).
+# (The org secret NPM_TOKEN is no longer used here; other packages may still
+# publish with it until they move to trusted publishing.)
 #
-# Idempotent: if the version in package.json is already on the registry, the
-# publish step is skipped (so re-running, or the v1.5.0 release that matches the
-# already-published version, passes green instead of erroring).
+# Two jobs, so the publishing credential never meets dependency code:
+#   test     installs (dependency scripts run here), tests, checks the tag,
+#            builds and packs the tarball. Read-only; no OIDC.
+#   publish  needs `test`. Holds `id-token: write`, installs nothing and runs
+#            no tests: it publishes the tarball `test` packed, and
+#            `npm publish <tarball>` runs no lifecycle scripts.
+#
+# Idempotent: if the version is already on the registry, the publish is skipped
+# (so re-running a release's run passes green instead of erroring).
 #
 # Create a release tagged vX.Y.Z (matching package.json's version) to trigger it.
+# A manual run (workflow_dispatch) builds and checks but never publishes.
 on:
   release:
     types: [published]
   workflow_dispatch:
 
-# Read-only by default; the publish job adds only the OIDC token it needs.
+# Read-only by default; only the publish job adds the OIDC token it needs.
 permissions:
   contents: read
 
 jobs:
-  publish:
-    # GitHub-hosted: npm does not accept trusted publishing from self-hosted runners.
+  test:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write # lets npm exchange the workflow's OIDC token for a publish
+    outputs:
+      name: ${{ steps.pack.outputs.name }}
+      version: ${{ steps.pack.outputs.version }}
+      tarball: ${{ steps.pack.outputs.tarball }}
     steps:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -45,15 +56,7 @@ jobs:
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
-          registry-url: https://registry.npmjs.org
           cache: pnpm
-
-      - name: Use an npm that supports trusted publishing
-        # Node 22 ships npm 10; trusted publishing needs 11.5.1 or later. Pinned
-        # to a release that has been out for a while.
-        run: |
-          npm install -g npm@11.6.2
-          npm --version
 
       - name: Install
         run: pnpm install --frozen-lockfile
@@ -71,14 +74,62 @@ jobs:
             exit 1
           fi
 
-      - name: Publish to npm (skip if version already published)
-        # No NODE_AUTH_TOKEN: npm authenticates with the job's OIDC token.
+      - name: Build and pack
+        id: pack
         run: |
-          NAME="$(node -p "require('./package.json').name")"
-          VER="$(node -p "require('./package.json').version")"
-          if npm view "$NAME@$VER" version >/dev/null 2>&1; then
-            echo "$NAME@$VER is already on the registry — skipping publish."
+          pnpm build
+          mkdir -p pack
+          TARBALL="$(npm pack --ignore-scripts --pack-destination pack | tail -n 1)"
+          echo "tarball=$TARBALL" >> "$GITHUB_OUTPUT"
+          echo "name=$(node -p "require('./package.json').name")" >> "$GITHUB_OUTPUT"
+          echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Keep the tarball for the publish job
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: package
+          path: pack/${{ steps.pack.outputs.tarball }}
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    needs: test
+    # Only a published release publishes; a manual run stops after `test`.
+    if: github.event_name == 'release'
+    # GitHub-hosted: npm does not accept trusted publishing from self-hosted runners.
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # lets npm exchange the workflow's OIDC token for a publish
+    steps:
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      - name: Use an npm that supports trusted publishing
+        # Node 22 ships npm 10; trusted publishing needs 11.5.1 or later. Pinned
+        # to a release that has been out for a while.
+        run: |
+          npm install -g npm@11.6.2
+          npm --version
+
+      - name: Get the tarball the test job packed
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: package
+
+      - name: Publish to npm (skip if version already published)
+        # No checkout, no install, no tests here: nothing but npm runs while the
+        # OIDC token is available, and publishing a tarball runs no scripts.
+        env:
+          NAME: ${{ needs.test.outputs.name }}
+          VERSION: ${{ needs.test.outputs.version }}
+          TARBALL: ${{ needs.test.outputs.tarball }}
+        run: |
+          if npm view "$NAME@$VERSION" version >/dev/null 2>&1; then
+            echo "$NAME@$VERSION is already on the registry — skipping publish."
           else
-            # prepare script builds dist/ via rollup; publishConfig sets public access
-            npm publish
+            npm publish "./$TARBALL" --access public
           fi

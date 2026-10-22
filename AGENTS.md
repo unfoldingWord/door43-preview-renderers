@@ -55,7 +55,7 @@ Every page in `docs/` is listed in `styleguide.config.cjs` (the style guide's se
 
 ## Building and releasing
 
-`pnpm build` runs Rollup to `dist/index.esm.js` (the published entry) and `dist/index.js`; `prebuild` fetches the cover logos into `src/assets/logos.generated.js` only when that committed file is missing (`pnpm fetch-logos` refreshes it). Only `dist/index.esm.js` and `src/cli.js` are published. To release: bump `version` in `package.json` through a PR, then publish a GitHub release tagged `v<version>`; `npm-publish.yml` tests, checks the tag against `package.json`, and publishes (skipping a version already on npm) with npm trusted publishing (OIDC, no token; the Trusted Publisher on npmjs.com names `npm-publish.yml`). A person cuts the release.
+`pnpm build` runs Rollup to `dist/index.esm.js` (the published entry) and `dist/index.js`; `prebuild` fetches the cover logos into `src/assets/logos.generated.js` only when that committed file is missing (`pnpm fetch-logos` refreshes it). Only `dist/index.esm.js` and `src/cli.js` are published. To release: bump `version` in `package.json` through a PR, then publish a GitHub release tagged `v<version>`; `npm-publish.yml` tests, checks the tag against `package.json`, and publishes (skipping a version already on npm) with npm trusted publishing (OIDC: no token in this workflow, though the org `NPM_TOKEN` secret may still serve other packages; the Trusted Publisher on npmjs.com names `npm-publish.yml`). A `test` job installs, tests and packs; the `publish` job alone has `id-token: write`, runs no dependency code, and publishes that tarball. A person cuts the release.
 
 ## Reviews
 
