@@ -69,7 +69,8 @@ describe('getCatalogEntry', () => {
     );
 
     expect(axiosGetMock).toHaveBeenCalledWith(
-      'https://git.door43.org/api/v1/catalog/entry/unfoldingWord/en_ult/v88'
+      'https://git.door43.org/api/v1/catalog/entry/unfoldingWord/en_ult/v88',
+      { timeout: 30000 } // REQUEST_TIMEOUT_MS
     );
     expect(result).toEqual(catalog);
   });

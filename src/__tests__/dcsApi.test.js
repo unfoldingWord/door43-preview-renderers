@@ -29,7 +29,8 @@ describe('dcsApi.fetchContent', () => {
     );
 
     expect(axiosGetMock).toHaveBeenCalledWith(
-      'https://git.door43.org/api/v1/repos/unfoldingWord/en_ult/contents/content/tit.usfm?ref=v88'
+      'https://git.door43.org/api/v1/repos/unfoldingWord/en_ult/contents/content/tit.usfm?ref=v88',
+      { timeout: 30000 } // REQUEST_TIMEOUT_MS
     );
     expect(result).toBe(text);
   });

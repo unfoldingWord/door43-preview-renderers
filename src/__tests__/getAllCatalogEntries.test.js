@@ -25,7 +25,8 @@ describe('getAllCatalogEntries', () => {
     );
 
     expect(axiosGetMock).toHaveBeenCalledWith(
-      'https://git.door43.org/api/v1/catalog/bp/unfoldingWord/en_tn/v80'
+      'https://git.door43.org/api/v1/catalog/bp/unfoldingWord/en_tn/v80',
+      { timeout: 30000 } // REQUEST_TIMEOUT_MS
     );
     expect(result.catalogEntries).toEqual(entries);
     expect(result.resourceVersion).toBe('v80');
@@ -48,7 +49,8 @@ describe('getAllCatalogEntries', () => {
     );
 
     expect(axiosGetMock).toHaveBeenCalledWith(
-      'https://git.door43.org/api/v1/catalog/bp/unfoldingWord/en_tw/v89'
+      'https://git.door43.org/api/v1/catalog/bp/unfoldingWord/en_tw/v89',
+      { timeout: 30000 } // REQUEST_TIMEOUT_MS
     );
     expect(result.catalogEntries).toEqual(entries);
   });

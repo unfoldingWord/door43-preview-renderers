@@ -13,19 +13,8 @@ import { filterCatalogEntries } from './catalogSelection.js';
 import { directoryContentSource } from './contentSource.js';
 import { getAllCatalogEntries } from './getAllCatalogEntries.js';
 import axios from 'axios';
-
-// Global quiet flag for logging
-let isQuiet = false;
-
-/**
- * Logging function that respects quiet flag
- * @param {...any} args - Arguments to log
- */
-function log(...args) {
-  if (!isQuiet) {
-    console.warn(...args);
-  }
-}
+import { loggerFor } from './logger.js';
+import { REQUEST_TIMEOUT_MS } from './dcsApi.js';
 
 /**
  * Fetches the catalog entry from DCS API
@@ -33,7 +22,8 @@ function log(...args) {
  * @param {string} repo - Repository name
  * @param {string} ref - Git reference
  * @param {string} dcs_api_url - Base URL for DCS API
- * @param {boolean} quiet - Suppress logging output
+ * @param {boolean} quiet - Suppress progress logging (the URL fetched)
+ * @param {Object} [logger] - `{ info, warn }` in place of the console (see logger.js)
  * @returns {Promise<Object>} The catalog entry data
  */
 export async function getCatalogEntry(
@@ -41,13 +31,13 @@ export async function getCatalogEntry(
   repo,
   ref,
   dcs_api_url = 'https://git.door43.org/api/v1',
-  quiet = false
+  quiet = false,
+  logger
 ) {
-  isQuiet = quiet;
   try {
     const url = `${dcs_api_url}/catalog/entry/${owner}/${repo}/${ref}`;
-    log(url);
-    const response = await axios.get(url);
+    loggerFor({ quiet, logger }).info(url);
+    const response = await axios.get(url, { timeout: REQUEST_TIMEOUT_MS });
     return response.data;
   } catch (error) {
     throw new Error(`Failed to get catalog entry: ${error.message}`);
@@ -65,7 +55,8 @@ export async function getCatalogEntry(
  *   - existing **ResourceData** (returned unchanged — passthrough)
  * @param {Object} [options]
  * @param {string} [options.dcs_api_url] - DCS API base URL (default: https://git.door43.org/api/v1)
- * @param {boolean} [options.quiet] - Suppress logging
+ * @param {boolean} [options.quiet] - Suppress progress logging (warnings still reach the logger)
+ * @param {Object} [options.logger] - `{ info, warn }` in place of the console
  * @param {Array<string>} [options.books] - Books (when not carried on `input`)
  * @param {Array<string>} [options.extraSubjects] - Blueprint subjects to fetch as
  *   extras beyond the ones the subject requires, e.g. `['TSV Translation
@@ -108,9 +99,16 @@ export async function getResourceData(input, options = {}) {
   } else if (input && input.ref && input.repo) {
     // Descriptor { owner, repo, ref }
     try {
-      catalogEntry = await getCatalogEntry(input.owner, input.repo, input.ref, dcs_api_url, quiet);
+      catalogEntry = await getCatalogEntry(
+        input.owner,
+        input.repo,
+        input.ref,
+        dcs_api_url,
+        quiet,
+        options.logger
+      );
     } catch (e) {
-      console.warn(e);
+      loggerFor(options).warn(e.message);
       return { error: e.message };
     }
   } else if (input && (input.name || input.branch_or_tag_name || input.ingredients)) {
