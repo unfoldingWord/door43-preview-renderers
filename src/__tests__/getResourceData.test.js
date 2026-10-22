@@ -237,6 +237,43 @@ describe('getResourceData', () => {
     expect(result).toEqual({ type: 'tsv' });
   });
 
+  test('routes TSV OBS Translation Words Links through extractRcTsvData with its OBS and TW dependencies', async () => {
+    const catalogEntry = {
+      title: 'OBS Translation Words Links',
+      subject: 'TSV OBS Translation Words Links',
+      ingredients: [{ identifier: 'obs', path: './twl_OBS.tsv' }],
+      metadata_type: 'rc',
+    };
+    const dep = (name, subject) => ({ owner: 'unfoldingWord', name, subject });
+    const main = dep('en_obs-twl', 'TSV OBS Translation Words Links');
+    const blueprint = [
+      main,
+      dep('en_obs', 'Open Bible Stories'),
+      dep('en_ta', 'Translation Academy'),
+      dep('en_tw', 'Translation Words'),
+      dep('en_obs-tn', 'TSV OBS Translation Notes'),
+    ];
+
+    axiosGetMock.mockResolvedValueOnce({ data: catalogEntry });
+    getAllCatalogEntriesMock.mockResolvedValueOnce({ catalogEntries: blueprint });
+    extractRcTsvDataMock.mockResolvedValueOnce({ type: 'tsv' });
+
+    const result = await getResourceData(
+      { owner: 'unfoldingWord', repo: 'en_obs-twl', ref: 'v3' },
+      { quiet: true }
+    );
+
+    // Every story is in the one `obs` ingredient; only the stories and the
+    // Translation Words articles are fetched as extras.
+    expect(extractRcTsvDataMock).toHaveBeenCalledWith(
+      catalogEntry,
+      ['obs'],
+      expect.objectContaining({ quiet: true }),
+      [main, blueprint[1], blueprint[3]]
+    );
+    expect(result).toEqual({ type: 'tsv' });
+  });
+
   test('routes RC OBS resources through extractRcSbObsData + formatObsData', async () => {
     const catalogEntry = {
       title: 'OBS',

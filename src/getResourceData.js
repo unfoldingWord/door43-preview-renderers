@@ -393,16 +393,16 @@ async function getRcTsvObsTranslationQuestionsData(catalogEntry, options) {
 
 /**
  * Get resource data for RC TSV OBS Translation Words Links
+ *
+ * One TSV for every story (`Reference` is `story:frame`), read like the other
+ * OBS TSV subjects. Its `OrigWords` are already Gateway Language words, the
+ * OBS text being in the GL, so there is no quote lookup to do.
  */
 async function getRcTsvObsTranslationWordsLinksData(catalogEntry, options) {
-  return {
-    flavorType: catalogEntry.flavor_type,
-    flavor: catalogEntry.flavor,
-    subject: catalogEntry.subject,
-    ingredients: catalogEntry.ingredients.map((i) => i.identifier),
-    title: catalogEntry.title,
-    options,
-  };
+  // OBS doesn't use books parameter, extract all ingredients
+  const books = catalogEntry.ingredients.map((i) => i.identifier);
+  const catalogEntries = await getFilteredCatalogEntries(catalogEntry, books, options);
+  return await extractRcTsvData(catalogEntry, books, options, catalogEntries);
 }
 
 /**

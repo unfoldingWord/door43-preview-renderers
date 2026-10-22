@@ -240,6 +240,78 @@ describe('renderTranslationWordsLinksHtml — verse layout options', () => {
     expect(sections.body).toContain('>Παῦλος</a>');
     expect(sections.body).not.toContain('twl-scripture-cols');
   });
+
+  test('a word whose article the TW resource lacks is listed unlinked, with no appendix entry', () => {
+    const data = buildResourceData();
+    const verse = Object.values(data.books)[0].chapters[1].verses[1];
+    verse.push({ ...verse[0], ID: 'gone', TWLink: 'rc://*/tw/dict/bible/other/peoplegroup' });
+    const { sections } = renderTranslationWordsLinksHtml(data);
+    expect(sections.body).not.toContain('--tw-other-peoplegroup');
+    expect(sections.body).toContain('class="unresolved-link"');
+    expect(sections.appendices.tw['other/peoplegroup']).toBeUndefined();
+  });
+});
+
+describe('renderTranslationWordsLinksHtml — OBS', () => {
+  // en_obs-twl: one `obs` book, stories as chapters, frames as verses; the
+  // words are already in the Gateway Language, so there are no GLQuotes.
+  function buildObsTwl() {
+    return {
+      type: 'tsv',
+      subject: 'TSV OBS Translation Words Links',
+      title: 'OBS Translation Words Links',
+      books: {
+        obs: {
+          title: 'OBS Translation Words Links',
+          chapters: {
+            1: {
+              verses: {
+                1: [
+                  {
+                    Reference: '1:1',
+                    ID: 'aoaa',
+                    Quote: 'God',
+                    Occurrence: '1',
+                    TWLink: 'rc://*/tw/dict/bible/kt/god',
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
+      extras: {
+        obs: {
+          type: 'obs',
+          subject: 'Open Bible Stories',
+          stories: {
+            1: {
+              title: '1. The Creation',
+              frames: { 1: { text: 'This is how God made everything in the beginning.' } },
+            },
+          },
+        },
+        tw: {
+          type: 'tw',
+          subject: 'Translation Words',
+          articles: { kt: { god: { title: 'God', text: '## God\n\nThe one true God.' } } },
+        },
+      },
+    };
+  }
+
+  test('shows the story frame the words are in, not scripture columns', () => {
+    const { sections } = renderTranslationWordsLinksHtml(buildObsTwl());
+    expect(sections.body).toContain('class="obs-frames-body"');
+    expect(sections.body).toContain('This is how God made everything in the beginning.');
+    expect(sections.body).not.toContain('twl-scripture-cols');
+  });
+
+  test('lists each word with the GL words linked to its article', () => {
+    const { sections } = renderTranslationWordsLinksHtml(buildObsTwl());
+    expect(sections.body).toContain('href="#nav-obs--tw-kt-god" class="internal-link">God</a>');
+    expect(sections.appendices.tw['kt/god'].title).toBe('God');
+  });
 });
 
 describe('renderTranslationWordsLinksHtml — glossary layout', () => {

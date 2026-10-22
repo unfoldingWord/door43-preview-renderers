@@ -227,3 +227,31 @@ export function resolveRcLinks(html, bookId, rcLinks, extras, bookIdSet = new Se
 
   return html;
 }
+
+/**
+ * Rewrite `href="#nav-…"` links whose target id is in neither the body nor the
+ * appendices to the inert `external-ref` form. Returns { body, appendices }.
+ */
+export function neutralizeDanglingAnchors(body, appendices) {
+  const ids = new Set();
+  const collect = (html) => {
+    for (const m of String(html || '').matchAll(/\bid="([^"]+)"/g)) ids.add(m[1]);
+  };
+  collect(body);
+  for (const kind of Object.keys(appendices)) {
+    for (const id of Object.keys(appendices[kind])) collect(appendices[kind][id].html);
+  }
+  const fix = (html) =>
+    // The link's own class (internal-link) goes too, so it carries one class attribute.
+    String(html || '').replace(/href="#(nav-[^"]+)"(?: class="[^"]*")?/g, (m, id) =>
+      ids.has(id) ? m : 'href="#" class="external-ref"'
+    );
+  const out = {};
+  for (const kind of Object.keys(appendices)) {
+    out[kind] = {};
+    for (const id of Object.keys(appendices[kind])) {
+      out[kind][id] = { ...appendices[kind][id], html: fix(appendices[kind][id].html) };
+    }
+  }
+  return { body: fix(body), appendices: out };
+}

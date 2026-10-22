@@ -441,6 +441,116 @@ describe('renderTranslationNotesHtml — OBS', () => {
     expect(sections.body).toContain('class="obs-frames-body"');
   });
 
+  test("lists the frame's Translation Words from the obs-twl extra, linking to the TW appendix", () => {
+    const data = buildObsData();
+    data.extras.tw = {
+      type: 'tw',
+      subject: 'Translation Words',
+      articles: {
+        kt: { title: 'Key Terms', god: { title: 'God', text: '## God\n\nThe one true God.' } },
+      },
+    };
+    // getResourceData keys the extra by repo identifier: en_obs-twl → `obs-twl`.
+    data.extras['obs-twl'] = {
+      type: 'tsv',
+      subject: 'TSV OBS Translation Words Links',
+      books: {
+        obs: {
+          chapters: {
+            1: {
+              verses: {
+                1: [
+                  {
+                    Reference: '1:1',
+                    ID: 'aoaa',
+                    Quote: 'God',
+                    Occurrence: '1',
+                    TWLink: 'rc://*/tw/dict/bible/kt/god',
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
+    };
+    const { sections } = renderTranslationNotesHtml(data);
+    expect(sections.body).toContain('tn-verse-twl-table');
+    // No aligned Bibles for OBS: one column with the GL words the TSV already has.
+    expect(sections.body).toContain('>Quote</th>');
+    expect(sections.body).toContain('href="#nav-obs--tw-kt-god" class="internal-link">God</a>');
+    expect(sections.appendices.tw['kt/god'].title).toBe('God');
+  });
+
+  test('a TW article citing a frame without notes does not link to a missing anchor', () => {
+    // en_tw articles list "Examples from the Bible stories" as rc://*/tn/help/obs/…
+    // links; frame 18:11 has no notes here, so it has no anchor to point at.
+    const data = buildObsData();
+    data.extras.tw = {
+      type: 'tw',
+      subject: 'Translation Words',
+      articles: {
+        kt: {
+          god: {
+            title: 'God',
+            text: '## God\n\n* [01:01](rc://*/tn/help/obs/01/01)\n* [18:11](rc://*/tn/help/obs/18/11)',
+          },
+        },
+      },
+    };
+    data.extras['obs-twl'] = {
+      type: 'tsv',
+      subject: 'TSV OBS Translation Words Links',
+      books: {
+        obs: {
+          chapters: {
+            1: {
+              verses: {
+                1: [{ Reference: '1:1', Quote: 'God', TWLink: 'rc://*/tw/dict/bible/kt/god' }],
+              },
+            },
+          },
+        },
+      },
+    };
+    const { sections } = renderTranslationNotesHtml(data);
+    const article = sections.appendices.tw['kt/god'].html;
+    expect(article).toContain('href="#nav-obs-1-1" class="internal-link"');
+    expect(article).not.toContain('nav-obs-18-11');
+    expect(article).toContain('href="#" class="external-ref"');
+  });
+
+  test('does not link a Translation Words row whose article the TW resource lacks', () => {
+    // en_obs-twl v3 still links other/peoplegroup, which en_tw v87 no longer has.
+    const data = buildObsData();
+    data.extras.tw = { type: 'tw', subject: 'Translation Words', articles: { kt: {} } };
+    data.extras['obs-twl'] = {
+      type: 'tsv',
+      subject: 'TSV OBS Translation Words Links',
+      books: {
+        obs: {
+          chapters: {
+            1: {
+              verses: {
+                1: [
+                  {
+                    Reference: '1:1',
+                    Quote: 'people',
+                    TWLink: 'rc://*/tw/dict/bible/other/peoplegroup',
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
+    };
+    const { sections } = renderTranslationNotesHtml(data);
+    expect(sections.body).toContain('<span class="unresolved-link">people</span>');
+    expect(sections.body).not.toContain('--tw-other-peoplegroup');
+    expect(sections.appendices?.tw?.['other/peoplegroup']).toBeUndefined();
+  });
+
   test('keeps the per-verse page break for Bible-versed notes', () => {
     const { sections } = renderTranslationNotesHtml(buildResourceData());
     expect(sections.css.print).not.toMatch(/\.tn-verse-header\s*{[^}]*break-before:\s*auto/);

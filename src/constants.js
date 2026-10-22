@@ -101,6 +101,7 @@ export const requiredSubjectsMap = {
     'Translation Words',
   ],
   'TSV OBS Translation Questions': ['Open Bible Stories'],
+  'TSV OBS Translation Words Links': ['Open Bible Stories', 'Translation Words'],
 };
 
 /**
