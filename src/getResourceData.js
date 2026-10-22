@@ -296,7 +296,8 @@ async function getFilteredCatalogEntries(catalogEntry, books, options) {
 
   // Reuse a CatalogSet passed into getResourceData (no second /catalog/bp/ call).
   const catalogEntries =
-    options.preEntries || (await getAllCatalogEntries(catalogEntry, { ...options, books })).catalogEntries;
+    options.preEntries ||
+    (await getAllCatalogEntries(catalogEntry, { ...options, books })).catalogEntries;
 
   // The selection rules live in catalogSelection.js (exported, so a caller can
   // derive the same set from a CatalogSet without re-implementing them).

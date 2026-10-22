@@ -31,7 +31,9 @@ function escapeHtml(value) {
  */
 export function renderHTML(htmlData, options = {}) {
   if (!htmlData || !htmlData.sections) {
-    throw new Error('renderHTML: expected the result of renderHtmlData() with a `sections` property.');
+    throw new Error(
+      'renderHTML: expected the result of renderHtmlData() with a `sections` property.'
+    );
   }
 
   const opts = resolveComposeOptions(options, htmlData);
@@ -92,7 +94,9 @@ function buildScreenDocument(htmlData, opts) {
   }
   // Appendices keyed by kind (e.g. TN's TA + TW), rendered with section headings.
   if (opts.show.appendices && sections.appendices) {
-    const appendicesHtml = renderAppendicesHtml(sections.appendices, { titles: sections.appendixTitles });
+    const appendicesHtml = renderAppendicesHtml(sections.appendices, {
+      titles: sections.appendixTitles,
+    });
     if (appendicesHtml) parts.push(appendicesHtml);
   }
 

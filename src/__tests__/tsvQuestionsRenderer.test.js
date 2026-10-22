@@ -19,9 +19,9 @@ function buildBibleVersedData() {
         identifier: 'tit',
         sort: 57,
         chapters: {
-          '1': {
+          1: {
             verses: {
-              '1': [
+              1: [
                 {
                   ID: 'q1',
                   Reference: '1:1',
@@ -70,10 +70,15 @@ function buildObsData(resolution) {
         identifier: 'obs',
         sort: 0,
         chapters: {
-          '1': {
+          1: {
             verses: {
-              '1': [
-                { ID: 'oq1', Reference: '1:1', Question: 'What did God create?', Response: 'The heavens and the earth.' },
+              1: [
+                {
+                  ID: 'oq1',
+                  Reference: '1:1',
+                  Question: 'What did God create?',
+                  Response: 'The heavens and the earth.',
+                },
               ],
             },
           },
@@ -141,9 +146,7 @@ describe('renderTsvQuestionsHtml — Bible-versed', () => {
   });
 
   test('starts each chapter on a new page', () => {
-    expect(sections.css.print).toMatch(
-      /\.tq-chapter-header\s*{[^}]*break-before:\s*page/
-    );
+    expect(sections.css.print).toMatch(/\.tq-chapter-header\s*{[^}]*break-before:\s*page/);
   });
 
   test('keeps the first chapter on the same page as the book heading', () => {

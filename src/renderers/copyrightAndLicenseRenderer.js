@@ -70,10 +70,7 @@ export async function generateCopyrightAndLicenseHtml(catalogEntry, builtWith = 
     const released = entry.released || entry.repo?.released || '';
     const version = entry.branch_or_tag_name || entry.ref || '';
     const publishedBy =
-      entry.repo?.owner?.full_name ||
-      entry.repo?.owner?.username ||
-      entry.owner ||
-      '';
+      entry.repo?.owner?.full_name || entry.repo?.owner?.username || entry.owner || '';
 
     html += `<div class="built-with-entry">\n`;
     html += `  <div class="built-with-title">${escapeHtml(title)}</div>\n`;

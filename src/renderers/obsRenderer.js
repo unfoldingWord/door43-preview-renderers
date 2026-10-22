@@ -87,10 +87,7 @@ const obsPrintCss = `
  * @returns {Object} Rendered HTML package
  */
 export function renderObsHtml(resourceData, options = {}) {
-  const {
-    resolution = DEFAULT_RESOLUTION,
-    chapters = [],
-  } = options;
+  const { resolution = DEFAULT_RESOLUTION, chapters = [] } = options;
 
   if (!resourceData || resourceData.type !== 'obs' || !resourceData.stories) {
     throw new Error('OBS renderer expects OBS resource data from getResourceData().');
@@ -167,8 +164,8 @@ export function renderObsHtml(resourceData, options = {}) {
     const backHtml = convertMarkdown(resourceData.back);
     bodyParts.push(
       `<section class="section obs-back-section" data-toc-title="Back Matter">\n` +
-      `  <div class="article obs-back-article" id="obs-back-article">${backHtml}</div>\n` +
-      `</section>`
+        `  <div class="article obs-back-article" id="obs-back-article">${backHtml}</div>\n` +
+        `</section>`
     );
   }
 

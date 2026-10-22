@@ -36,20 +36,20 @@ function buildResourceData() {
         identifier: 'tit',
         sort: 57,
         chapters: {
-          '1': {
+          1: {
             verses: {
-              '1': [
+              1: [
                 row('trr8', 'Παῦλος', 'names/paul', 'Paul', 'I, Paul'),
                 row('pmq8', 'Θεοῦ', 'kt/god', 'God', 'God'),
                 row('zfgc', 'δοῦλος', 'other/servant', 'servant', 'serve'),
                 row('pmq9', 'Θεοῦ', 'kt/god', 'God', 'God'),
               ],
-              '3': [row('x1', 'Θεοῦ', 'kt/god', 'God', 'God')],
+              3: [row('x1', 'Θεοῦ', 'kt/god', 'God', 'God')],
             },
           },
-          '2': {
+          2: {
             verses: {
-              '1': [row('y1', 'Θεοῦ', 'kt/god', 'God', 'God')],
+              1: [row('y1', 'Θεοῦ', 'kt/god', 'God', 'God')],
             },
           },
         },
@@ -82,15 +82,24 @@ function buildResourceData() {
         articles: {
           kt: {
             title: 'Key Terms',
-            god: { title: 'God', text: '# God\n\n## Definition:\n\nThe one true God. See [servant](../other/servant.md).' },
+            god: {
+              title: 'God',
+              text: '# God\n\n## Definition:\n\nThe one true God. See [servant](../other/servant.md).',
+            },
           },
           names: {
             title: 'Names',
-            paul: { title: 'Paul, Saul', text: '# Paul, Saul\n\n## Facts:\n\nPaul was an apostle.' },
+            paul: {
+              title: 'Paul, Saul',
+              text: '# Paul, Saul\n\n## Facts:\n\nPaul was an apostle.',
+            },
           },
           other: {
             title: 'Other',
-            servant: { title: 'servant, slave', text: '# servant\n\n## Definition:\n\nOne who serves.' },
+            servant: {
+              title: 'servant, slave',
+              text: '# servant\n\n## Definition:\n\nOne who serves.',
+            },
           },
         },
       },
@@ -140,7 +149,9 @@ describe('renderTranslationWordsLinksHtml — verse layout (default)', () => {
     expect(body).toContain('class="twl-col-label">UST<');
     expect(body).toContain('<a href="#nav-tit--tw-names-paul" class="internal-link">Paul</a>');
     expect(body).toContain('<a href="#nav-tit--tw-names-paul" class="internal-link">I, Paul</a>');
-    expect(body).toContain('<a href="#nav-tit--tw-other-servant" class="internal-link">servant</a>');
+    expect(body).toContain(
+      '<a href="#nav-tit--tw-other-servant" class="internal-link">servant</a>'
+    );
     // No table heading inside a verse — the verse header already says what it is.
     expect(body).not.toContain('>Translation Words</h4>');
   });
@@ -297,10 +308,10 @@ function buildTwoBookData() {
     identifier: 'phm',
     sort: 58,
     chapters: {
-      '1': {
+      1: {
         verses: {
-          '4': [row('p1', 'Θεῷ', 'kt/god', 'God')],
-          '10': [row('p2', 'Ὀνήσιμον', 'names/onesimus', 'Onesimus')],
+          4: [row('p1', 'Θεῷ', 'kt/god', 'God')],
+          10: [row('p2', 'Ὀνήσιμον', 'names/onesimus', 'Onesimus')],
         },
       },
     },
@@ -319,7 +330,9 @@ describe('renderTranslationWordsLinksHtml — several books', () => {
     const tw = sections.appendices.tw;
     expect(tw['names/onesimus'].id).toBe('nav-tit--tw-names-onesimus');
     // Philemon's word table points at the appendix that exists, not a dead anchor.
-    expect(sections.body).toContain('<a href="#nav-tit--tw-names-onesimus" class="internal-link">Onesimus</a>');
+    expect(sections.body).toContain(
+      '<a href="#nav-tit--tw-names-onesimus" class="internal-link">Onesimus</a>'
+    );
     expect(sections.body).toContain('<a href="#nav-tit--tw-kt-god" class="internal-link">God</a>');
     expect(sections.body).not.toContain('nav-phm--tw-');
     expect(sections.body).not.toContain('class="external-ref"');
@@ -328,7 +341,9 @@ describe('renderTranslationWordsLinksHtml — several books', () => {
   });
 
   test('glossary: cross-links reach the entry in whichever book holds it', () => {
-    const { body } = renderTranslationWordsLinksHtml(buildTwoBookData(), { layout: 'glossary' }).sections;
+    const { body } = renderTranslationWordsLinksHtml(buildTwoBookData(), {
+      layout: 'glossary',
+    }).sections;
     expect(body).toContain('<article class="twl-term" id="nav-phm--tw-names-onesimus">');
     // Titus's God entry → Onesimus, an entry only Philemon has.
     expect(body).toContain('href="#nav-phm--tw-names-onesimus" class="internal-link"');

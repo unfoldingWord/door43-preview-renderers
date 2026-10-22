@@ -1,6 +1,6 @@
 name: CI
 
-# Lint, test and build on every pull request and on pushes to main, so a PR can't
+# Lint, format-check, test and build on every pull request and on pushes to main, so a PR can't
 # merge green without the suite passing. Mirrors the toolchain in npm-publish.yml.
 on:
   pull_request:
@@ -43,6 +43,9 @@ jobs:
 
       - name: Lint
         run: pnpm lint
+
+      - name: Format check
+        run: pnpm format:check
 
       - name: Test (with coverage threshold)
         run: pnpm test:coverage

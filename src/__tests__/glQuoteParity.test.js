@@ -85,7 +85,10 @@ describe.each(BOOKS)('GL quote parity with tsv-quote-converters: $label', ({ id,
         const got = row.GLQuotes?.[repo];
         compared++;
         if (expQuote.startsWith('QUOTE_NOT_FOUND')) {
-          if (got) mismatches.push(`${row.Reference} ${row.ID} ${repo}: converter found nothing, lookup gave "${got.Quote}"`);
+          if (got)
+            mismatches.push(
+              `${row.Reference} ${row.ID} ${repo}: converter found nothing, lookup gave "${got.Quote}"`
+            );
           continue;
         }
         if (!got || got.Quote !== expQuote || String(got.Occurrence) !== String(expOcc)) {

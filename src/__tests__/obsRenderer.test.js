@@ -28,7 +28,10 @@ function buildResourceData(overrides = {}) {
         reference: 'A Bible story from: Genesis 3',
         frames: {
           1: { text: 'Adam and his wife were very happy.' },
-          2: { text: 'But there was a crafty snake.', img: 'https://example.test/custom-02-02.jpg' },
+          2: {
+            text: 'But there was a crafty snake.',
+            img: 'https://example.test/custom-02-02.jpg',
+          },
         },
       },
       1: {
@@ -67,7 +70,9 @@ describe('renderObsHtml', () => {
   });
 
   test('wraps the body in a resource section with the TOC title', () => {
-    expect(body).toContain('<div class="section" id="obs" data-toc-title="unfoldingWord® Open Bible Stories">');
+    expect(body).toContain(
+      '<div class="section" id="obs" data-toc-title="unfoldingWord® Open Bible Stories">'
+    );
   });
 
   test('renders stories in numeric order (2 before 12) with anchors, headings and TOC entries', () => {
@@ -75,7 +80,9 @@ describe('renderObsHtml', () => {
       Number(m[1])
     );
     expect(ids).toEqual([1, 2, 12]);
-    expect(body).toContain('<section class="section story" id="nav-obs-1" data-toc-title="1. The Creation">');
+    expect(body).toContain(
+      '<section class="section story" id="nav-obs-1" data-toc-title="1. The Creation">'
+    );
     expect(body).toContain('<a href="#nav-obs-1" class="header-link">1. The Creation</a></h1>');
     expect(sections.toc).toEqual([
       { id: 'nav-obs-1', title: '1. The Creation', story: 1 },
@@ -116,8 +123,12 @@ describe('renderObsHtml', () => {
   test('renders front and back matter from markdown', () => {
     expect(body).toContain('<div class="obs-front-matter"><h1>Front matter</h1>');
     expect(body).toContain('<p>About these stories.</p>');
-    expect(body).toContain('<section class="section obs-back-section" data-toc-title="Back Matter">');
-    expect(body).toContain('<div class="article obs-back-article" id="obs-back-article"><h1>Back matter</h1>');
+    expect(body).toContain(
+      '<section class="section obs-back-section" data-toc-title="Back Matter">'
+    );
+    expect(body).toContain(
+      '<div class="article obs-back-article" id="obs-back-article"><h1>Back matter</h1>'
+    );
     // Front matter comes before the first story; back matter after the last.
     expect(body.indexOf('obs-front-matter')).toBeLessThan(body.indexOf('id="nav-obs-1"'));
     expect(body.indexOf('obs-back-section')).toBeGreaterThan(body.indexOf('id="nav-obs-12"'));
@@ -130,7 +141,10 @@ describe('renderObsHtml', () => {
           title: 'Tom & "Jerry" <3',
           reference: 'A <b>ref</b>',
           frames: {
-            1: { text: 'He said "hi" & left', img: 'https://x.test/a.jpg?w=1&h=2"><script>x()</script>' },
+            1: {
+              text: 'He said "hi" & left',
+              img: 'https://x.test/a.jpg?w=1&h=2"><script>x()</script>',
+            },
           },
         },
       },

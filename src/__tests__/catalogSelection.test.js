@@ -1,8 +1,4 @@
-import {
-  filterCatalogEntries,
-  selectAlignedBibles,
-  testamentOf,
-} from '../catalogSelection.js';
+import { filterCatalogEntries, selectAlignedBibles, testamentOf } from '../catalogSelection.js';
 import { requiredSubjectsMap } from '../constants.js';
 
 const entry = (name, subject, abbreviation) => ({ name, subject, abbreviation });
@@ -160,7 +156,10 @@ describe('filterCatalogEntries', () => {
   });
 
   test('an unknown id among known books keeps both original-language Bibles', () => {
-    for (const books of [['tit', 'nope'], ['rut', 'nope']]) {
+    for (const books of [
+      ['tit', 'nope'],
+      ['rut', 'nope'],
+    ]) {
       expect(filterCatalogEntries(blueprint, { books })).toContainEqual(uhb);
       expect(filterCatalogEntries(blueprint, { books })).toContainEqual(ugnt);
     }

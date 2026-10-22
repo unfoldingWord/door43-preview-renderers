@@ -36,8 +36,18 @@ export const PAGE_SIZES = {
   A4_PORTRAIT: { label: 'A4', orientation: 'portrait', width: '210mm', height: '297mm' },
   A4_LANDSCAPE: { label: 'A4', orientation: 'landscape', width: '297mm', height: '210mm' },
   A5_PORTRAIT: { label: 'A5', orientation: 'portrait', width: '148.5mm', height: '210mm' },
-  US_LETTER_PORTRAIT: { label: 'US Letter', orientation: 'portrait', width: '8.5in', height: '11in' },
-  US_LETTER_LANDSCAPE: { label: 'US Letter', orientation: 'landscape', width: '11in', height: '8.5in' },
+  US_LETTER_PORTRAIT: {
+    label: 'US Letter',
+    orientation: 'portrait',
+    width: '8.5in',
+    height: '11in',
+  },
+  US_LETTER_LANDSCAPE: {
+    label: 'US Letter',
+    orientation: 'landscape',
+    width: '11in',
+    height: '8.5in',
+  },
   TRADE: { label: 'Trade', orientation: 'portrait', width: '6in', height: '9in' },
   CROWN_QUARTO: { label: 'Crown Quarto', orientation: 'portrait', width: '189mm', height: '246mm' },
 };
@@ -181,7 +191,8 @@ function extractTocEntriesFromHtml(bodyHtml) {
   if (!bodyHtml) return [];
 
   // Match elements with both id and data-toc-title (in either order)
-  const pattern = /<[^>]+?\bid="([^"]+)"[^>]*?\bdata-toc-title="([^"]+)"[^>]*?>|<[^>]+?\bdata-toc-title="([^"]+)"[^>]*?\bid="([^"]+)"[^>]*?>/g;
+  const pattern =
+    /<[^>]+?\bid="([^"]+)"[^>]*?\bdata-toc-title="([^"]+)"[^>]*?>|<[^>]+?\bdata-toc-title="([^"]+)"[^>]*?\bid="([^"]+)"[^>]*?>/g;
 
   const entries = [];
   let match;
@@ -248,10 +259,16 @@ export function renderAppendicesHtml(appendices, options = {}) {
  * @returns {string}
  */
 export function shortenForHeader(title, maxWords = 4) {
-  const words = String(title || '').trim().split(/\s+/).filter(Boolean);
+  const words = String(title || '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
   if (words.length <= maxWords) return words.join(' ');
   // Trailing punctuation before the ellipsis reads badly ("better,…").
-  const kept = words.slice(0, maxWords).join(' ').replace(/[,;:—–-]+$/, '');
+  const kept = words
+    .slice(0, maxWords)
+    .join(' ')
+    .replace(/[,;:—–-]+$/, '');
   return `${kept}…`;
 }
 
@@ -448,7 +465,9 @@ export function getPrintCss(options = {}) {
   ${pnBox} {
     content: counter(page);
   }
-${showHeader && rangeHeader ? `
+${
+  showHeader && rangeHeader
+    ? `
   @top-left {
     font-size: 10px;
     content: string(runningref, first);
@@ -459,7 +478,9 @@ ${showHeader && rangeHeader ? `
     font-size: 10px;
     content: string(runningref, last);
     text-align: right;
-  }` : ''}
+  }`
+    : ''
+}
 }
 
 @page :first {
@@ -486,23 +507,31 @@ ${showHeader && rangeHeader ? `
 @page :left {
   margin-right: 30mm;
   margin-left: 20mm;
-${showHeader && !rangeHeader ? `
+${
+  showHeader && !rangeHeader
+    ? `
   @top-left {
     font-size: 10px;
     content: string(runningtitle);
     text-align: left;
-  }` : ''}
+  }`
+    : ''
+}
 }
 
 @page :right {
   margin-left: 30mm;
   margin-right: 20mm;
-${showHeader && !rangeHeader ? `
+${
+  showHeader && !rangeHeader
+    ? `
   @top-right {
     font-size: 10px;
     content: string(runningref, first);
     text-align: right;
-  }` : ''}
+  }`
+    : ''
+}
 }
 
 /* ─── Running Header ─────────────────────────────────────── */
@@ -514,14 +543,18 @@ ${showHeader && !rangeHeader ? `
    the very end of this stylesheet — see there for why it must come last.
    Note this is a WeasyPrint/Prince feature: PagedJS resolves string() to an
    empty value, so the browser preview shows no running header. */
-${showHeader ? `
+${
+  showHeader
+    ? `
 .running-title {
   string-set: runningtitle content(text);
 }
 
 .running-ref {
   string-set: runningref content(text);
-}` : ''}
+}`
+    : ''
+}
 
 /* ─── Footnotes (USFM) ──────────────────────────────────── */
 
@@ -807,16 +840,16 @@ export function assemblePrintDocument(sections, options = {}) {
   });
 
   // Assemble the document sections (only those selected by `show`).
-  const coverHtml = showCover
-    ? `  <div class="section cover-page">\n    ${cover}\n  </div>\n`
-    : '';
+  const coverHtml = showCover ? `  <div class="section cover-page">\n    ${cover}\n  </div>\n` : '';
   const copyrightHtml = showCopyright
     ? `  <div class="section copyright-page" id="copyright-page">\n    ${copyright}\n    ${footerHtml}\n  </div>\n`
     : '';
   const tocHtmlBlock = showToc
     ? `  <div class="section toc-page" id="toc">\n    ${tocHtml}\n  </div>\n`
     : '';
-  const appendicesHtml = showAppendices ? renderAppendicesHtml(appendices, { titles: sections.appendixTitles }) : '';
+  const appendicesHtml = showAppendices
+    ? renderAppendicesHtml(appendices, { titles: sections.appendixTitles })
+    : '';
 
   const htmlStr = `<div id="pagedjs-print" style="direction: ${direction}" data-direction="${direction}">
 ${coverHtml}${copyrightHtml}${tocHtmlBlock}  ${body}

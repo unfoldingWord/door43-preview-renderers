@@ -152,7 +152,14 @@ function flattenSectionToHtml(manual, section, index, total, depth = 1, subtitle
   if (sectionChildren.length) {
     const childrenHtml = sectionChildren
       .map((child, childIndex) =>
-        flattenSectionToHtml(manual, child, childIndex, sectionChildren.length, normalizedDepth + 1, mySubtitles)
+        flattenSectionToHtml(
+          manual,
+          child,
+          childIndex,
+          sectionChildren.length,
+          normalizedDepth + 1,
+          mySubtitles
+        )
       )
       .join('');
 

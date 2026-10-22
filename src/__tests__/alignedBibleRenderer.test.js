@@ -46,7 +46,10 @@ describe('renderAlignedBibleHtml', () => {
 
   test('marks every verse so a page header can show its reference range', () => {
     const result = renderAlignedBibleHtml({
-      type: 'usfm', subject: 'Aligned Bible', title: 'Test Bible', books: { tit: titUsfm },
+      type: 'usfm',
+      subject: 'Aligned Bible',
+      title: 'Test Bible',
+      books: { tit: titUsfm },
     });
     expect(result.sections.body).toMatch(/<span class="running-ref">[^<]*1:1<\/span>/);
     // The markers are for the print margins; the web CSS keeps them off the screen.

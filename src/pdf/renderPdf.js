@@ -37,7 +37,9 @@ export { resolvePageSize };
  */
 export async function renderPdf(renderResult, options = {}) {
   if (!renderResult || typeof renderResult !== 'object' || !renderResult.sections) {
-    throw new Error('renderPdf: expected the result of renderHtmlData() with a `sections` property.');
+    throw new Error(
+      'renderPdf: expected the result of renderHtmlData() with a `sections` property.'
+    );
   }
 
   const {

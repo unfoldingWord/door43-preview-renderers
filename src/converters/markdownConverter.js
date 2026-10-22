@@ -57,15 +57,13 @@ export function convertNoteFromMD2HTML(note, bookId, chapterStr) {
   // Transform relative chapter links: ../../../{book}/0*{ch}.md
   html = html.replace(
     /href="(?:\.\.\/)+([a-z1-3]{3})\/0*(\d+)\.md"/gi,
-    (_, book, ch) =>
-      `href="#nav-${book.toLowerCase()}-${parseInt(ch, 10)}" class="internal-link"`
+    (_, book, ch) => `href="#nav-${book.toLowerCase()}-${parseInt(ch, 10)}" class="internal-link"`
   );
 
   // Transform same-book verse links: ../01.md or 01.md or ./10
   html = html.replace(
     /href="(?:\.\/)?(?:\.\.\/)?0*(\d+)(?:\.md)?"/gi,
-    (_, verse) =>
-      `href="#nav-${bookId}-${chapterStr}-${parseInt(verse, 10)}" class="internal-link"`
+    (_, verse) => `href="#nav-${bookId}-${chapterStr}-${parseInt(verse, 10)}" class="internal-link"`
   );
 
   // Restore rc:// links

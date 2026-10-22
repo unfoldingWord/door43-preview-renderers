@@ -96,7 +96,13 @@ function run(args) {
 describe('door43-renderers CLI, stage 0 → CatalogSet hand-off', () => {
   test('getAllCatalogEntries --lang --subject: the selected resource first, the resolved version', async () => {
     const { code, stdout, stderr } = await run([
-      'getAllCatalogEntries', '--lang', 'es-419', '--subject', 'TSV Translation Notes', '--book', 'tit',
+      'getAllCatalogEntries',
+      '--lang',
+      'es-419',
+      '--subject',
+      'TSV Translation Notes',
+      '--book',
+      'tit',
     ]);
     expect(stderr).toBe('');
     expect(code).toBe(0);
@@ -104,14 +110,25 @@ describe('door43-renderers CLI, stage 0 → CatalogSet hand-off', () => {
     expect(set.catalogEntries[0].name).toBe('es-419_tn');
     expect(set.catalogEntries.map((e) => e.name)).toContain('el-x-koine_ugnt');
     expect(set.resourceVersion).toBe('v66');
-    expect(set.source).toMatchObject({ owner: 'es-419_gl', repo: 'es-419_tn', ref: 'v66', books: ['tit'] });
+    expect(set.source).toMatchObject({
+      owner: 'es-419_gl',
+      repo: 'es-419_tn',
+      ref: 'v66',
+      books: ['tit'],
+    });
     // One search, one blueprint — the set is not fetched a second time.
     expect(requests.filter((u) => u.includes('/catalog/bp/'))).toHaveLength(1);
   });
 
   test('getResourceData --lang --subject renders the selected resource from that same set', async () => {
     const { code, stdout, stderr } = await run([
-      'getResourceData', '--lang', 'es-419', '--subject', 'TSV Translation Notes', '--book', 'tit',
+      'getResourceData',
+      '--lang',
+      'es-419',
+      '--subject',
+      'TSV Translation Notes',
+      '--book',
+      'tit',
     ]);
     expect(stderr).toBe('');
     expect(code).toBe(0);
@@ -125,17 +142,35 @@ describe('door43-renderers CLI, stage 0 → CatalogSet hand-off', () => {
 
   test('an explicit --ref with --lang is kept and its own blueprint is fetched', async () => {
     const { code, stdout } = await run([
-      'getAllCatalogEntries', '--lang', 'es-419', '--subject', 'TSV Translation Notes', '--book', 'tit', '--ref', 'v60',
+      'getAllCatalogEntries',
+      '--lang',
+      'es-419',
+      '--subject',
+      'TSV Translation Notes',
+      '--book',
+      'tit',
+      '--ref',
+      'v60',
     ]);
     expect(code).toBe(0);
     const set = JSON.parse(stdout);
     expect(set.source).toMatchObject({ owner: 'es-419_gl', repo: 'es-419_tn', ref: 'v60' });
     expect(set.resourceVersion).toBe('v60');
-    expect(requests.some((u) => u.startsWith('/api/v1/catalog/bp/es-419_gl/es-419_tn/v60'))).toBe(true);
+    expect(requests.some((u) => u.startsWith('/api/v1/catalog/bp/es-419_gl/es-419_tn/v60'))).toBe(
+      true
+    );
   });
 
   test('an omitted --ref on --owner/--repo means the latest release', async () => {
-    const { code, stdout } = await run(['getAllCatalogEntries', '--owner', 'es-419_gl', '--repo', 'es-419_tn', '--book', 'tit']);
+    const { code, stdout } = await run([
+      'getAllCatalogEntries',
+      '--owner',
+      'es-419_gl',
+      '--repo',
+      'es-419_tn',
+      '--book',
+      'tit',
+    ]);
     expect(code).toBe(0);
     const set = JSON.parse(stdout);
     expect(set.source.ref).toBe('v66');
@@ -146,7 +181,12 @@ describe('door43-renderers CLI, stage 0 → CatalogSet hand-off', () => {
     const { code, stdout } = await run(['findResources', '--lang', 'es-419']);
     expect(code).toBe(0);
     expect(JSON.parse(stdout)).toEqual([
-      expect.objectContaining({ owner: 'es-419_gl', repo: 'es-419_tn', ref: 'v66', subject: 'TSV Translation Notes' }),
+      expect.objectContaining({
+        owner: 'es-419_gl',
+        repo: 'es-419_tn',
+        ref: 'v66',
+        subject: 'TSV Translation Notes',
+      }),
     ]);
   });
 });

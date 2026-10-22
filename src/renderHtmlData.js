@@ -13,10 +13,7 @@ import { filterResourceDataByRanges } from './rangeFilter.js';
 const translationAcademySubjects = new Set(['Translation Academy']);
 const translationWordsSubjects = new Set(['Translation Words']);
 const obsSubjects = new Set(['Open Bible Stories']);
-const translationNotesSubjects = new Set([
-  'TSV Translation Notes',
-  'TSV OBS Translation Notes',
-]);
+const translationNotesSubjects = new Set(['TSV Translation Notes', 'TSV OBS Translation Notes']);
 const translationWordsLinksSubjects = new Set([
   'TSV Translation Words Links',
   'TSV OBS Translation Words Links',

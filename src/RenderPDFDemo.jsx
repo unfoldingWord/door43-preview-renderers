@@ -14,7 +14,8 @@ const PAGE_SIZE_OPTIONS = Object.entries(PAGE_SIZES).map(([key, size]) => ({
 }));
 
 const isLocalhost =
-  typeof window !== 'undefined' && /^(localhost|127\.0\.0\.1|\[::1\])$/.test(window.location.hostname);
+  typeof window !== 'undefined' &&
+  /^(localhost|127\.0\.0\.1|\[::1\])$/.test(window.location.hostname);
 
 // Inject a tiny timing hook before PagedJS runs so the iframe can report how long
 // pagination took and how many pages it produced (for the side-by-side comparison).
@@ -28,7 +29,8 @@ function buildPagedHtml(htmlData, pageSize, columns) {
   const timing =
     '<script>window.__t0=performance.now();window.PagedConfig={auto:true,' +
     'after:function(flow){try{parent.postMessage({type:"pagedjs-done",' +
-    'ms:Math.round(performance.now()-window.__t0),pages:flow&&flow.total},"*");}catch(e){}}};</scr' + 'ipt>';
+    'ms:Math.round(performance.now()-window.__t0),pages:flow&&flow.total},"*");}catch(e){}}};</scr' +
+    'ipt>';
   return base.replace('<head>', '<head>' + timing);
 }
 
@@ -103,9 +105,13 @@ export default function RenderPDFDemo() {
     setLoadError(null);
     setLoadStatus('loading');
     try {
-      const books = booksInput.split(',').map((b) => b.trim().toLowerCase()).filter(Boolean);
+      const books = booksInput
+        .split(',')
+        .map((b) => b.trim().toLowerCase())
+        .filter(Boolean);
       const resourceData = await getResourceData({ owner, repo, ref, books });
-      if (!resourceData || resourceData.error) throw new Error(resourceData?.error || 'No resource data');
+      if (!resourceData || resourceData.error)
+        throw new Error(resourceData?.error || 'No resource data');
       setHtmlData(renderHtmlData(resourceData, { books, renderOptions: liveRenderOptions }));
     } catch (e) {
       setLoadError(e.message);
@@ -162,25 +168,38 @@ export default function RenderPDFDemo() {
       <h2>Render PDF Demo — PagedJS vs WeasyPrint</h2>
       <p style={{ color: '#555', marginTop: 0 }}>
         Same document, two engines: <strong>PagedJS</strong> paginates in the browser (works
-        anywhere — use <em>Save as PDF</em>), while <strong>WeasyPrint</strong> renders a real PDF on
-        the dev server (<code>localhost</code>) or a hosted <code>weasyprint-pdf</code> service.
+        anywhere — use <em>Save as PDF</em>), while <strong>WeasyPrint</strong> renders a real PDF
+        on the dev server (<code>localhost</code>) or a hosted <code>weasyprint-pdf</code> service.
       </p>
 
       {/* ─── Source ─── */}
       <div style={{ ...card, marginBottom: 14, background: '#fafafa' }}>
         <div style={{ marginBottom: 8 }}>
           <label style={{ marginRight: 16 }}>
-            <input type="radio" checked={sourceMode === 'fixture'} onChange={() => setSourceMode('fixture')} />{' '}
+            <input
+              type="radio"
+              checked={sourceMode === 'fixture'}
+              onChange={() => setSourceMode('fixture')}
+            />{' '}
             Cached fixture (instant)
           </label>
           <label>
-            <input type="radio" checked={sourceMode === 'live'} onChange={() => setSourceMode('live')} /> Live from DCS
+            <input
+              type="radio"
+              checked={sourceMode === 'live'}
+              onChange={() => setSourceMode('live')}
+            />{' '}
+            Live from DCS
           </label>
         </div>
 
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
           {sourceMode === 'fixture' ? (
-            <select value={fixtureKey} onChange={(e) => loadFixture(e.target.value)} style={{ padding: 8 }}>
+            <select
+              value={fixtureKey}
+              onChange={(e) => loadFixture(e.target.value)}
+              style={{ padding: 8 }}
+            >
               {htmlDataFixtures.map((f) => (
                 <option key={f.key} value={f.key}>
                   {f.label}
@@ -199,11 +218,36 @@ export default function RenderPDFDemo() {
                   setLiveRenderOptions(ex.renderOptions || {});
                 },
               })}
-              <input value={owner} onChange={(e) => setOwner(e.target.value)} placeholder="owner" style={{ padding: 8 }} />
-              <input value={repo} onChange={(e) => setRepo(e.target.value)} placeholder="repo" style={{ padding: 8 }} />
-              <input value={ref} onChange={(e) => setRef(e.target.value)} placeholder="ref" style={{ padding: 8, width: 90 }} />
-              <input value={booksInput} onChange={(e) => setBooksInput(e.target.value)} placeholder="books" style={{ padding: 8, width: 90 }} />
-              <button type="button" onClick={fetchLive} disabled={loadStatus === 'loading'} style={{ padding: '8px 14px' }}>
+              <input
+                value={owner}
+                onChange={(e) => setOwner(e.target.value)}
+                placeholder="owner"
+                style={{ padding: 8 }}
+              />
+              <input
+                value={repo}
+                onChange={(e) => setRepo(e.target.value)}
+                placeholder="repo"
+                style={{ padding: 8 }}
+              />
+              <input
+                value={ref}
+                onChange={(e) => setRef(e.target.value)}
+                placeholder="ref"
+                style={{ padding: 8, width: 90 }}
+              />
+              <input
+                value={booksInput}
+                onChange={(e) => setBooksInput(e.target.value)}
+                placeholder="books"
+                style={{ padding: 8, width: 90 }}
+              />
+              <button
+                type="button"
+                onClick={fetchLive}
+                disabled={loadStatus === 'loading'}
+                style={{ padding: '8px 14px' }}
+              >
                 {loadStatus === 'loading' ? 'Loading…' : 'Load'}
               </button>
             </>
@@ -211,7 +255,11 @@ export default function RenderPDFDemo() {
 
           <label>
             <span style={{ marginRight: 6, fontSize: 13, color: '#555' }}>Page size</span>
-            <select value={pageSize} onChange={(e) => setPageSize(e.target.value)} style={{ padding: 8 }}>
+            <select
+              value={pageSize}
+              onChange={(e) => setPageSize(e.target.value)}
+              style={{ padding: 8 }}
+            >
               {PAGE_SIZE_OPTIONS.map((o) => (
                 <option key={o.key} value={o.key}>
                   {o.label}
@@ -248,24 +296,43 @@ export default function RenderPDFDemo() {
       </div>
 
       {/* ─── Side-by-side engines ─── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 14 }}>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
+          gap: 14,
+        }}
+      >
         {/* PagedJS */}
         <div style={card}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
             <h3 style={{ margin: 0 }}>PagedJS</h3>
             <span style={{ fontSize: 12, color: '#0a7', fontWeight: 'bold' }}>works anywhere</span>
-            <button type="button" onClick={printPaged} disabled={!htmlData} style={{ marginLeft: 'auto', padding: '6px 10px' }}>
+            <button
+              type="button"
+              onClick={printPaged}
+              disabled={!htmlData}
+              style={{ marginLeft: 'auto', padding: '6px 10px' }}
+            >
               Save as PDF
             </button>
           </div>
           <div style={{ fontSize: 13, color: '#555', marginBottom: 6 }}>
-            {pagedMeta ? `paginated in ${pagedMeta.ms} ms · ${pagedMeta.pages ?? '?'} pages` : 'paginating…'}
+            {pagedMeta
+              ? `paginated in ${pagedMeta.ms} ms · ${pagedMeta.pages ?? '?'} pages`
+              : 'paginating…'}
           </div>
           <iframe
             ref={pagedIframeRef}
             title="pagedjs-preview"
             srcDoc={pagedHtml}
-            style={{ width: '100%', height: '70vh', border: '1px solid #eee', borderRadius: 4, display: 'block' }}
+            style={{
+              width: '100%',
+              height: '70vh',
+              border: '1px solid #eee',
+              borderRadius: 4,
+              display: 'block',
+            }}
           />
         </div>
 
@@ -290,14 +357,20 @@ export default function RenderPDFDemo() {
             value={pdfServiceUrl}
             onChange={(e) => setPdfServiceUrl(e.target.value)}
             placeholder="PDF service URL (optional) — e.g. https://weasyprint-pdf.example.com"
-            style={{ width: '100%', padding: 6, marginBottom: 8, fontSize: 13, boxSizing: 'border-box' }}
+            style={{
+              width: '100%',
+              padding: 6,
+              marginBottom: 8,
+              fontSize: 13,
+              boxSizing: 'border-box',
+            }}
           />
 
           {!wpAvailable ? (
             <div style={{ fontSize: 13, color: '#555', padding: '8px 0' }}>
-              WeasyPrint is a native (Python) engine — it can't run in the browser. Run the styleguide
-              locally (<code>pnpm run styleguide</code>), paste a hosted <code>weasyprint-pdf</code>{' '}
-              service URL above, or generate PDFs from the CLI:{' '}
+              WeasyPrint is a native (Python) engine — it can't run in the browser. Run the
+              styleguide locally (<code>pnpm run styleguide</code>), paste a hosted{' '}
+              <code>weasyprint-pdf</code> service URL above, or generate PDFs from the CLI:{' '}
               <code>node src/cli.js generatePdf …</code>.
             </div>
           ) : (
@@ -306,18 +379,34 @@ export default function RenderPDFDemo() {
                 {wpMeta
                   ? `rendered in ${wpMeta.ms} ms · ${(wpMeta.bytes / 1024).toFixed(0)} KB`
                   : wpStatus === 'rendering'
-                  ? 'rendering on the server…'
-                  : 'click “Render PDF”'}
+                    ? 'rendering on the server…'
+                    : 'click “Render PDF”'}
               </div>
               {wpError && <div style={{ color: '#842029', marginBottom: 6 }}>Error: {wpError}</div>}
               {wpUrl ? (
                 <iframe
                   title="weasyprint-preview"
                   src={wpUrl}
-                  style={{ width: '100%', height: '70vh', border: '1px solid #eee', borderRadius: 4, display: 'block' }}
+                  style={{
+                    width: '100%',
+                    height: '70vh',
+                    border: '1px solid #eee',
+                    borderRadius: 4,
+                    display: 'block',
+                  }}
                 />
               ) : (
-                <div style={{ height: '70vh', border: '1px dashed #ddd', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#aaa' }}>
+                <div
+                  style={{
+                    height: '70vh',
+                    border: '1px dashed #ddd',
+                    borderRadius: 4,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#aaa',
+                  }}
+                >
                   no PDF yet
                 </div>
               )}

@@ -57,7 +57,9 @@ export function renderTwlTable(rows, opts = {}) {
     const twAnchor = key ? `nav-${anchorBookId}--tw-${key.replace(/\//g, '-')}` : '';
     const cells = cols
       .map((b) => {
-        const q = quoteForDisplay((b.id && glQuoteForBibleId(row.GLQuotes, b.id)) || row.Quote || '');
+        const q = quoteForDisplay(
+          (b.id && glQuoteForBibleId(row.GLQuotes, b.id)) || row.Quote || ''
+        );
         const inner = twAnchor
           ? `<a href="#${twAnchor}" class="internal-link">${escapeHtml(q)}</a>`
           : escapeHtml(q);

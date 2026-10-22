@@ -32,7 +32,10 @@ describe('resolvePageSize', () => {
     expect(resolvePageSize('A4')).toEqual(PAGE_SIZES.A4_PORTRAIT);
   });
   test('passes through explicit { width, height }', () => {
-    expect(resolvePageSize({ width: '6in', height: '9in' })).toEqual({ width: '6in', height: '9in' });
+    expect(resolvePageSize({ width: '6in', height: '9in' })).toEqual({
+      width: '6in',
+      height: '9in',
+    });
   });
   test('falls back to A4 portrait for unknown input', () => {
     expect(resolvePageSize('nonsense')).toEqual(PAGE_SIZES.A4_PORTRAIT);

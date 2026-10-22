@@ -174,7 +174,10 @@ describe('renderHtmlData', () => {
 
   test('routes Open Bible Stories subjects', () => {
     const resourceData = { subject: 'Open Bible Stories', type: 'obs', title: 'OBS', stories: {} };
-    const rendered = { subject: 'Open Bible Stories', sections: { body: '<div />', copyright: '' } };
+    const rendered = {
+      subject: 'Open Bible Stories',
+      sections: { body: '<div />', copyright: '' },
+    };
 
     renderObsHtmlMock.mockReturnValueOnce(rendered);
 
