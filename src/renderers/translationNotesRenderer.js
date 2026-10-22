@@ -486,11 +486,20 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
   const allRcLinks = { ta: new Set(), tw: new Set() };
   const backRefs = { ta: {}, tw: {} };
 
-  const bookIds = Object.keys(resourceData.books).sort((a, b) => {
-    const aSort = resourceData.books[a].sort || 0;
-    const bSort = resourceData.books[b].sort || 0;
-    return aSort - bSort;
-  });
+  // With questions, a book that has questions but no notes is rendered too.
+  const hasRows = (chapter) =>
+    Object.values(chapter?.verses || {}).some((rows) => Array.isArray(rows) && rows.length);
+  const books = { ...resourceData.books };
+  if (includeQuestions) {
+    for (const [bookId, qBook] of Object.entries(questionsExtra.books || {})) {
+      if (books[bookId] || !Object.values(qBook?.chapters || {}).some(hasRows)) continue;
+      books[bookId] = { title: qBook.title, sort: qBook.sort, chapters: {} };
+    }
+  }
+  // Canonical position: the catalog's `sort`, else the number in the USFM file
+  // name (`57-TIT`).
+  const sortOf = (id) => books[id].sort || parseInt(BibleBookData[id]?.usfm, 10) || 0;
+  const bookIds = Object.keys(books).sort((a, b) => sortOf(a) - sortOf(b));
 
   // Chapters are listed in the TOC only for a single-book document. Once a
   // document covers more than one book the chapter list swamps the book names —
@@ -515,7 +524,7 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
   );
 
   for (const bookId of bookIds) {
-    const book = resourceData.books[bookId];
+    const book = books[bookId];
     const bookTitle = book.title || BibleBookData[bookId]?.title || bookId;
     const bookAnchor = `nav-${bookId}`;
     // OBS-based resources carry a single pseudo-book whose title is the resource
@@ -548,9 +557,7 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
     // so none of its questions is dropped.
     const questionChapters = includeQuestions
       ? Object.entries(questionsExtra.books?.[bookId]?.chapters || {})
-          .filter(([, ch]) =>
-            Object.values(ch?.verses || {}).some((rows) => Array.isArray(rows) && rows.length)
-          )
+          .filter(([, ch]) => hasRows(ch))
           .map(([key]) => key)
       : [];
     // Sort chapters numerically (handle 'front' as 0)
@@ -816,7 +823,7 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
     // Single-book documents name the book on the cover, under the version.
     bookTitle:
       bookIds.length === 1
-        ? resourceData.books[bookIds[0]].title || BibleBookData[bookIds[0]]?.title || bookIds[0]
+        ? books[bookIds[0]].title || BibleBookData[bookIds[0]]?.title || bookIds[0]
         : '',
   });
   const copyright = resourceData.license

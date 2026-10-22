@@ -183,21 +183,28 @@ export function filterResourceDataByRanges(resourceData, ranges) {
     changed = true;
   }
 
-  if (!changed) return resourceData;
-
   // A TSV resource's TSV extras (Translation Questions, Translation Words
   // Links) are keyed by the same chapters and verses and are shown alongside
   // them, so the same ranges apply: a question outside the range must not
-  // bring its verse back. Bible and manual extras are looked up per rendered
-  // verse or article and are left whole.
+  // bring its verse back. They are narrowed even when the notes already lie in
+  // the range. Bible and manual extras are looked up per rendered verse or
+  // article and are left whole.
   let extras = resourceData.extras;
+  let extrasChanged = false;
   if (resourceData.type === 'tsv' && extras && typeof extras === 'object') {
-    extras = Object.fromEntries(
-      Object.entries(extras).map(([key, extra]) => [
-        key,
-        extra?.type === 'tsv' ? filterResourceDataByRanges(extra, ranges) : extra,
-      ])
-    );
+    const next = {};
+    for (const [key, extra] of Object.entries(extras)) {
+      const narrowed = extra?.type === 'tsv' ? filterResourceDataByRanges(extra, ranges) : extra;
+      if (narrowed !== extra) extrasChanged = true;
+      next[key] = narrowed;
+    }
+    extras = next;
   }
-  return { ...resourceData, books, extras };
+
+  if (!changed && !extrasChanged) return resourceData;
+  return {
+    ...resourceData,
+    books: changed ? books : resourceData.books,
+    ...(extrasChanged ? { extras } : {}),
+  };
 }
