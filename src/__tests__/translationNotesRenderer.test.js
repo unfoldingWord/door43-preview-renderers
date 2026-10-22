@@ -150,9 +150,10 @@ describe('renderTranslationNotesHtml', () => {
     data.extras.tw.articles.names.paul.text =
       '## Paul\n\n* [Titus 1:1](rc://*/tn/help/tit/01/01)\n* [Titus 3:1](rc://*/tn/help/tit/03/01)';
     const article = renderTranslationNotesHtml(data).sections.appendices.tw['names/paul'].html;
-    expect(article).toContain('href="#nav-tit-1-1" class="internal-link"');
+    // Each assertion is tied to the link's own text, in any attribute order.
+    expect(article).toMatch(/<a [^>]*href="#nav-tit-1-1"[^>]*>Titus 1:1<\/a>/);
     expect(article).not.toContain('nav-tit-3-1');
-    expect(article).toContain('href="#" class="external-ref"');
+    expect(article).toMatch(/<a [^>]*href="#"[^>]*class="external-ref"[^>]*>Titus 3:1<\/a>/);
   });
 
   test('collects a TW appendix (keyed by kind) from TWL references', () => {
