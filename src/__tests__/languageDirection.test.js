@@ -80,6 +80,14 @@ describe('an RTL resource through renderHtmlData and renderHTML', () => {
     expect(html).not.toContain('onload');
   });
 
+  test('a language value cannot break out of the lang attribute, screen or print', () => {
+    for (const media of ['screen', 'print']) {
+      const html = renderHTML(htmlData, { media, language: 'ar" onload="x' });
+      expect(html).toContain('<html lang="ar&quot; onload=&quot;x" dir="rtl">');
+      expect(html).not.toContain('onload="x"');
+    }
+  });
+
   test('a resource with no language keeps lang="en" dir="ltr"', () => {
     const { language, direction, ...unknown } = arabicNotes();
     void language;
