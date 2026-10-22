@@ -172,7 +172,7 @@ Returns a **CatalogSet**:
 ```javascript
 {
   resourceVersion: 'v91',      // the resource's version (tag/branch)
-  libraryVersion: '1.6.0',     // this library's npm version
+  libraryVersion: '1.7.0',     // this library's npm version
   catalogEntries: [ /* main entry first, then every related resource */ ],
   source: { owner, repo, ref, books, dcsApiUrl }, // + lang, subject for the language form
 }
@@ -356,7 +356,7 @@ CI (`.github/workflows/ci.yml`) runs lint, the format check, the coverage-gated 
 ### Releasing
 
 1. Bump `version` in `package.json` in a pull request and merge it.
-2. Publish a GitHub release whose tag is that version with a `v` in front (`v1.6.0`).
+2. Publish a GitHub release whose tag is that version with a `v` in front (`v1.7.0`).
 3. `npm-publish.yml` runs the tests, checks that the tag matches `package.json`, and publishes to npm; a version that is already on the registry is skipped. The workflow publishes with the `NPM_TOKEN` organization secret.
 
 ## Project structure
