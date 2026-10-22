@@ -135,8 +135,9 @@ const RTL_CHAR = /[\u0590-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFC]/;
  */
 export function textDirection(text) {
   for (const ch of String(text || '')) {
-    if (RTL_CHAR.test(ch)) return 'rtl';
-    if (/\p{L}/u.test(ch)) return 'ltr';
+    // Only a letter decides: Arabic punctuation and digits sit in the RTL
+    // ranges but say nothing about the quote's script.
+    if (/\p{L}/u.test(ch)) return RTL_CHAR.test(ch) ? 'rtl' : 'ltr';
   }
   return '';
 }

@@ -121,6 +121,17 @@ describe('mixed-direction quotes', () => {
     expect(textDirection('1:1 — ')).toBe('');
     // U+FEFF (a byte-order mark) is not a letter of a right-to-left script.
     expect(textDirection('\uFEFFParis')).toBe('ltr');
+    // Arabic punctuation and digits are not letters: the Greek decides.
+    expect(textDirection('\u060C \u03A0\u03B1\u1FE6\u03BB\u03BF\u03C2')).toBe('ltr');
+    expect(textDirection('\u0661\u0662 \u03A0\u03B1\u1FE6\u03BB\u03BF\u03C2')).toBe('ltr');
+    expect(textDirection('\u0661\u0662\u060C')).toBe('');
+    expect(isolatedQuoteHtml('\u060C \u03A0\u03B1\u1FE6\u03BB\u03BF\u03C2', 'rtl')).toBe('<bdi dir="ltr">\u060C \u03A0\u03B1\u1FE6\u03BB\u03BF\u03C2</bdi>');
+  });
+
+  test('a language code cannot break out of the lang attribute', () => {
+    expect(htmlRootAttributes({ language: 'ar" onload="x' })).toBe(
+      'lang="ar&quot; onload=&quot;x" dir="ltr"'
+    );
   });
 
   test('isolatedQuoteHtml wraps only a quote that runs the other way', () => {
