@@ -206,9 +206,9 @@ export function buildManualToc(manuals = []) {
   }));
 }
 
-export function buildFullHtmlDocument(title, css, content) {
+export function buildFullHtmlDocument(title, css, content, rootAttributes = 'lang="en" dir="ltr"') {
   return `<!DOCTYPE html>
-<html lang="en">
+<html ${rootAttributes}>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">

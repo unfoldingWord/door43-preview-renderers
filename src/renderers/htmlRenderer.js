@@ -1,3 +1,5 @@
+import { htmlRootAttributes } from './scriptureColumns.js';
+
 /**
  * Renders HTML from content
  *
@@ -34,15 +36,17 @@ export function renderHTML(content, options = {}) {
  * @param {string} options.content - Main content
  * @param {string} [options.title] - Title
  * @param {Object} [options.metadata] - Additional metadata
+ * @param {string} [options.language='en'] - Language code for `lang`
+ * @param {'ltr'|'rtl'} [options.direction='ltr'] - Text direction for `dir`
  * @returns {string} HTML snippet
  */
-export function createHTMLSnippet({ content, title, metadata = {} }) {
+export function createHTMLSnippet({ content, title, metadata = {}, language, direction }) {
   const metaTags = Object.entries(metadata)
     .map(([key, value]) => `<meta name="${key}" content="${value}">`)
     .join('\n  ');
 
   return `<!DOCTYPE html>
-<html lang="en">
+<html ${htmlRootAttributes({ language, direction })}>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">

@@ -1,4 +1,9 @@
-import { escapeHtml, glQuoteForBibleId, quoteForDisplay } from './scriptureColumns.js';
+import {
+  escapeHtml,
+  glQuoteForBibleId,
+  quoteForDisplay,
+  isolatedQuoteHtml,
+} from './scriptureColumns.js';
 import { twKey } from './rcAppendices.js';
 
 /**
@@ -26,6 +31,8 @@ import { twKey } from './rcAppendices.js';
  *   Translation Words resource has no such article, and the row's words are shown
  *   unlinked (and not passed to onArticle) instead of pointing at a missing anchor
  * @param {boolean} [opts.id=true] - Emit the `twl-<book>-<ch>-<v>` id on the wrapper
+ * @param {'ltr'|'rtl'} [opts.direction='ltr'] - The document's direction; a quote
+ *   running the other way is isolated (see isolatedQuoteHtml)
  * @returns {string} HTML, or '' when no row is rendered
  */
 export function renderTwlTable(rows, opts = {}) {
@@ -39,6 +46,7 @@ export function renderTwlTable(rows, opts = {}) {
     onArticle,
     skip,
     hasArticle,
+    direction = 'ltr',
   } = opts;
   const classes = {
     wrapper: 'verse-twls',
@@ -67,11 +75,12 @@ export function renderTwlTable(rows, opts = {}) {
         const q = quoteForDisplay(
           (b.id && glQuoteForBibleId(row.GLQuotes, b.id)) || row.Quote || ''
         );
+        const qHtml = isolatedQuoteHtml(q, direction);
         const inner = twAnchor
-          ? `<a href="#${twAnchor}" class="internal-link">${escapeHtml(q)}</a>`
+          ? `<a href="#${twAnchor}" class="internal-link">${qHtml}</a>`
           : key
-            ? `<span class="unresolved-link">${escapeHtml(q)}</span>`
-            : escapeHtml(q);
+            ? `<span class="unresolved-link">${qHtml}</span>`
+            : qHtml;
         return `<td class="${classes.cell}">${inner}</td>`;
       })
       .join('');

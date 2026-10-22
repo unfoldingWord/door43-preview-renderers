@@ -12,6 +12,7 @@ import {
   getBibleColumns,
   renderScriptureColumns,
   renderQuoteHeader,
+  htmlRootAttributes,
 } from './scriptureColumns.js';
 import {
   twKey,
@@ -631,11 +632,12 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
           });
 
           // Quote header — one line per Bible (ULT/UST) plus the original quote
-          const quoteHeader = renderQuoteHeader(note, bibles, {
-            header: 'tn-note-header',
-            quote: 'tn-note-quote',
-            tag: 'tn-bible-tag',
-          });
+          const quoteHeader = renderQuoteHeader(
+            note,
+            bibles,
+            { header: 'tn-note-header', quote: 'tn-note-quote', tag: 'tn-bible-tag' },
+            resourceData.direction
+          );
 
           // Introduction notes are marked so print CSS can let them flow; every
           // other note is kept whole on one page.
@@ -660,6 +662,7 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
           bodyParts.push(
             renderTwlTable(twlRows, {
               bibles,
+              direction: resourceData.direction,
               bookId,
               chapterKey,
               verseKey,
@@ -735,7 +738,8 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
   const fullHtml = buildFullHtmlDocument(
     title,
     tnWebCss + tnPrintCss + coverCss + runningMarkerWebCss,
-    `<div class="section cover-page">${cover}</div>\n${body}${renderAppendicesHtml(appendices, { titles: appendixTitles })}`
+    `<div class="section cover-page">${cover}</div>\n${body}${renderAppendicesHtml(appendices, { titles: appendixTitles })}`,
+    htmlRootAttributes(resourceData)
   );
 
   return {
@@ -756,9 +760,9 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
   };
 }
 
-function buildFullHtmlDocument(title, css, content) {
+function buildFullHtmlDocument(title, css, content, rootAttributes = 'lang="en" dir="ltr"') {
   return `<!DOCTYPE html>
-<html lang="en">
+<html ${rootAttributes}>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">

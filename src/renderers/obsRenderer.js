@@ -1,5 +1,6 @@
 import { convertMarkdown } from '../converters/markdownConverter.js';
 import { buildCoverPage, coverCss, runningMarkerWebCss } from './printDocumentAssembler.js';
+import { htmlRootAttributes } from './scriptureColumns.js';
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -183,7 +184,8 @@ export function renderObsHtml(resourceData, options = {}) {
   const fullHtml = buildFullHtmlDocument(
     title,
     obsWebCss + obsPrintCss + coverCss + runningMarkerWebCss,
-    `<div class="section cover-page">${cover}</div>\n${body}`
+    `<div class="section cover-page">${cover}</div>\n${body}`,
+    htmlRootAttributes(resourceData)
   );
 
   return {
@@ -202,9 +204,9 @@ export function renderObsHtml(resourceData, options = {}) {
   };
 }
 
-function buildFullHtmlDocument(title, css, content) {
+function buildFullHtmlDocument(title, css, content, rootAttributes = 'lang="en" dir="ltr"') {
   return `<!DOCTYPE html>
-<html lang="en">
+<html ${rootAttributes}>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">

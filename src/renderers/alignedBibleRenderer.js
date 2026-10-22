@@ -3,6 +3,7 @@ import { SofriaRenderFromProskomma, render } from 'proskomma-json-tools';
 import { renderers as sofriaRenderers } from './sofria2html.js';
 import { convertMarkdown } from '../converters/markdownConverter.js';
 import { buildCoverPage, coverCss, runningMarkerWebCss } from './printDocumentAssembler.js';
+import { htmlRootAttributes } from './scriptureColumns.js';
 
 const defaultFlags = {
   showWordAtts: false,
@@ -194,9 +195,9 @@ function buildBooksMap(resourceData, requestedBooks = []) {
   return output;
 }
 
-function buildFullHtmlDocument(title, css, content) {
+function buildFullHtmlDocument(title, css, content, rootAttributes = 'lang="en" dir="ltr"') {
   return `<!DOCTYPE html>
-<html lang="en">
+<html ${rootAttributes}>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -322,6 +323,6 @@ export function renderAlignedBibleHtml(resourceData, options = {}) {
       webView: includeRawUsfmView ? buildRawUsfmWebView(booksMap) : null,
     },
     renderedBooks,
-    fullHtml: buildFullHtmlDocument(coverTitle, webCss, pageBody),
+    fullHtml: buildFullHtmlDocument(coverTitle, webCss, pageBody, htmlRootAttributes(resourceData)),
   };
 }

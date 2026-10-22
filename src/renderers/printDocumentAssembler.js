@@ -419,6 +419,15 @@ export function getPrintCss(options = {}) {
   } = options;
 
   const isRtl = direction === 'rtl';
+  // A right-to-left book reads the right-hand page of a spread first, and each
+  // page from its right edge. So the title goes on the right-hand page and the
+  // first reference of a range in the right corner. The margins stay put:
+  // :left/:right are physical sides, and with dir="rtl" on <html> the engine
+  // starts the book on a left-hand page, whose spine is on its right.
+  const firstCorner = isRtl ? 'right' : 'left';
+  const lastCorner = isRtl ? 'left' : 'right';
+  const leftPageHeader = isRtl ? 'string(runningref, first)' : 'string(runningtitle)';
+  const rightPageHeader = isRtl ? 'string(runningtitle)' : 'string(runningref, first)';
   // Running-header layout. Each mode fills the two top margin boxes from named
   // strings that the renderers set on hidden marker spans (.running-*):
   //   'title-ref' — verso carries the resource/manual title, recto the reference
@@ -468,16 +477,16 @@ export function getPrintCss(options = {}) {
 ${
   showHeader && rangeHeader
     ? `
-  @top-left {
+  @top-${firstCorner} {
     font-size: 10px;
     content: string(runningref, first);
-    text-align: left;
+    text-align: ${firstCorner};
   }
 
-  @top-right {
+  @top-${lastCorner} {
     font-size: 10px;
     content: string(runningref, last);
-    text-align: right;
+    text-align: ${lastCorner};
   }`
     : ''
 }
@@ -512,7 +521,7 @@ ${
     ? `
   @top-left {
     font-size: 10px;
-    content: string(runningtitle);
+    content: ${leftPageHeader};
     text-align: left;
   }`
     : ''
@@ -527,7 +536,7 @@ ${
     ? `
   @top-right {
     font-size: 10px;
-    content: string(runningref, first);
+    content: ${rightPageHeader};
     text-align: right;
   }`
     : ''
@@ -768,6 +777,7 @@ ${extraCss}
  * @param {string} [options.pageHeight] - Page height
  * @param {number} [options.columns] - Number of columns
  * @param {string} [options.direction] - 'ltr' or 'rtl'
+ * @param {string} [options.language='en'] - Language code for the document's `lang`
  * @param {boolean} [options.includePagedJsPolyfill] - Include <script> tag for PagedJS polyfill
  * @param {string} [options.pagedJsUrl] - Custom PagedJS polyfill URL
  * @param {string} [options.footerHtml] - Optional footer HTML (e.g., app version)
@@ -782,6 +792,7 @@ export function assemblePrintDocument(sections, options = {}) {
     pageHeight = '297mm',
     columns = 1,
     direction = 'ltr',
+    language = 'en',
     // 'weasyprint' (or 'prince'): native paged-media engine, no JS polyfill.
     // 'pagedjs': inject the PagedJS polyfill for in-browser preview/PDF.
     engine = 'weasyprint',
@@ -857,8 +868,10 @@ ${coverHtml}${copyrightHtml}${tocHtmlBlock}  ${body}
 </div>`;
 
   // Build complete HTML document
+  // dir on the root element is what sets the page progression (an RTL book
+  // starts on a left-hand page), not only the text direction.
   const fullHtml = `<!DOCTYPE html>
-<html lang="en">
+<html lang="${escapeHtml(language)}" dir="${direction === 'rtl' ? 'rtl' : 'ltr'}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
