@@ -43,6 +43,15 @@ and supplies every subject the main subject needs for them wins; the others
 are skipped with the reason kept for the error message if none fit. The
 chosen resource is always the first of the returned `catalogEntries`.
 
+Books asked for must come from the dependencies too: a Bible or Words Links
+entry that lacks one is left out of `catalogEntries`, as DCS does for a
+one-book blueprint, so the Bibles chosen for the render are ones that carry
+every book. An original-language Bible is held only to the books of its own
+testament, and Translation Academy and Translation Words are not
+book-based. With no `books`, the package is judged as a whole: it needs the
+original-language Bible of each testament its own ingredients span, and its
+dependencies are not checked book by book.
+
 ```js static
 const { owner, repo, ref } = await resolveResource({
   lang: 'es-419',

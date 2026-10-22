@@ -13,9 +13,18 @@ import path from 'path';
 // Import from the built package entry: only dist/index.esm.js and this file
 // are published, so the installed `door43-renderers` bin resolves against
 // dist. A checkout without a build (CI's test job, a fresh clone) falls back
-// to the source entry so the CLI still runs.
-const { getAllCatalogEntries, getResourceData, renderHtmlData, renderHTML, renderPdf, findResources, resolveRef } =
-  await import('../dist/index.esm.js').catch(() => import('./index.js'));
+// to the source entry so the CLI still runs. Only a missing build falls back;
+// a build that fails to load reports its own error.
+const distEntry = new URL('../dist/index.esm.js', import.meta.url);
+const {
+  getAllCatalogEntries,
+  getResourceData,
+  renderHtmlData,
+  renderHTML,
+  renderPdf,
+  findResources,
+  resolveRef,
+} = await import(fs.existsSync(distEntry) ? distEntry.href : './index.js');
 
 // Map the CLI's short page-size keys to PAGE_SIZES keys understood by renderHTML/renderPdf.
 function resolveCliPageSize(shortKey) {
@@ -176,7 +185,9 @@ async function main() {
 
   if (command === 'findResources') {
     if (!params.lang) {
-      console.error('Error: findResources needs --lang (and optionally --subject, --owner, --stage)');
+      console.error(
+        'Error: findResources needs --lang (and optionally --subject, --owner, --stage)'
+      );
       process.exit(1);
     }
   } else if (!byLanguage && (!params.owner || !params.repo)) {
@@ -210,7 +221,8 @@ async function main() {
       } else {
         const ref =
           params.ref ||
-          (await resolveRef({ owner: params.owner, repo: params.repo }, { dcs_api_url: dcsApiUrl })).ref;
+          (await resolveRef({ owner: params.owner, repo: params.repo }, { dcs_api_url: dcsApiUrl }))
+            .ref;
         descriptor = { owner: params.owner, repo: params.repo, ref, books };
       }
       set = await getAllCatalogEntries(descriptor, { dcs_api_url: dcsApiUrl, quiet });
@@ -246,7 +258,6 @@ async function main() {
         }));
         break;
       }
-
 
       case 'getAllCatalogEntries': {
         result = set;

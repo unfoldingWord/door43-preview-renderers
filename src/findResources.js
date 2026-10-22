@@ -125,6 +125,13 @@ function rankCandidates(entries, owner) {
     .map((x) => x.entry);
 }
 
+/** Lower-cased ingredient identifiers of a catalog row, or null when it lists none. */
+function ingredientIds(row) {
+  return Array.isArray(row?.ingredients)
+    ? row.ingredients.map((i) => String(i?.identifier || '').toLowerCase())
+    : null;
+}
+
 /**
  * Requested books the resource does not carry, judged by the ingredients the
  * blueprint (or, failing that, the search) lists for it. No ingredient list
@@ -132,23 +139,54 @@ function rankCandidates(entries, owner) {
  */
 function booksMissingFrom(blueprintMain, searchEntry, books) {
   if (!books || !books.length) return [];
-  const ingredients = Array.isArray(blueprintMain?.ingredients)
-    ? blueprintMain.ingredients
-    : Array.isArray(searchEntry?.ingredients)
-      ? searchEntry.ingredients
-      : null;
-  if (!ingredients) return [];
-  const have = new Set(ingredients.map((i) => String(i?.identifier || '').toLowerCase()));
+  const ids = ingredientIds(blueprintMain) ?? ingredientIds(searchEntry);
+  if (!ids) return [];
+  const have = new Set(ids);
   return books.filter((b) => !have.has(String(b).toLowerCase()));
 }
 
-/** The required subjects a blueprint must supply for `subject`, given the books asked for. */
+/**
+ * Requested books a dependency should carry and does not. Only a row whose
+ * ingredients are Bible books is judged (not Translation Academy or
+ * Translation Words, nor a row with no ingredient list), only for books a
+ * testament claims, and an original-language Bible only for its own testament.
+ */
+function booksMissingFromDependency(row, books) {
+  const ids = ingredientIds(row);
+  if (!ids || !ids.some((id) => testamentOf(id))) return [];
+  const have = new Set(ids);
+  return books.filter((b) => {
+    const t = testamentOf(b);
+    if (!t) return false;
+    if (row?.subject === 'Hebrew Old Testament' && t !== 'old') return false;
+    if (row?.subject === 'Greek New Testament' && t !== 'new') return false;
+    return !have.has(String(b).toLowerCase());
+  });
+}
+
+/**
+ * The books whose testaments decide which original-language Bibles are
+ * needed: the ones asked for, or with none asked for, the Bible books the
+ * resource itself lists. Empty when neither says.
+ */
+function booksForTestaments(books, blueprintMain, searchEntry) {
+  if (books.length) return books;
+  const ids = ingredientIds(blueprintMain) ?? ingredientIds(searchEntry) ?? [];
+  return ids.filter((id) => testamentOf(id));
+}
+
+/**
+ * The required subjects a blueprint must supply for `subject`: an
+ * original-language Bible only for a testament the books are in. No books
+ * means no testament is known, so neither is required; an id no testament
+ * claims keeps both.
+ */
 function requiredSubjectsFor(subject, books) {
   const required = requiredSubjectsMap[subject] || [];
-  const testaments = new Set((books || []).map(testamentOf).filter(Boolean));
-  const unknown = (books || []).some((b) => !testamentOf(b));
+  const testaments = new Set(books.map(testamentOf).filter(Boolean));
+  const unknown = books.some((b) => !testamentOf(b));
   return required.filter((s) => {
-    if (!testaments.size || unknown) return true;
+    if (unknown) return true;
     if (s === 'Hebrew Old Testament') return testaments.has('old');
     if (s === 'Greek New Testament') return testaments.has('new');
     return true;
@@ -161,7 +199,12 @@ function requiredSubjectsFor(subject, books) {
  * Candidates come from `findResources`. They are tried in order of: the
  * requested owner, gateway-language publishers, newest release. The first
  * whose blueprint (`/catalog/bp/`) supplies every subject the main subject
- * needs for the requested books wins.
+ * needs for the requested books wins. With books asked for, the resource
+ * and every book-based dependency must carry all of them (a dependency
+ * that does not is left out of `catalogEntries`, as DCS does for one
+ * book). With none asked for, the package is judged as a whole: the
+ * original-language Bibles needed are those of the testaments its own
+ * ingredients span, and dependencies are not checked book by book.
  *
  * @param {Object} query
  * @param {string} query.lang
@@ -183,7 +226,6 @@ export async function resolveResource(
     throw new Error(`No ${subject} published for language "${lang}" (stage ${stage}).`);
   }
 
-  const required = requiredSubjectsFor(subject, books);
   // A book-scoped blueprint only lists that book's dependencies, so scope it
   // only for a single book; several books are checked against the full package.
   const bookParam = books.length === 1 ? `?book=${enc(books[0])}` : '';
@@ -215,7 +257,10 @@ export async function resolveResource(
       continue;
     }
     if (mainIndex > 0) {
-      catalogEntries = [catalogEntries[mainIndex], ...catalogEntries.filter((_, i) => i !== mainIndex)];
+      catalogEntries = [
+        catalogEntries[mainIndex],
+        ...catalogEntries.filter((_, i) => i !== mainIndex),
+      ];
     }
     // The package must hold every book asked for, or the render comes back short.
     const missingBooks = booksMissingFrom(catalogEntries[0], entry, books);
@@ -223,17 +268,38 @@ export async function resolveResource(
       lastReason = `${entry.owner}/${entry.name}@${ref}: lacks book${missingBooks.length > 1 ? 's' : ''} ${missingBooks.join(', ')}`;
       continue;
     }
+    // So must every book-based dependency the render draws on. A one-book
+    // blueprint from DCS already leaves out the rows without that book; an
+    // unscoped one does not, so drop them here, before the Bibles are chosen.
+    const gaps = [];
+    if (books.length) {
+      catalogEntries = catalogEntries.filter((row, i) => {
+        if (i === 0) return true;
+        const lacking = booksMissingFromDependency(row, books);
+        if (!lacking.length) return true;
+        gaps.push({ subject: row?.subject, text: `${row?.name} lacks ${lacking.join(', ')}` });
+        return false;
+      });
+    }
+    const required = requiredSubjectsFor(
+      subject,
+      booksForTestaments(books, catalogEntries[0], entry)
+    );
     const filtered = filterCatalogEntries(catalogEntries, { subject, books });
     const present = new Set(filtered.map((e) => e?.subject));
     const missing = required.filter((s) => !present.has(s));
     if (missing.length) {
-      lastReason = `${entry.owner}/${entry.name}@${ref}: blueprint lacks ${missing.join(', ')}`;
+      const why = gaps.filter((g) => missing.includes(g.subject)).map((g) => g.text);
+      lastReason =
+        `${entry.owner}/${entry.name}@${ref}: blueprint lacks ${missing.join(', ')}` +
+        (why.length ? ` for ${books.join(', ')} (${why.join('; ')})` : '');
       continue;
     }
     return { owner: entry.owner, repo: entry.name, ref, entry, catalogEntries };
   }
   throw new Error(
-    `No complete book package for ${subject} in "${lang}"` + (lastReason ? ` (last tried ${lastReason})` : '.')
+    `No complete book package for ${subject} in "${lang}"` +
+      (lastReason ? ` (last tried ${lastReason})` : '.')
   );
 }
 
@@ -258,7 +324,8 @@ export async function resolveTarget(
       ? { owner: found.owner, repo: found.repo, ref }
       : { owner: found.owner, repo: found.repo, ref: found.ref, resolved: found };
   }
-  if (!owner || !repo) throw new Error('resolveTarget: owner and repo, or lang and subject, are required.');
+  if (!owner || !repo)
+    throw new Error('resolveTarget: owner and repo, or lang and subject, are required.');
   if (ref) return { owner, repo, ref };
   const latest = await resolveRef({ owner, repo }, options);
   return { owner, repo, ref: latest.ref };
