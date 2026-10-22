@@ -1,14 +1,6 @@
 import { jest } from '@jest/globals';
 import JSZip from 'jszip';
 
-const axiosGetMock = jest.fn();
-
-jest.unstable_mockModule('axios', () => ({
-  default: {
-    get: axiosGetMock,
-  },
-}));
-
 const { ts2usfm, extractTsBibleData } = await import('../tsBibleHelpers.js');
 
 /**
@@ -87,10 +79,16 @@ describe('extractTsBibleData', () => {
     jest.clearAllMocks();
   });
 
+  // The archive is downloaded with fetch (contentSource.downloadCapped).
+  const realFetch = globalThis.fetch;
+  afterAll(() => {
+    globalThis.fetch = realFetch;
+  });
+
   async function mockZipResponse(rootFolder, files) {
     const zip = await buildRepoZip(rootFolder, files);
-    const buffer = await zip.generateAsync({ type: 'nodebuffer' });
-    axiosGetMock.mockResolvedValueOnce({ data: buffer });
+    const buffer = await zip.generateAsync({ type: 'uint8array' });
+    globalThis.fetch = jest.fn().mockResolvedValueOnce(new Response(buffer));
   }
 
   test('reconstructs USFM and resolves a lowercased zip root folder', async () => {
@@ -107,7 +105,7 @@ describe('extractTsBibleData', () => {
         title: 'Regular - Ruth',
         subject: 'Bible',
         metadata_type: 'ts',
-        zipball_url: 'https://example.com/MyRepo.zip',
+        zipball_url: 'https://git.door43.org/owner/MyRepo/archive/master.zip',
         ingredients: [{ identifier: 'rut', title: 'Ruth', path: '.' }],
       },
       ['rut'],
@@ -131,7 +129,7 @@ describe('extractTsBibleData', () => {
         title: 'T',
         subject: 'Bible',
         metadata_type: 'ts',
-        zipball_url: 'https://example.com/repo.zip',
+        zipball_url: 'https://git.door43.org/owner/repo/archive/master.zip',
         ingredients: [{ identifier: 'rut', path: '.' }],
       },
       [],
@@ -157,7 +155,7 @@ describe('extractTsBibleData', () => {
           title: 'T',
           subject: 'Bible',
           metadata_type: 'ts',
-          zipball_url: 'https://example.com/repo.zip',
+          zipball_url: 'https://git.door43.org/owner/repo/archive/master.zip',
           ingredients: [{ identifier: 'rut', path: '.' }],
         },
         ['rut'],
