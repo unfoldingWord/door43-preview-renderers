@@ -17,7 +17,7 @@ const SOURCE_KEYS = ['owner', 'repo', 'ref', 'books', 'lang', 'subject', 'stage'
  * The request names the resource the way getAllCatalogEntries() does — `{ owner,
  * repo, ref?, books? }`, or `{ lang, subject, books?, owner?, stage?, ref? }` to
  * find the publisher — and carries every stage's options in the same object;
- * each stage reads its own (`dcs_api_url`, `quiet`, `extraSubjects`,
+ * each stage reads its own (`dcsApiUrl`, `quiet`, `extraSubjects`,
  * `renderOptions`, `media`, `show`, `print`, `outputPath`, …). An owner/repo
  * without a ref renders the latest release. The blueprint is fetched once.
  *
@@ -58,9 +58,7 @@ export async function renderPreview(request = {}) {
   }
 
   const set = await getAllCatalogEntries(source, options);
-  // A copy: getResourceData notes the set's entries on the options it is given.
-  const resourceData = await getResourceData(set, { ...options });
-  if (resourceData?.error) throw new Error(`renderPreview: ${resourceData.error}`);
+  const resourceData = await getResourceData(set, options);
   const htmlData = renderHtmlData(resourceData, { ...options, books: set.source?.books });
 
   return output === 'pdf' ? renderPdf(htmlData, options) : renderHTML(htmlData, options);

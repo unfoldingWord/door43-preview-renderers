@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { loggerFor } from './logger.js';
 import { ResourceError } from './errors.js';
+import { dcsApiUrlFrom, namesDcsApiUrl } from './options.js';
 import { REQUEST_TIMEOUT_MS } from './dcsApi.js';
 import { resolveResource } from './findResources.js';
 
@@ -15,11 +16,11 @@ const libraryVersion =
  * Resolve a `source` into { owner, repo, ref, books, dcsApiUrl }.
  *
  * `source` is either:
- *  - a descriptor: `{ owner, repo, ref, books?, dcs_api_url? }`  (has `ref`)
+ *  - a descriptor: `{ owner, repo, ref, books?, dcsApiUrl? }`  (has `ref`)
  *  - a catalog entry: `{ owner, name, branch_or_tag_name, url, ... }`
  */
 function resolveDescriptor(source, options) {
-  let dcsApiUrl = options.dcs_api_url || 'https://git.door43.org/api/v1';
+  let dcsApiUrl = dcsApiUrlFrom(options);
 
   if (source.ref) {
     return {
@@ -27,18 +28,19 @@ function resolveDescriptor(source, options) {
       repo: source.repo,
       ref: source.ref,
       books: source.books || options.books || [],
-      dcsApiUrl: options.dcs_api_url || source.dcs_api_url || dcsApiUrl,
+      // The options win over the descriptor.
+      dcsApiUrl: dcsApiUrlFrom(options, source),
     };
   }
 
-  // Catalog entry: derive the DCS API base from its `url` when present.
-  if (source.url) {
+  // Catalog entry: derive the DCS API base from its `url` when present. A URL
+  // in the options wins, by the same rule as above (any string, '' included).
+  if (!namesDcsApiUrl(options) && source.url) {
     const parts = source.url.split('/');
     if (parts.length >= 5) {
       dcsApiUrl = `${parts[0]}//${parts[2]}/${parts[3]}/${parts[4]}`;
     }
   }
-  if (options.dcs_api_url) dcsApiUrl = options.dcs_api_url;
 
   return {
     owner: source.owner,
@@ -60,7 +62,7 @@ function resolveDescriptor(source, options) {
  *   (the preferred publisher is found first, see findResources.js; its current
  *   release is used unless `ref` names one) | a catalog entry | a CatalogSet (returned as-is)
  * @param {Object} [options]
- * @param {string} [options.dcs_api_url] - DCS API base URL
+ * @param {string} [options.dcsApiUrl] - DCS API base URL
  * @param {boolean} [options.quiet] - Suppress logging
  * @param {Array<string>} [options.books] - Books (used with the catalog-entry source form)
  * @returns {Promise<{resourceVersion: string, libraryVersion: string, catalogEntries: Array, source: Object}>}
@@ -93,7 +95,10 @@ export async function getAllCatalogEntries(source, options = {}) {
         stage: source.stage,
         ref: source.ref,
       },
-      { ...options, dcs_api_url: options.dcs_api_url || source.dcs_api_url }
+      {
+        ...options,
+        dcsApiUrl: dcsApiUrlFrom(options, source),
+      }
     );
     // The version is the ref that was resolved, not whatever row the blueprint lists first.
     return {
@@ -105,7 +110,7 @@ export async function getAllCatalogEntries(source, options = {}) {
         repo: resolved.repo,
         ref: resolved.ref,
         books,
-        dcsApiUrl: options.dcs_api_url || source.dcs_api_url || 'https://git.door43.org/api/v1',
+        dcsApiUrl: dcsApiUrlFrom(options, source),
         lang: source.lang,
         subject: source.subject,
       },

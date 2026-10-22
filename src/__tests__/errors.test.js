@@ -160,7 +160,7 @@ describe('arguments and stage 0', () => {
   });
 
   test('stage 0: a failed DCS request is a ResourceError with its status or NETWORK', async () => {
-    const api = { dcs_api_url: 'https://stage0.test/api/v1' };
+    const api = { dcsApiUrl: 'https://stage0.test/api/v1' };
     axiosGetMock.mockRejectedValueOnce(httpError(503));
     await expect(resolveRef({ owner: 'o', repo: 'r' }, api)).rejects.toMatchObject({
       name: 'ResourceError',
@@ -175,30 +175,17 @@ describe('arguments and stage 0', () => {
   });
 });
 
-describe('getResourceData: 1.x { error } and throwOnError', () => {
-  test('by default a failed catalog lookup returns { error, code, status, url }', async () => {
+describe('getResourceData throws', () => {
+  test('a failed catalog lookup is the ResourceError, with its status and URL', async () => {
     axiosGetMock.mockRejectedValue(httpError(404));
-    const result = await getResourceData({ owner: 'o', repo: 'r', ref: 'v1' }, quiet);
-    expect(result).toEqual({
-      error: 'Failed to get catalog entry: Request failed with status code 404',
+    await expect(
+      getResourceData({ owner: 'o', repo: 'r', ref: 'v1' }, quiet)
+    ).rejects.toMatchObject({
+      name: 'ResourceError',
       code: 'NOT_FOUND',
       status: 404,
       url: 'https://git.door43.org/api/v1/catalog/entry/o/r/v1',
     });
-    // renderHtmlData turns it back into the ResourceError it was.
-    expect(() => renderHtmlData(result)).toThrow(ResourceError);
-    try {
-      renderHtmlData(result);
-    } catch (e) {
-      expect(e).toMatchObject({ code: 'NOT_FOUND', status: 404 });
-    }
-  });
-
-  test('throwOnError: true throws the ResourceError instead', async () => {
-    axiosGetMock.mockRejectedValue(httpError(404));
-    await expect(
-      getResourceData({ owner: 'o', repo: 'r', ref: 'v1' }, { ...quiet, throwOnError: true })
-    ).rejects.toMatchObject({ name: 'ResourceError', code: 'NOT_FOUND', status: 404 });
   });
 
   test('bad input and an unsupported type have their codes', async () => {

@@ -40,8 +40,7 @@ describe('renderAlignedBibleHtml', () => {
     expect(result.sections.toc).toEqual(
       expect.arrayContaining([expect.objectContaining({ id: 'nav-tit', book: 'tit' })])
     );
-    expect(result.fullHtml).toContain('<style>');
-    expect(result.fullHtml).toContain('Test Bible');
+    expect(result).not.toHaveProperty('fullHtml'); // renderHTML composes the document
   });
 
   test('marks every verse so a page header can show its reference range', () => {

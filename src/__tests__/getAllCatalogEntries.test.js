@@ -21,7 +21,7 @@ describe('getAllCatalogEntries', () => {
 
     const result = await getAllCatalogEntries(
       { owner: 'unfoldingWord', repo: 'en_tn', ref: 'v80', books: ['tit'] },
-      { dcs_api_url: 'https://git.door43.org/api/v1', quiet: true }
+      { dcsApiUrl: 'https://git.door43.org/api/v1', quiet: true }
     );
 
     expect(axiosGetMock).toHaveBeenCalledWith(
@@ -34,7 +34,7 @@ describe('getAllCatalogEntries', () => {
     expect(result.source).toMatchObject({ owner: 'unfoldingWord', repo: 'en_tn', ref: 'v80' });
   });
 
-  test('fetches from a catalog-entry source and infers dcs_api_url from its url', async () => {
+  test('fetches from a catalog-entry source and infers dcsApiUrl from its url', async () => {
     const entries = [{ owner: 'unfoldingWord', name: 'en_tw' }];
     axiosGetMock.mockResolvedValueOnce({ data: { data: entries } });
 
@@ -53,6 +53,28 @@ describe('getAllCatalogEntries', () => {
       { timeout: 30000 } // REQUEST_TIMEOUT_MS
     );
     expect(result.catalogEntries).toEqual(entries);
+  });
+
+  test("a catalog entry: the options' URL wins over the entry's, an empty one included", async () => {
+    const entry = {
+      owner: 'unfoldingWord',
+      name: 'en_tw',
+      branch_or_tag_name: 'v89',
+      url: 'https://entry.test/api/v1/catalog/entry/unfoldingWord/en_tw/v89',
+    };
+    const bp = '/catalog/bp/unfoldingWord/en_tw/v89';
+    const calledWith = async (options) => {
+      axiosGetMock.mockResolvedValueOnce({ data: { data: [{ name: 'en_tw' }] } });
+      await getAllCatalogEntries(entry, { quiet: true, ...options });
+      return axiosGetMock.mock.calls.at(-1)[0];
+    };
+
+    expect(await calledWith({})).toBe(`https://entry.test/api/v1${bp}`);
+    expect(await calledWith({ dcsApiUrl: 'https://opt.test/api/v1' })).toBe(
+      `https://opt.test/api/v1${bp}`
+    );
+    // An empty URL is the caller's (it fails at the request), never the entry's host.
+    expect(await calledWith({ dcsApiUrl: '' })).toBe(bp);
   });
 
   test('returns a CatalogSet source unchanged (passthrough)', async () => {

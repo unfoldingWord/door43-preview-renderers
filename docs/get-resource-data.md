@@ -21,14 +21,14 @@ getResourceData(input, options?)
   - a **catalog entry** object from the DCS API
   - an existing **ResourceData** object (returned unchanged — passthrough)
 - **options** (object, optional):
-  - **dcs_api_url** (string): DCS API base URL (default `https://git.door43.org/api/v1`)
+  - **dcsApiUrl** (string): DCS API base URL (default `https://git.door43.org/api/v1`)
   - **quiet** (boolean): suppress progress logging (default `false`); warnings are still reported
   - **logger** (object): `{ info, warn }` to receive progress and warnings instead of the console
   - **books** (array): book ids, when `input` does not carry them
   - **archiveMaxBytes** / **archiveTimeoutMs** (numbers): limits for the repository
     archives that Translation Academy, Translation Words, Open Bible Stories and tS
     are read from (default 100 MB and 120 s). The archive must be on the
-    `dcs_api_url` host; redirects are not followed
+    `dcsApiUrl` host; redirects are not followed
   - **extraSubjects** (array): blueprint subjects to fetch as extras beyond the ones
     the subject requires, e.g. `['TSV Translation Questions']` so Translation Notes
     can show each verse's questions (see `includeQuestions` in the
@@ -97,12 +97,6 @@ messages:
 
 It also carries `status` and `url` when there was a request, and `cause` when it
 wraps another error.
-
-One exception in 1.x: when the catalog lookup for an `{ owner, repo, ref }`
-descriptor fails, `getResourceData` **returns** `{ error, code, status, url }`
-instead of throwing (and `renderHtmlData` throws it if passed on). Pass
-`throwOnError: true` to get the `ResourceError` thrown instead. The returned form
-is deprecated; 2.0 will always throw.
 
 ## Returns
 

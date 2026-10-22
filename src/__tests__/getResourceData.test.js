@@ -89,22 +89,17 @@ describe('getResourceData', () => {
     jest.clearAllMocks();
   });
 
-  test('returns { error } when catalog entry fetch fails', async () => {
+  test('throws the ResourceError when the catalog entry fetch fails', async () => {
     axiosGetMock.mockRejectedValueOnce(new Error('network down'));
-    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 
-    const result = await getResourceData(
-      { owner: 'u', repo: 'r', ref: 'ref', books: [] },
-      { quiet: true }
-    );
-
-    // 1.x shape, with the ResourceError's code and URL alongside the message.
-    expect(result).toEqual({
-      error: 'Failed to get catalog entry: network down',
+    await expect(
+      getResourceData({ owner: 'u', repo: 'r', ref: 'ref', books: [] }, { quiet: true })
+    ).rejects.toMatchObject({
+      name: 'ResourceError',
+      message: 'Failed to get catalog entry: network down',
       code: 'NETWORK',
       url: 'https://git.door43.org/api/v1/catalog/entry/u/r/ref',
     });
-    consoleErrorSpy.mockRestore();
   });
 
   test('routes Aligned Bible resources to extractRcAlignedBibleData', async () => {
@@ -121,13 +116,13 @@ describe('getResourceData', () => {
 
     const result = await getResourceData(
       { owner: 'unfoldingWord', repo: 'en_ult', ref: 'v88', books: ['tit'] },
-      { quiet: true, dcs_api_url: 'https://git.door43.org/api/v1' }
+      { quiet: true, dcsApiUrl: 'https://git.door43.org/api/v1' }
     );
 
     expect(extractRcAlignedBibleDataMock).toHaveBeenCalledWith(
       catalogEntry,
       ['tit'],
-      expect.objectContaining({ quiet: true, dcs_api_url: 'https://git.door43.org/api/v1' })
+      expect.objectContaining({ quiet: true, dcsApiUrl: 'https://git.door43.org/api/v1' })
     );
     expect(result).toEqual(renderedData);
   });

@@ -41,8 +41,10 @@ describe('renderHtmlData', () => {
     expect(() => renderHtmlData(null)).toThrow('resourceData is required');
   });
 
-  test('throws when resourceData carries an error payload', () => {
-    expect(() => renderHtmlData({ error: 'catalog failed' })).toThrow('catalog failed');
+  test('an object with no known subject is UNSUPPORTED', () => {
+    expect(() => renderHtmlData({ error: 'catalog failed' })).toThrow(
+      expect.objectContaining({ name: 'ResourceError', code: 'UNSUPPORTED' })
+    );
   });
 
   test('routes aligned Bible subjects and passes requested books/render options', () => {

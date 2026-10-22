@@ -1,6 +1,7 @@
 import { contentSourceFor, entryCoords } from './contentSource.js';
 import { ResourceError } from './errors.js';
 import { loggerFor } from './logger.js';
+import { dcsApiUrlOf } from './options.js';
 import { applyTwlQuoteTrimming } from './twlQuoteTrimming.js';
 import { BibleBookData } from './constants.js';
 import { indexUsfmBook } from './quotes/usfmBookIndex.js';
@@ -242,7 +243,6 @@ function groupByChapterVerse(rows) {
  * Common function to extract and format TSV data
  */
 export async function extractRcTsvData(catalogEntry, books, options = {}, catalogEntries = []) {
-  const { dcs_api_url = 'https://git.door43.org/api/v1' } = options;
   // DCS, or a local checkout (getResourceDataFromDirectory).
   const contentSource = contentSourceFor(options);
 
@@ -350,9 +350,11 @@ export async function extractRcTsvData(catalogEntry, books, options = {}, catalo
           const resourceData = await getResourceData(
             { owner: entryOwner, repo: entryRepo, ref: entryRef, books },
             {
-              dcs_api_url,
+              dcsApiUrl: dcsApiUrlOf(options),
               quiet: options.quiet || false,
               logger: options.logger,
+            },
+            {
               // Extras come from where the resource came from, with the same
               // limits (an explicit DCS source carries the archive limits).
               contentSource: contentSourceFor(options),
@@ -361,7 +363,7 @@ export async function extractRcTsvData(catalogEntry, books, options = {}, catalo
               isExtra: true, // prevent recursive dependency fetching
             }
           );
-          return resourceData && !resourceData.error ? [identifier, resourceData] : null;
+          return resourceData ? [identifier, resourceData] : null;
         } catch (e) {
           // Dependency resource doesn't have the requested books — skip gracefully.
           // This is expected, e.g., when requesting NT book 'tit' from Hebrew OT.

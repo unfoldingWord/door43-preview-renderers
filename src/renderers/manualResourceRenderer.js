@@ -1,5 +1,3 @@
-import { htmlRootAttributes } from './scriptureColumns.js';
-
 function escapeHtml(value) {
   return String(value ?? '')
     .replaceAll('&', '&amp;')
@@ -206,21 +204,6 @@ export function buildManualToc(manuals = []) {
     manual: manual.id,
     sections: (manual.sections || []).map(toTocNode),
   }));
-}
-
-export function buildFullHtmlDocument(title, css, content, resource = {}) {
-  return `<!DOCTYPE html>
-<html ${htmlRootAttributes(resource)}>
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${escapeHtml(title)}</title>
-  <style>${css}</style>
-</head>
-<body>
-  ${content}
-</body>
-</html>`;
 }
 
 export function createTextAnchorId(title, fallback = 'section') {

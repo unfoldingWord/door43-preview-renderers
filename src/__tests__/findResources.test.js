@@ -89,7 +89,7 @@ describe('findResources', () => {
 
     const result = await findResources(
       { lang: 'es-419', subject: 'TSV Translation Notes', owner: 'es-419_gl' },
-      { dcs_api_url: API }
+      { dcsApiUrl: API }
     );
 
     expect(result).toHaveLength(101);
@@ -101,7 +101,7 @@ describe('findResources', () => {
 
   test('a single short page is one request; other stages are passed through', async () => {
     axiosGetMock.mockResolvedValueOnce({ data: { ok: true, data: [TN_GL] } });
-    const result = await findResources({ lang: 'es-419', stage: 'latest' }, { dcs_api_url: API });
+    const result = await findResources({ lang: 'es-419', stage: 'latest' }, { dcsApiUrl: API });
     expect(result).toEqual([TN_GL]);
     expect(urlOf(axiosGetMock.mock.calls[0])).toBe(
       `${API}/catalog/search?lang=es-419&stage=latest&limit=100&page=1`
@@ -111,7 +111,7 @@ describe('findResources', () => {
   test('an endpoint that never returns a short page is an error, not an endless loop', async () => {
     const full = Array.from({ length: 100 }, (_, i) => entry('o', `r${i}`, 'v1', 'Bible'));
     axiosGetMock.mockResolvedValue({ data: { ok: true, data: full } });
-    await expect(findResources({ lang: 'es-419' }, { dcs_api_url: API })).rejects.toThrow(
+    await expect(findResources({ lang: 'es-419' }, { dcsApiUrl: API })).rejects.toThrow(
       'after 50 pages'
     );
     expect(axiosGetMock).toHaveBeenCalledTimes(50);
@@ -153,12 +153,12 @@ describe('resolveRef', () => {
 
   test('an empty ref means the latest release', async () => {
     axiosGetMock.mockResolvedValueOnce({ data: { tag_name: 'v91', draft: false } });
-    expect(
-      await resolveRef({ owner: 'unfoldingWord', repo: 'en_tn' }, { dcs_api_url: API })
-    ).toEqual({
-      ref: 'v91',
-      isRelease: true,
-    });
+    expect(await resolveRef({ owner: 'unfoldingWord', repo: 'en_tn' }, { dcsApiUrl: API })).toEqual(
+      {
+        ref: 'v91',
+        isRelease: true,
+      }
+    );
     expect(urlOf(axiosGetMock.mock.calls[0])).toBe(
       `${API}/repos/unfoldingWord/en_tn/releases/latest`
     );
@@ -169,13 +169,13 @@ describe('resolveRef', () => {
     axiosGetMock
       .mockRejectedValueOnce(notFound)
       .mockResolvedValueOnce({ data: { default_branch: 'main' } });
-    expect(await resolveRef({ owner: 'x', repo: 'y' }, { dcs_api_url: API })).toEqual({
+    expect(await resolveRef({ owner: 'x', repo: 'y' }, { dcsApiUrl: API })).toEqual({
       ref: 'main',
       isRelease: false,
     });
 
     axiosGetMock.mockRejectedValueOnce(notFound).mockRejectedValueOnce(notFound);
-    expect(await resolveRef({ owner: 'x', repo: 'z' }, { dcs_api_url: API })).toEqual({
+    expect(await resolveRef({ owner: 'x', repo: 'z' }, { dcsApiUrl: API })).toEqual({
       ref: 'master',
       isRelease: false,
     });
@@ -184,16 +184,12 @@ describe('resolveRef', () => {
   test('an outage on the release lookup is an error, not the default branch', async () => {
     const outage = Object.assign(new Error('503'), { response: { status: 503 } });
     axiosGetMock.mockRejectedValueOnce(outage);
-    await expect(resolveRef({ owner: 'x', repo: 'w' }, { dcs_api_url: API })).rejects.toThrow(
-      '503'
-    );
+    await expect(resolveRef({ owner: 'x', repo: 'w' }, { dcsApiUrl: API })).rejects.toThrow('503');
     expect(axiosGetMock).toHaveBeenCalledTimes(1); // never reached the default-branch lookup
 
     const notFound = Object.assign(new Error('404'), { response: { status: 404 } });
     axiosGetMock.mockRejectedValueOnce(notFound).mockRejectedValueOnce(outage);
-    await expect(resolveRef({ owner: 'x', repo: 'v' }, { dcs_api_url: API })).rejects.toThrow(
-      '503'
-    );
+    await expect(resolveRef({ owner: 'x', repo: 'v' }, { dcsApiUrl: API })).rejects.toThrow('503');
   });
 });
 
@@ -217,7 +213,7 @@ describe('resolveResource', () => {
     });
     const found = await resolveResource(
       { lang: 'es-419', subject: 'TSV Translation Notes', books: ['tit'] },
-      { dcs_api_url: API }
+      { dcsApiUrl: API }
     );
     // Both GL publishers beat the non-GL one; the newer GL release wins.
     expect(found).toMatchObject({ owner: 'es-419_obt', repo: 'es-419_tn', ref: 'v0.0.5' });
@@ -235,7 +231,7 @@ describe('resolveResource', () => {
     });
     const found = await resolveResource(
       { lang: 'es-419', subject: 'TSV Translation Notes', owner: 'es-419_gl' },
-      { dcs_api_url: API }
+      { dcsApiUrl: API }
     );
     expect(found).toMatchObject({ owner: 'es-419_gl', ref: 'v66' });
   });
@@ -252,7 +248,7 @@ describe('resolveResource', () => {
     });
     const found = await resolveResource(
       { lang: 'es-419', subject: 'TSV Translation Notes', books: ['tit'] },
-      { dcs_api_url: API }
+      { dcsApiUrl: API }
     );
     expect(found).toMatchObject({ owner: 'es-419_gl', ref: 'v66' });
   });
@@ -267,7 +263,7 @@ describe('resolveResource', () => {
     });
     const found = await resolveResource(
       { lang: 'es-419', subject: 'TSV Translation Notes', books: ['tit'] },
-      { dcs_api_url: API }
+      { dcsApiUrl: API }
     );
     expect(found.owner).toBe('es-419_gl');
   });
@@ -283,7 +279,7 @@ describe('resolveResource', () => {
     await expect(
       resolveResource(
         { lang: 'es-419', subject: 'TSV Translation Notes', books: ['tit'] },
-        { dcs_api_url: API }
+        { dcsApiUrl: API }
       )
     ).rejects.toThrow('500');
   });
@@ -299,7 +295,7 @@ describe('resolveResource', () => {
     });
     const found = await resolveResource(
       { lang: 'es-419', subject: 'TSV Translation Notes', books: ['gen', 'tit'] },
-      { dcs_api_url: API }
+      { dcsApiUrl: API }
     );
     expect(found.owner).toBe('es-419_gl');
     const urls = axiosGetMock.mock.calls.map(urlOf).filter((u) => u.includes('/catalog/bp/'));
@@ -309,7 +305,7 @@ describe('resolveResource', () => {
   test('nothing published, or no complete package, is an error that says why', async () => {
     serve({ [`${API}/catalog/search?`]: { ok: true, data: [] } });
     await expect(
-      resolveResource({ lang: 'zz', subject: 'TSV Translation Notes' }, { dcs_api_url: API })
+      resolveResource({ lang: 'zz', subject: 'TSV Translation Notes' }, { dcsApiUrl: API })
     ).rejects.toThrow('No TSV Translation Notes published for language "zz"');
 
     clearFetchCache();
@@ -323,7 +319,7 @@ describe('resolveResource', () => {
     await expect(
       resolveResource(
         { lang: 'es-419', subject: 'TSV Translation Notes', books: ['tit'] },
-        { dcs_api_url: API }
+        { dcsApiUrl: API }
       )
     ).rejects.toThrow('blueprint lacks Greek New Testament');
   });
@@ -354,7 +350,7 @@ describe('resolveResource: the selected resource and its books', () => {
     });
     const found = await resolveResource(
       { lang: 'es-419', subject: 'TSV Translation Notes', books: ['rut'] },
-      { dcs_api_url: API }
+      { dcsApiUrl: API }
     );
     expect(found.catalogEntries[0]).toBe(found.entry);
     expect(found.catalogEntries[0].name).toBe('es-419_tn');
@@ -373,7 +369,7 @@ describe('resolveResource: the selected resource and its books', () => {
     });
     const found = await resolveResource(
       { lang: 'es-419', subject: 'TSV Translation Notes' },
-      { dcs_api_url: API }
+      { dcsApiUrl: API }
     );
     expect(found.owner).toBe('es-419_gl');
   });
@@ -391,7 +387,7 @@ describe('resolveResource: the selected resource and its books', () => {
     });
     const found = await resolveResource(
       { lang: 'es-419', subject: 'Aligned Bible', books: ['gen', 'tit'] },
-      { dcs_api_url: API }
+      { dcsApiUrl: API }
     );
     expect(found.owner).toBe('es-419_gl');
     const urls = axiosGetMock.mock.calls.map(urlOf).filter((u) => u.includes('/catalog/bp/'));
@@ -411,7 +407,7 @@ describe('resolveResource: the selected resource and its books', () => {
     await expect(
       resolveResource(
         { lang: 'es-419', subject: 'Aligned Bible', books: ['gen', 'tit'] },
-        { dcs_api_url: API }
+        { dcsApiUrl: API }
       )
     ).rejects.toThrow('lacks book tit');
   });
@@ -424,7 +420,7 @@ describe('resolveResource: the selected resource and its books', () => {
     });
     const found = await resolveResource(
       { lang: 'es-419', subject: 'Aligned Bible', books: ['tit'] },
-      { dcs_api_url: API }
+      { dcsApiUrl: API }
     );
     expect(found.owner).toBe('es-419_gl');
   });
@@ -463,7 +459,7 @@ describe('resolveResource: books the dependencies carry', () => {
     });
     const found = await resolveResource(
       { lang: 'es-419', subject: TN, books: ['tit', '3jn'] },
-      { dcs_api_url: API }
+      { dcsApiUrl: API }
     );
     expect(found.owner).toBe('es-419_gl');
     const glt = found.catalogEntries.find((e) => e.name === 'es-419_glt');
@@ -484,7 +480,7 @@ describe('resolveResource: books the dependencies carry', () => {
     });
     const found = await resolveResource(
       { lang: 'es-419', subject: TN, books: ['tit', '3jn'] },
-      { dcs_api_url: API }
+      { dcsApiUrl: API }
     );
     const names = found.catalogEntries.map((e) => e.name);
     expect(names).not.toContain('es-419_glt');
@@ -503,7 +499,7 @@ describe('resolveResource: books the dependencies carry', () => {
     });
     const found = await resolveResource(
       { lang: 'es-419', subject: TN, books: ['gen', 'tit'] },
-      { dcs_api_url: API }
+      { dcsApiUrl: API }
     );
     expect(found.catalogEntries.map((e) => e.name)).toEqual(
       expect.arrayContaining(['hbo_uhb', 'el-x-koine_ugnt'])
@@ -519,7 +515,7 @@ describe('resolveResource: books the dependencies carry', () => {
       },
     });
     await expect(
-      resolveResource({ lang: 'es-419', subject: TN, books: ['tit', '3jn'] }, { dcs_api_url: API })
+      resolveResource({ lang: 'es-419', subject: TN, books: ['tit', '3jn'] }, { dcsApiUrl: API })
     ).rejects.toThrow(
       'blueprint lacks Aligned Bible, TSV Translation Words Links for tit, 3jn (es-419_glt lacks 3jn;'
     );
@@ -534,7 +530,7 @@ describe('resolveResource: books the dependencies carry', () => {
       },
     });
     // Nor are its dependencies held to every book the notes carry.
-    const found = await resolveResource({ lang: 'es-419', subject: TN }, { dcs_api_url: API });
+    const found = await resolveResource({ lang: 'es-419', subject: TN }, { dcsApiUrl: API });
     expect(found.owner).toBe('es-419_gl');
   });
 
@@ -547,7 +543,7 @@ describe('resolveResource: books the dependencies carry', () => {
       },
     });
     await expect(
-      resolveResource({ lang: 'es-419', subject: TN }, { dcs_api_url: API })
+      resolveResource({ lang: 'es-419', subject: TN }, { dcsApiUrl: API })
     ).rejects.toThrow('blueprint lacks Hebrew Old Testament');
   });
 
@@ -560,7 +556,7 @@ describe('resolveResource: books the dependencies carry', () => {
       },
     });
     await expect(
-      resolveResource({ lang: 'es-419', subject: TN, books: ['gen', 'tit'] }, { dcs_api_url: API })
+      resolveResource({ lang: 'es-419', subject: TN, books: ['gen', 'tit'] }, { dcsApiUrl: API })
     ).rejects.toThrow('blueprint lacks Greek New Testament');
   });
 
@@ -580,7 +576,7 @@ describe('resolveResource: books the dependencies carry', () => {
     });
     const found = await resolveResource(
       { lang: 'es-419', subject: TN, books: ['tit'] },
-      { dcs_api_url: API }
+      { dcsApiUrl: API }
     );
     expect(found.owner).toBe('es-419_gl');
   });
@@ -593,7 +589,7 @@ describe('resolveResource: books the dependencies carry', () => {
         data: blueprint(TN_GL, { withOT: false, withNT: false }),
       },
     });
-    const found = await resolveResource({ lang: 'es-419', subject: TN }, { dcs_api_url: API });
+    const found = await resolveResource({ lang: 'es-419', subject: TN }, { dcsApiUrl: API });
     expect(found.owner).toBe('es-419_gl');
   });
 });
@@ -610,7 +606,7 @@ describe('resolveTarget', () => {
     });
     const pinned = await resolveTarget(
       { lang: 'es-419', subject: 'TSV Translation Notes', ref: 'v60' },
-      { dcs_api_url: API }
+      { dcsApiUrl: API }
     );
     expect(pinned).toMatchObject({ owner: 'es-419_gl', repo: 'es-419_tn', ref: 'v60' });
     // The package returned is the one at the pinned ref.
@@ -618,7 +614,7 @@ describe('resolveTarget', () => {
 
     const found = await resolveTarget(
       { lang: 'es-419', subject: 'TSV Translation Notes' },
-      { dcs_api_url: API }
+      { dcsApiUrl: API }
     );
     expect(found).toMatchObject({ owner: 'es-419_gl', repo: 'es-419_tn', ref: 'v66' });
     expect(found.resolved.catalogEntries[0].name).toBe('es-419_tn');
@@ -634,7 +630,7 @@ describe('resolveTarget', () => {
 
     axiosGetMock.mockResolvedValueOnce({ data: { tag_name: 'v91' } });
     expect(
-      await resolveTarget({ owner: 'unfoldingWord', repo: 'en_tn' }, { dcs_api_url: API })
+      await resolveTarget({ owner: 'unfoldingWord', repo: 'en_tn' }, { dcsApiUrl: API })
     ).toEqual({
       owner: 'unfoldingWord',
       repo: 'en_tn',
@@ -681,9 +677,9 @@ describe('hand-off into getResourceData', () => {
 
     const set = await getAllCatalogEntries(
       { lang: 'es-419', subject: 'TSV Translation Notes', books: ['tit'] },
-      { dcs_api_url: API, quiet: true }
+      { dcsApiUrl: API, quiet: true }
     );
-    const data = await getResourceData(set, { dcs_api_url: API, quiet: true });
+    const data = await getResourceData(set, { dcsApiUrl: API, quiet: true });
 
     expect(data.subject).toBe('TSV Translation Notes');
     expect(data.title).toBe('Notas de traducción');
@@ -703,7 +699,7 @@ describe('listLanguages', () => {
         ],
       },
     });
-    const langs = await listLanguages({}, { dcs_api_url: API });
+    const langs = await listLanguages({}, { dcsApiUrl: API });
     expect(langs).toEqual([
       { code: 'am', name: 'Amharic', native: 'አማርኛ', direction: 'ltr', gateway: true },
       { code: 'ar', name: 'Arabic', native: 'العربية', direction: 'rtl', gateway: false },
@@ -725,7 +721,7 @@ describe('getAllCatalogEntries with { lang, subject }', () => {
 
     const set = await getAllCatalogEntries(
       { lang: 'es-419', subject: 'TSV Translation Notes', books: ['tit'] },
-      { dcs_api_url: API, quiet: true }
+      { dcsApiUrl: API, quiet: true }
     );
 
     expect(set.source).toMatchObject({
@@ -756,7 +752,7 @@ describe('getAllCatalogEntries with { lang, subject }', () => {
     });
     const set = await getAllCatalogEntries(
       { lang: 'es-419', subject: 'TSV Translation Notes', books: ['tit'] },
-      { dcs_api_url: API, quiet: true }
+      { dcsApiUrl: API, quiet: true }
     );
     // The selected resource is first whatever order the blueprint listed.
     expect(set.catalogEntries[0].name).toBe('es-419_tn');
@@ -785,12 +781,12 @@ describe('getAllCatalogEntries with { lang, subject }', () => {
       throw new Error(`unexpected ${url}`);
     });
     const query = { lang: 'es-419', subject: 'TSV Translation Notes', books: ['tit'], ref: 'v60' };
-    const set = await getAllCatalogEntries(query, { dcs_api_url: API, quiet: true });
+    const set = await getAllCatalogEntries(query, { dcsApiUrl: API, quiet: true });
     expect(set.source).toMatchObject({ owner: 'es-419_gl', repo: 'es-419_tn', ref: 'v60' });
     expect(set.resourceVersion).toBe('v60');
     expect(set.catalogEntries[0].branch_or_tag_name).toBe('v60');
 
-    const target = await resolveTarget(query, { dcs_api_url: API });
+    const target = await resolveTarget(query, { dcsApiUrl: API });
     expect(target).toMatchObject({ owner: 'es-419_gl', repo: 'es-419_tn', ref: 'v60' });
 
     const urls = axiosGetMock.mock.calls.map(urlOf);

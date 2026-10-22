@@ -112,8 +112,6 @@ export default function RenderPDFDemo() {
         .map((b) => b.trim().toLowerCase())
         .filter(Boolean);
       const resourceData = await getResourceData({ owner, repo, ref, books }, liveDataOptions);
-      if (!resourceData || resourceData.error)
-        throw new Error(resourceData?.error || 'No resource data');
       setHtmlData(renderHtmlData(resourceData, { books, renderOptions: liveRenderOptions }));
     } catch (e) {
       setLoadError(e.message);

@@ -53,7 +53,7 @@ await renderPreview({
 | `owner`, `repo`, `ref`, `books` | | The resource, as stage 1 takes it. No `ref`: the latest release (the default branch if there is none). |
 | `lang`, `subject`, `owner`, `stage`, `ref`, `books` | | Or find it from a language (stage 0). |
 | `output` | `'html'` | `'html'`: the document `renderHTML` composes (`media: 'screen'` or `'print'`). `'pdf'`: `renderPdf`, with the local WeasyPrint or `pdfServiceUrl`. |
-| anything else | | Passed to the stages: `dcs_api_url`, `quiet`, `extraSubjects` (stage 2), `renderOptions` (stage 3), `media`, `show`, `columns`, `print` (stage 4), `outputPath`, `pdfServiceUrl`, … (stage 5). |
+| anything else | | Passed to the stages: `dcsApiUrl`, `quiet`, `extraSubjects` (stage 2), `renderOptions` (stage 3), `media`, `show`, `columns`, `print` (stage 4), `outputPath`, `pdfServiceUrl`, … (stage 5). |
 
 It returns the HTML string, or the PDF bytes (the path when `outputPath` is given).
 The blueprint is fetched once. To keep or cache an intermediate (the CatalogSet,

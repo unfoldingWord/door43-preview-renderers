@@ -64,9 +64,7 @@ describe('renderObsHtml', () => {
     expect(typeof sections.css.web).toBe('string');
     expect(sections.css.web).toContain('.obs-story-title');
     expect(sections.css.print).toContain('break-after: page');
-    expect(result.fullHtml).toContain('<!DOCTYPE html>');
-    expect(result.fullHtml).toContain('<title>unfoldingWord® Open Bible Stories</title>');
-    expect(result.fullHtml).toContain('class="section cover-page"');
+    expect(result).not.toHaveProperty('fullHtml'); // renderHTML composes the document
   });
 
   test('wraps the body in a resource section with the TOC title', () => {

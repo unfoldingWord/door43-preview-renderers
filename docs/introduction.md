@@ -44,7 +44,7 @@ import {
 // 1–2. Fetch + parse a resource and what it depends on (network).
 const resourceData = await getResourceData(
   { owner: 'unfoldingWord', repo: 'en_tn', ref: 'v91', books: ['tit'] },
-  { dcs_api_url: 'https://git.door43.org/api/v1' }
+  { dcsApiUrl: 'https://git.door43.org/api/v1' }
 );
 
 // 3. Render to reusable HTML sections (pure, no network).
@@ -56,7 +56,7 @@ const webHtml = renderHTML(htmlData);                       // continuous web pa
 const printHtml = renderHTML(htmlData, { media: 'print' }); // PagedJS/WeasyPrint-ready
 
 // 5. …or render a PDF directly (needs the weasyprint binary, or a pdfServiceUrl).
-const pdf = await renderPdf(htmlData, { pageSize: 'A4_PORTRAIT' });
+const pdf = await renderPdf(htmlData, { print: { pageSize: 'A4_PORTRAIT' } });
 ```
 
 See [Rendering options](./options.md) for every option each stage accepts.

@@ -65,9 +65,6 @@ export default function RenderHTMLDemo() {
         .map((b) => b.trim().toLowerCase())
         .filter(Boolean);
       const resourceData = await getResourceData({ owner, repo, ref, books }, liveDataOptions);
-      if (!resourceData || resourceData.error) {
-        throw new Error(resourceData?.error || 'No resource data');
-      }
       setHtmlData(renderHtmlData(resourceData, { books, renderOptions: liveRenderOptions }));
       setLoadedLabel(`${owner}/${repo}@${ref}${books.length ? ` — ${books.join(', ')}` : ''}`);
     } catch (e) {

@@ -92,7 +92,7 @@ afterAll(() => {
   fs.rmSync(dir, { recursive: true, force: true });
 });
 
-const offline = { dcs_api_url: 'http://127.0.0.1:9/api/v1', quiet: true };
+const offline = { dcsApiUrl: 'http://127.0.0.1:9/api/v1', quiet: true };
 
 describe('getResourceDataFromDirectory', () => {
   test('reads the resource and every supporting resource from the checkouts', async () => {

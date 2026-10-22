@@ -15,7 +15,7 @@ import { getResourceData, renderHtmlData, renderHTML, renderPdf } from '@unfoldi
 // 1. Fetch + parse the resource (network)
 const resourceData = await getResourceData(
   { owner: 'unfoldingWord', repo: 'en_ult', ref: 'v91', books: ['tit'] },
-  { dcs_api_url: 'https://git.door43.org/api/v1' }
+  { dcsApiUrl: 'https://git.door43.org/api/v1' }
 );
 
 // 2. Render to reusable HTML sections (pure, no network — pass cached data here to skip step 1)
@@ -25,7 +25,7 @@ const htmlData = renderHtmlData(resourceData, { renderOptions: { editorMode: fal
 const webHtml   = renderHTML(htmlData);            const printHtml = renderHTML(htmlData, { media: 'print' });
 
 // 4. …or go straight to a PDF
-const pdf = await renderPdf(htmlData, { pageSize: 'A4_PORTRAIT', outputPath: 'titus.pdf' });
+const pdf = await renderPdf(htmlData, { print: { pageSize: 'A4_PORTRAIT' }, outputPath: 'titus.pdf' });
 ```
 
 Know a language rather than a repository? Call
@@ -53,13 +53,12 @@ catalog entry object, or an existing `resourceData` (returned unchanged).
 | `input.repo` | string | — | ✅ | Repository name (e.g. `en_tn`). |
 | `input.ref` | string | — | ✅ | Tag, branch, or commit (e.g. `v91`, `master`). |
 | `input.books` | string[] | `[]` | ✅ | Book ids to fetch (e.g. `['tit','rom']`). What an empty list means, and which subjects ignore it: [the `books` rule](https://github.com/unfoldingWord/door43-preview-renderers/blob/main/skills/door43-renderers-maintainer/references/contracts.md#books-at-stage-2). |
-| `options.dcs_api_url` | string | `https://git.door43.org/api/v1` | ✅ | DCS API base URL. |
+| `options.dcsApiUrl` | string | `https://git.door43.org/api/v1` | ✅ | DCS API base URL. Every function that talks to DCS takes it. |
 | `options.quiet` | boolean | `false` | ✅ | Suppress progress logging (the URLs fetched). Warnings (a book or supporting resource that could not be read, GL quotes that could not be worked out) are still reported. |
-| `options.throwOnError` | boolean | `false` | ✅ | Throw the `ResourceError` when the catalog lookup for an `{ owner, repo, ref }` fails, instead of returning `{ error, code, status, url }`. Every other failure already throws. The returned form is deprecated; 2.0 will always throw. |
 | `options.logger` | `{ info, warn }` | the console | ✅ | Where progress (`info`) and warnings (`warn`) go, per call. Also taken by `getAllCatalogEntries` and the stage-0 functions. The CLI passes one that writes to stderr. |
 | `options.books` | string[] | `[]` | ✅ | Books, when `input` does not carry them (catalog-entry form). |
 | `options.archiveMaxBytes` | number | `104857600` (100 MB) | ✅ | Largest repository archive accepted. Translation Academy, Translation Words, Open Bible Stories and tS repositories are read from their DCS archive (the largest today, en_tw, is about 1 MB). |
-| `options.archiveTimeoutMs` | number | `120000` | ✅ | Time limit for an archive download. The archive URL must be on the `dcs_api_url` host, and redirects are not followed. |
+| `options.archiveTimeoutMs` | number | `120000` | ✅ | Time limit for an archive download. The archive URL must be on the `dcsApiUrl` host, and redirects are not followed. |
 | `options.extraSubjects` | string[] | `[]` | ✅ | Blueprint subjects to fetch as extras beyond the ones the subject requires. `['TSV Translation Questions']` on Translation Notes (`['TSV OBS Translation Questions']` on OBS Translation Notes) fetches the package's questions, which the notes then show under each verse or frame (`includeQuestions`). A subject the blueprint lacks is ignored. |
 
 ### `getResourceDataFromDirectory(catalogEntries, dirPath, options?)`
@@ -168,15 +167,11 @@ runs WeasyPrint. `input` is the `htmlData` from `renderHtmlData()`. Requires the
 
 It takes **`renderHTML`'s composition options** (`show`, `columns`, `language`,
 `direction`, `print.*`; `media` is always `'print'`), so a PDF and the print HTML
-come out the same, running headers included. `pageSize` and `footerHtml` are still
-accepted at the top level as aliases of `print.pageSize` and `print.footerHtml`;
-the nested names win when both are given.
+come out the same, running headers included.
 
 | Option | Type | Default | Status | Description |
 |---|---|---|---|---|
 | `show`, `columns`, `language`, `direction`, `print.*` | | as `renderHTML` with `media: 'print'` | ✅ | See [`renderHTML`](#renderhtmlhtmldata-options). |
-| `pageSize` | string \| `{width,height}` | `'A4_PORTRAIT'` | ✅ | Alias of `print.pageSize` (see below). |
-| `footerHtml` | string | — | ✅ | Alias of `print.footerHtml`. |
 | `title` | string | `htmlData.title` | ✅ | Cover title override. |
 | `version` | string | `htmlData.version` | ✅ | Cover version override. |
 | `abbreviation` | string | `htmlData.abbreviation` | ✅ | Cover abbreviation (selects the logo). |
@@ -203,8 +198,8 @@ Pass a **key**, a friendly **label** (portrait assumed), or an explicit
 | `CROWN_QUARTO` | `Crown Quarto` | 189×246mm |
 
 ```js
-renderPdf(htmlData, { pageSize: 'TRADE' });
-renderPdf(htmlData, { pageSize: { width: '160mm', height: '240mm' } });
+renderPdf(htmlData, { print: { pageSize: 'TRADE' } });
+renderPdf(htmlData, { print: { pageSize: { width: '160mm', height: '240mm' } } });
 ```
 
 ---
@@ -262,7 +257,7 @@ const html = renderHTML(htmlData, { media: 'print', engine: 'pagedjs', print: { 
 
 **PDF to a file, two columns, Trade size:**
 ```js
-await renderPdf(htmlData, { pageSize: 'TRADE', columns: 2, outputPath: 'titus.pdf' });
+await renderPdf(htmlData, { print: { pageSize: 'TRADE' }, columns: 2, outputPath: 'titus.pdf' });
 ```
 
 **Resume from cached data (no network):**

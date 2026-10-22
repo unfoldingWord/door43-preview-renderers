@@ -6,7 +6,6 @@ import {
   parseScriptureExtras,
   getBibleColumns,
   renderScriptureColumns,
-  htmlRootAttributes,
 } from './scriptureColumns.js';
 import {
   isObsSubject,
@@ -440,13 +439,6 @@ export function renderTsvQuestionsHtml(resourceData, options = {}) {
     web: tqWebCss + coverCss + runningMarkerWebCss,
     print: isObs ? tqPrintCss + tqObsPrintCss : tqPrintCss,
   };
-  const fullHtml = buildFullHtmlDocument(
-    title,
-    tqWebCss + tqPrintCss + coverCss + runningMarkerWebCss,
-    `<div class="section cover-page">${cover}</div>\n${body}`,
-    resourceData
-  );
-
   return {
     subject: resourceData.subject,
     title,
@@ -459,21 +451,5 @@ export function renderTsvQuestionsHtml(resourceData, options = {}) {
       webView: null,
     },
     renderedBooks: {},
-    fullHtml,
   };
-}
-
-function buildFullHtmlDocument(title, css, content, resource = {}) {
-  return `<!DOCTYPE html>
-<html ${htmlRootAttributes(resource)}>
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${escapeHtml(title)}</title>
-  <style>${css}</style>
-</head>
-<body>
-  ${content}
-</body>
-</html>`;
 }

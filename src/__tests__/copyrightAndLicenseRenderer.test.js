@@ -64,7 +64,7 @@ describe('generateCopyrightAndLicenseHtml', () => {
   test('passes a custom DCS API URL through to the license fetch', async () => {
     fetchContentMock.mockResolvedValueOnce('');
     await generateCopyrightAndLicenseHtml(mainEntry, [], {
-      dcs_api_url: 'https://qa.door43.org/api/v1',
+      dcsApiUrl: 'https://qa.door43.org/api/v1',
     });
     expect(fetchContentMock).toHaveBeenCalledWith(
       'unfoldingWord',

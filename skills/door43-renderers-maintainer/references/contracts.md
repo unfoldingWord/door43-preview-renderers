@@ -48,7 +48,7 @@ A subject renderer returns:
 
 `renderHtmlData` promotes `abbreviation`, `version`, `language`, `direction` onto the HtmlData (`renderHTML` and `renderPdf` write them as `<html lang dir>`; a renderer wraps every quote that has a letter in `<bdi dir>` in the quote's own direction with `isolatedQuoteHtml`, so sections do not depend on the document's direction) and rewrites `nav-` anchors in every section to `<abbreviation>-`. There is no `fullHtml`; `renderHTML` composes the document.
 
-Keep errors explicit: throw a `ResourceError` (`src/errors.js`) with a `code` (`NOT_FOUND`, `HTTP`, `NETWORK`, `INVALID_INPUT`, `UNSUPPORTED`, `NO_CONTENT`), plus `status` and `url` when there was a request. In 1.x `getResourceData` still returns `{ error, code, status, url }` for a failed descriptor lookup unless `throwOnError` is set.
+Keep errors explicit: throw a `ResourceError` (`src/errors.js`) with a `code` (`NOT_FOUND`, `HTTP`, `NETWORK`, `INVALID_INPUT`, `UNSUPPORTED`, `NO_CONTENT`), plus `status` and `url` when there was a request.
 
 ## Anchors
 

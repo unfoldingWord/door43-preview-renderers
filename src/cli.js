@@ -198,7 +198,7 @@ async function main() {
   // getResourceData options. --include-questions asks for both questions
   // subjects; the blueprint keeps only the one the package has.
   const dataOptions = {
-    dcs_api_url: dcsApiUrl,
+    dcsApiUrl,
     quiet,
     logger,
     ...(includeQuestions
@@ -265,15 +265,10 @@ async function main() {
       } else {
         const ref =
           params.ref ||
-          (
-            await resolveRef(
-              { owner: params.owner, repo: params.repo },
-              { dcs_api_url: dcsApiUrl, logger }
-            )
-          ).ref;
+          (await resolveRef({ owner: params.owner, repo: params.repo }, { dcsApiUrl, logger })).ref;
         descriptor = { owner: params.owner, repo: params.repo, ref, books };
       }
-      set = await getAllCatalogEntries(descriptor, { dcs_api_url: dcsApiUrl, quiet, logger });
+      set = await getAllCatalogEntries(descriptor, { dcsApiUrl, quiet, logger });
       // A requested owner is a preference: when its package was incomplete the
       // next publisher is used, and that substitution is said even when quiet.
       if (byLanguage && params.owner && params.owner !== set.source.owner) {
@@ -292,7 +287,7 @@ async function main() {
         if (!quiet) console.error(`Searching the catalog for ${params.lang}...`);
         const entries = await findResources(
           { lang: params.lang, subject: params.subject, owner: params.owner, stage: params.stage },
-          { dcs_api_url: dcsApiUrl, quiet, logger }
+          { dcsApiUrl, quiet, logger }
         );
         result = entries.map((e) => ({
           owner: e.owner,
@@ -370,7 +365,7 @@ async function main() {
         const htmlData = renderHtmlData(resourceData, { books: set.source.books });
         const pdfOutputPath = path.resolve(output);
         await renderPdf(htmlData, {
-          pageSize: resolveCliPageSize(params.pageSize),
+          print: { pageSize: resolveCliPageSize(params.pageSize) },
           columns: params.columns || 1,
           outputPath: pdfOutputPath,
           // Offload to a hosted weasyprint-pdf service instead of the local binary.

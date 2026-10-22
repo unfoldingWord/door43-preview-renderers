@@ -3,7 +3,6 @@ import {
   buildCoverPage,
   coverCss,
   runningMarkerWebCss,
-  renderAppendicesHtml,
   shortenForHeader,
 } from './printDocumentAssembler.js';
 import { BibleBookData } from '../constants.js';
@@ -15,7 +14,6 @@ import {
   quoteForDisplay,
   isolatedQuoteHtml,
   renderScriptureColumns,
-  htmlRootAttributes,
 } from './scriptureColumns.js';
 import {
   twKey,
@@ -698,13 +696,6 @@ export function renderTranslationWordsLinksHtml(resourceData, options = {}) {
     web: twlWebCss + coverCss + runningMarkerWebCss,
     print: isObs ? twlPrintCss + twlObsPrintCss : twlPrintCss,
   };
-  const fullHtml = buildFullHtmlDocument(
-    title,
-    twlWebCss + twlPrintCss + coverCss + runningMarkerWebCss,
-    `<div class="section cover-page">${cover}</div>\n${body}${renderAppendicesHtml(finalAppendices, { titles: appendixTitles })}`,
-    resourceData
-  );
-
   return {
     subject: resourceData.subject,
     title,
@@ -719,21 +710,5 @@ export function renderTranslationWordsLinksHtml(resourceData, options = {}) {
       appendixTitles,
     },
     renderedBooks: {},
-    fullHtml,
   };
-}
-
-function buildFullHtmlDocument(title, css, content, resource = {}) {
-  return `<!DOCTYPE html>
-<html ${htmlRootAttributes(resource)}>
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${escapeHtml(title)}</title>
-  <style>${css}</style>
-</head>
-<body>
-  ${content}
-</body>
-</html>`;
 }

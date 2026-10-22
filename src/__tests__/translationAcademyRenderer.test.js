@@ -44,11 +44,9 @@ describe('renderTranslationAcademyHtml', () => {
         }),
       ])
     );
-    expect(result.fullHtml).toContain('<style>');
-    expect(result.fullHtml).toContain('Translation Academy Demo');
-    // Running-header markers ride hidden in both the sections CSS and the legacy fullHtml.
+    // Running-header markers ride hidden in the web CSS.
     expect(result.sections.css.web).toContain('.running-title, .running-ref { display: none; }');
-    expect(result.fullHtml).toContain('.running-title, .running-ref { display: none; }');
+    expect(result).not.toHaveProperty('fullHtml'); // renderHTML composes the document
   });
 
   test('throws for invalid resource data', () => {
