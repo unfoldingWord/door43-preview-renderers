@@ -1,4 +1,3 @@
-import axios from 'axios';
 import JSZip from 'jszip';
 import { fetchContent, fetchLicense } from './dcsApi.js';
 
@@ -35,12 +34,74 @@ const stripDotSlash = (path) => String(path || '').replace(/^\.\//, '');
 export const ARCHIVE_LIMITS = { maxBytes: 100 * 1024 * 1024, timeoutMs: 120000 };
 
 /**
+ * GET a URL as bytes with `fetch`, the same way in Node (18+) and the browser:
+ *
+ *  - `redirect: 'error'`: a redirect fails the request, so it cannot carry the
+ *    download off the host the caller checked. (axios's `maxRedirects` is honored
+ *    by its Node adapter only; browsers followed redirects.) DCS serves archives
+ *    directly: a tag, a branch or a commit answers 200, and the only redirect
+ *    seen is http -> https, which the origin check already refuses.
+ *  - `maxBytes`: a declared Content-Length over the cap is refused before
+ *    reading, and the body is read as a stream and cancelled as soon as it
+ *    passes the cap, so no more than the cap (plus one chunk) is held.
+ *  - `timeoutMs`: the request and the read are aborted after that long.
+ *
+ * @param {string} url
+ * @param {{ maxBytes: number, timeoutMs: number }} limits
+ * @returns {Promise<Uint8Array>}
+ */
+export async function downloadCapped(url, { maxBytes, timeoutMs }) {
+  const tooLarge = () => new Error(`Archive ${url} is larger than ${maxBytes} bytes.`);
+  let response;
+  try {
+    response = await fetch(url, { redirect: 'error', signal: AbortSignal.timeout(timeoutMs) });
+  } catch (error) {
+    const reason = error?.cause?.message || error?.message || String(error);
+    throw new Error(`Could not download ${url}: ${reason}`);
+  }
+  if (!response.ok) {
+    await response.body?.cancel();
+    throw new Error(`Could not download ${url}: HTTP ${response.status}`);
+  }
+  const declared = Number(response.headers.get('content-length'));
+  if (Number.isFinite(declared) && declared > maxBytes) {
+    await response.body?.cancel();
+    throw tooLarge();
+  }
+  const reader = response.body.getReader();
+  const chunks = [];
+  let total = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > maxBytes) {
+        await reader.cancel();
+        throw tooLarge();
+      }
+      chunks.push(value);
+    }
+  } catch (error) {
+    if (error?.message?.includes('is larger than')) throw error;
+    throw new Error(`Could not download ${url}: ${error?.message || error}`);
+  }
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return bytes;
+}
+
+/**
  * Read from DCS: the contents API for a file (cached per URL), the repository
  * archive (`zipball_url`) for the whole tree.
  *
  * The archive URL comes from the catalog entry, so it is held to the DCS host
- * the caller configured: it must be on the origin of `dcs_api_url`, redirects
- * are not followed, and the download is limited in time and size.
+ * the caller configured: it must be on the origin of `dcs_api_url`, no redirect
+ * is followed, and the download is limited in time and size (see downloadCapped).
  *
  * @param {string} [dcs_api_url='https://git.door43.org/api/v1']
  * @param {Object} [limits]
@@ -74,26 +135,7 @@ export function dcsContentSource(dcs_api_url = 'https://git.door43.org/api/v1', 
       if (url.origin !== host) {
         throw new Error(`Archive URL ${url.href} is not on the DCS host ${host}.`);
       }
-      // Browsers do not enforce maxContentLength: abort once progress passes the cap.
-      const abort = new AbortController();
-      let response;
-      try {
-        response = await axios.get(url.href, {
-          responseType: 'arraybuffer',
-          timeout: timeoutMs,
-          maxContentLength: maxBytes, // enforced while downloading, in Node
-          maxRedirects: 0, // a redirect could leave the host checked above
-          signal: abort.signal,
-          onDownloadProgress: ({ loaded }) => loaded > maxBytes && abort.abort(),
-        });
-      } catch (error) {
-        if (!abort.signal.aborted) throw error;
-      }
-      // Aborted (no response), or a transport that sent no progress: check what arrived.
-      if (!response || (response.data?.byteLength ?? 0) > maxBytes) {
-        throw new Error(`Archive ${url.href} is larger than ${maxBytes} bytes.`);
-      }
-      return JSZip.loadAsync(response.data);
+      return JSZip.loadAsync(await downloadCapped(url.href, { maxBytes, timeoutMs }));
     },
   };
 }

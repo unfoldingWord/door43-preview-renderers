@@ -1,14 +1,6 @@
 import { jest } from '@jest/globals';
 import JSZip from 'jszip';
 
-const axiosGetMock = jest.fn();
-
-jest.unstable_mockModule('axios', () => ({
-  default: {
-    get: axiosGetMock,
-  },
-}));
-
 const { ts2usfm, extractTsBibleData } = await import('../tsBibleHelpers.js');
 
 /**
@@ -87,10 +79,16 @@ describe('extractTsBibleData', () => {
     jest.clearAllMocks();
   });
 
+  // The archive is downloaded with fetch (contentSource.downloadCapped).
+  const realFetch = globalThis.fetch;
+  afterAll(() => {
+    globalThis.fetch = realFetch;
+  });
+
   async function mockZipResponse(rootFolder, files) {
     const zip = await buildRepoZip(rootFolder, files);
-    const buffer = await zip.generateAsync({ type: 'nodebuffer' });
-    axiosGetMock.mockResolvedValueOnce({ data: buffer });
+    const buffer = await zip.generateAsync({ type: 'uint8array' });
+    globalThis.fetch = jest.fn().mockResolvedValueOnce(new Response(buffer));
   }
 
   test('reconstructs USFM and resolves a lowercased zip root folder', async () => {
