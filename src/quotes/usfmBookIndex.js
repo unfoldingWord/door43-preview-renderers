@@ -77,7 +77,10 @@ function walk(verseObjects, aligned, out, counts, chapter, verse) {
     if (!obj || typeof obj !== 'object') continue;
     if (obj.type === 'milestone' && obj.tag === 'zaln') {
       const next = obj.content
-        ? [...aligned, { content: normalizeWord(obj.content), occurrence: Number(obj.occurrence) || 1 }]
+        ? [
+            ...aligned,
+            { content: normalizeWord(obj.content), occurrence: Number(obj.occurrence) || 1 },
+          ]
         : aligned;
       walk(obj.children, next, out, counts, chapter, verse);
       continue;

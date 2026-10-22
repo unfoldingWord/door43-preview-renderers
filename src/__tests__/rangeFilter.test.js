@@ -69,8 +69,8 @@ describe('filterResourceDataByRanges', () => {
         tit: {
           chapters: {
             front: { verses: { intro: [{ Note: 'book intro' }] } },
-            '1': { verses: { '1': [{ Note: 'c1v1' }], '2': [{ Note: 'c1v2' }] } },
-            '2': { verses: { '1': [{ Note: 'c2v1' }] } },
+            1: { verses: { 1: [{ Note: 'c1v1' }], 2: [{ Note: 'c1v2' }] } },
+            2: { verses: { 1: [{ Note: 'c2v1' }] } },
           },
         },
       },

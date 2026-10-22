@@ -28,7 +28,8 @@ function convertTaMarkdownToHtml(markdown = '') {
 
 function buildTocSection(manualId, manualData, section = {}, index = 0) {
   const tocTitle = section.title || '';
-  const inputLink = section.link || createTextAnchorId(tocTitle, `section-${manualId}-${index + 1}`);
+  const inputLink =
+    section.link || createTextAnchorId(tocTitle, `section-${manualId}-${index + 1}`);
   const articleData = manualData.articles?.[inputLink];
 
   const built = {
@@ -42,7 +43,9 @@ function buildTocSection(manualId, manualData, section = {}, index = 0) {
   };
 
   const children = Array.isArray(section.sections) ? section.sections : [];
-  built.sections = children.map((child, childIndex) => buildTocSection(manualId, manualData, child, childIndex));
+  built.sections = children.map((child, childIndex) =>
+    buildTocSection(manualId, manualData, child, childIndex)
+  );
 
   return built;
 }
@@ -59,7 +62,9 @@ function buildManualSections(manualId, manualData) {
 
   const tocSections = manualData.toc?.sections;
   if (Array.isArray(tocSections) && tocSections.length) {
-    manual.sections = tocSections.map((section, index) => buildTocSection(manualId, manualData, section, index));
+    manual.sections = tocSections.map((section, index) =>
+      buildTocSection(manualId, manualData, section, index)
+    );
     return manual;
   }
 
@@ -89,7 +94,9 @@ function buildManualSections(manualId, manualData) {
 export function renderTranslationAcademyHtml(resourceData, options = {}) {
   void options;
   if (!resourceData || resourceData.type !== 'ta' || typeof resourceData.manuals !== 'object') {
-    throw new Error('Translation Academy renderer expects TA resource data from getResourceData().');
+    throw new Error(
+      'Translation Academy renderer expects TA resource data from getResourceData().'
+    );
   }
 
   const manuals = Object.entries(resourceData.manuals).map(([manualId, manualData]) =>

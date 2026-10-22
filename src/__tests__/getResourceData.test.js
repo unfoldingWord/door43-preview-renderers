@@ -92,7 +92,10 @@ describe('getResourceData', () => {
     axiosGetMock.mockRejectedValueOnce(new Error('network down'));
     const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 
-    const result = await getResourceData({ owner: 'u', repo: 'r', ref: 'ref', books: [] }, { quiet: true });
+    const result = await getResourceData(
+      { owner: 'u', repo: 'r', ref: 'ref', books: [] },
+      { quiet: true }
+    );
 
     expect(result).toEqual({ error: 'Failed to get catalog entry: network down' });
     consoleErrorSpy.mockRestore();
@@ -138,7 +141,10 @@ describe('getResourceData', () => {
     axiosGetMock.mockResolvedValueOnce({ data: catalogEntry });
     extractRcAlignedBibleDataMock.mockResolvedValueOnce({ ok: true });
 
-    await getResourceData({ owner: 'unfoldingWord', repo: 'en_ult', ref: 'v88', books: ['tit'] }, { quiet: true });
+    await getResourceData(
+      { owner: 'unfoldingWord', repo: 'en_ult', ref: 'v88', books: ['tit'] },
+      { quiet: true }
+    );
 
     expect(extractRcAlignedBibleDataMock).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -163,7 +169,10 @@ describe('getResourceData', () => {
     axiosGetMock.mockResolvedValueOnce({ data: catalogEntry });
     extractRcTaDataMock.mockResolvedValueOnce(data);
 
-    const result = await getResourceData({ owner: 'unfoldingWord', repo: 'en_ta', ref: 'v89', books: [] }, { quiet: true });
+    const result = await getResourceData(
+      { owner: 'unfoldingWord', repo: 'en_ta', ref: 'v89', books: [] },
+      { quiet: true }
+    );
 
     expect(extractRcTaDataMock).toHaveBeenCalledWith(
       catalogEntry,
@@ -184,7 +193,10 @@ describe('getResourceData', () => {
     axiosGetMock.mockResolvedValueOnce({ data: catalogEntry });
     extractRcTwDataMock.mockResolvedValueOnce(data);
 
-    const result = await getResourceData({ owner: 'unfoldingWord', repo: 'en_tw', ref: 'v89', books: [] }, { quiet: true });
+    const result = await getResourceData(
+      { owner: 'unfoldingWord', repo: 'en_tw', ref: 'v89', books: [] },
+      { quiet: true }
+    );
 
     expect(extractRcTwDataMock).toHaveBeenCalledWith(
       catalogEntry,
@@ -207,7 +219,10 @@ describe('getResourceData', () => {
     });
     extractRcTsvDataMock.mockResolvedValueOnce({ type: 'tsv' });
 
-    const result = await getResourceData({ owner: 'unfoldingWord', repo: 'en_tn', ref: 'v80', books: ['tit'] }, { quiet: true });
+    const result = await getResourceData(
+      { owner: 'unfoldingWord', repo: 'en_tn', ref: 'v80', books: ['tit'] },
+      { quiet: true }
+    );
 
     expect(getAllCatalogEntriesMock).toHaveBeenCalledWith(
       catalogEntry,
@@ -236,7 +251,10 @@ describe('getResourceData', () => {
     extractRcSbObsDataMock.mockResolvedValueOnce(obsData);
     formatObsDataMock.mockReturnValueOnce(formatted);
 
-    const result = await getResourceData({ owner: 'unfoldingWord', repo: 'en_obs', ref: 'v1', books: [] }, { quiet: true });
+    const result = await getResourceData(
+      { owner: 'unfoldingWord', repo: 'en_obs', ref: 'v1', books: [] },
+      { quiet: true }
+    );
 
     expect(getObsContentPathMock).toHaveBeenCalledWith(catalogEntry);
     expect(extractRcSbObsDataMock).toHaveBeenCalledWith(catalogEntry, { path: './stories-folder' });
@@ -254,9 +272,9 @@ describe('getResourceData', () => {
       },
     });
 
-    await expect(getResourceData({ owner: 'u', repo: 'r', ref: 'ref', books: [] }, { quiet: true })).rejects.toThrow(
-      'No ingredients found in catalog entry'
-    );
+    await expect(
+      getResourceData({ owner: 'u', repo: 'r', ref: 'ref', books: [] }, { quiet: true })
+    ).rejects.toThrow('No ingredients found in catalog entry');
   });
 
   test.each([
@@ -293,7 +311,11 @@ describe('getResourceData', () => {
         expect.any(Object)
       );
       expect(result).toEqual(
-        expect.objectContaining({ type: 'usfm', subject, books: { tit: expect.stringContaining('\\v 1') } })
+        expect.objectContaining({
+          type: 'usfm',
+          subject,
+          books: { tit: expect.stringContaining('\\v 1') },
+        })
       );
       // No placeholder fields from the old stub.
       expect(result).not.toHaveProperty('flavorType');
@@ -313,9 +335,9 @@ describe('getResourceData', () => {
       },
     });
 
-    await expect(getResourceData({ owner: 'u', repo: 'r', ref: 'ref', books: ['tit'] }, { quiet: true })).rejects.toThrow(
-      'Conversion of SB flavor `unknownFlavor` is not currently supported.'
-    );
+    await expect(
+      getResourceData({ owner: 'u', repo: 'r', ref: 'ref', books: ['tit'] }, { quiet: true })
+    ).rejects.toThrow('Conversion of SB flavor `unknownFlavor` is not currently supported.');
   });
 
   test('routes SB gloss/textStories through OBS extraction', async () => {
@@ -334,7 +356,10 @@ describe('getResourceData', () => {
     extractRcSbObsDataMock.mockResolvedValueOnce(obsData);
     formatObsDataMock.mockReturnValueOnce(formatted);
 
-    const result = await getResourceData({ owner: 'u', repo: 'r', ref: 'ref', books: [] }, { quiet: true });
+    const result = await getResourceData(
+      { owner: 'u', repo: 'r', ref: 'ref', books: [] },
+      { quiet: true }
+    );
 
     expect(getObsContentPathMock).toHaveBeenCalledWith(catalogEntry);
     expect(extractRcSbObsDataMock).toHaveBeenCalledWith(catalogEntry, { path: './stories-folder' });
@@ -353,9 +378,9 @@ describe('getResourceData', () => {
       },
     });
 
-    await expect(getResourceData({ owner: 'u', repo: 'r', ref: 'ref', books: [] }, { quiet: true })).rejects.toThrow(
-      'Conversion of SB gloss flavor `other` is not currently supported.'
-    );
+    await expect(
+      getResourceData({ owner: 'u', repo: 'r', ref: 'ref', books: [] }, { quiet: true })
+    ).rejects.toThrow('Conversion of SB gloss flavor `other` is not currently supported.');
   });
 
   test('routes TS OBS resources through extractTsObsData + formatObsData', async () => {
@@ -372,7 +397,10 @@ describe('getResourceData', () => {
     extractTsObsDataMock.mockResolvedValueOnce(obsData);
     formatObsDataMock.mockReturnValueOnce(formatted);
 
-    const result = await getResourceData({ owner: 'u', repo: 'r', ref: 'ref', books: [] }, { quiet: true });
+    const result = await getResourceData(
+      { owner: 'u', repo: 'r', ref: 'ref', books: [] },
+      { quiet: true }
+    );
 
     expect(getObsContentPathMock).toHaveBeenCalledWith(catalogEntry);
     expect(extractTsObsDataMock).toHaveBeenCalledWith(catalogEntry, { path: './stories-folder' });
@@ -393,7 +421,10 @@ describe('getResourceData', () => {
       books: { tit: '\\id TIT' },
     });
 
-    const result = await getResourceData({ owner: 'u', repo: 'r', ref: 'ref', books: ['tit'] }, { quiet: true });
+    const result = await getResourceData(
+      { owner: 'u', repo: 'r', ref: 'ref', books: ['tit'] },
+      { quiet: true }
+    );
 
     expect(extractTsBibleDataMock).toHaveBeenCalledWith(
       expect.objectContaining({ metadata_type: 'ts', subject: 'Bible' }),
@@ -413,9 +444,9 @@ describe('getResourceData', () => {
       },
     });
 
-    await expect(getResourceData({ owner: 'u', repo: 'r', ref: 'ref', books: [] }, { quiet: true })).rejects.toThrow(
-      'Conversion of translationStudio repositories is currently not supported.'
-    );
+    await expect(
+      getResourceData({ owner: 'u', repo: 'r', ref: 'ref', books: [] }, { quiet: true })
+    ).rejects.toThrow('Conversion of translationStudio repositories is currently not supported.');
   });
 
   test('delegates TC Bible to extractRcAlignedBibleData', async () => {
@@ -432,7 +463,10 @@ describe('getResourceData', () => {
       books: { tit: '\\id TIT' },
     });
 
-    const result = await getResourceData({ owner: 'u', repo: 'r', ref: 'ref', books: ['tit'] }, { quiet: true });
+    const result = await getResourceData(
+      { owner: 'u', repo: 'r', ref: 'ref', books: ['tit'] },
+      { quiet: true }
+    );
 
     expect(extractRcAlignedBibleDataMock).toHaveBeenCalledWith(
       expect.objectContaining({ metadata_type: 'tc', subject: 'Bible' }),
@@ -452,7 +486,9 @@ describe('getResourceData', () => {
       },
     });
 
-    await expect(getResourceData({ owner: 'u', repo: 'r', ref: 'ref', books: [] }, { quiet: true })).rejects.toThrow(
+    await expect(
+      getResourceData({ owner: 'u', repo: 'r', ref: 'ref', books: [] }, { quiet: true })
+    ).rejects.toThrow(
       'Conversion of translationCore `Translation Questions` repositories is currently not supported.'
     );
   });
@@ -467,9 +503,9 @@ describe('getResourceData', () => {
       },
     });
 
-    await expect(getResourceData({ owner: 'u', repo: 'r', ref: 'ref', books: [] }, { quiet: true })).rejects.toThrow(
-      'Conversion of `Random Subject` resources is currently not supported.'
-    );
+    await expect(
+      getResourceData({ owner: 'u', repo: 'r', ref: 'ref', books: [] }, { quiet: true })
+    ).rejects.toThrow('Conversion of `Random Subject` resources is currently not supported.');
   });
 
   test('throws for unsupported metadata types', async () => {
@@ -482,17 +518,17 @@ describe('getResourceData', () => {
       },
     });
 
-    await expect(getResourceData({ owner: 'x', repo: 'y', ref: 'z', books: [] }, { quiet: true })).rejects.toThrow(
-      'Not a valid repository that can be convert.'
-    );
+    await expect(
+      getResourceData({ owner: 'x', repo: 'y', ref: 'z', books: [] }, { quiet: true })
+    ).rejects.toThrow('Not a valid repository that can be convert.');
   });
 
   test('throws when metadata cannot be inferred from top-level or repo fields', async () => {
     axiosGetMock.mockResolvedValueOnce({ data: {} });
 
-    await expect(getResourceData({ owner: 'x', repo: 'y', ref: 'z', books: [] }, { quiet: true })).rejects.toThrow(
-      'Unable to determine its type and/or ingredients.'
-    );
+    await expect(
+      getResourceData({ owner: 'x', repo: 'y', ref: 'z', books: [] }, { quiet: true })
+    ).rejects.toThrow('Unable to determine its type and/or ingredients.');
   });
 
   test('reuses a passed CatalogSet without re-fetching /catalog/entry or /catalog/bp', async () => {

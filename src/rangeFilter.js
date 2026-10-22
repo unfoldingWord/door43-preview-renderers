@@ -124,7 +124,9 @@ export function sliceUsfmByRange(usfm, range) {
 
     const trimStart = ch === range.startCh && range.startV != null ? range.startV : null;
     const trimEnd = ch === range.endCh && range.endV != null ? range.endV : null;
-    kept.push(trimStart != null || trimEnd != null ? sliceChapterVerses(block, trimStart, trimEnd) : block);
+    kept.push(
+      trimStart != null || trimEnd != null ? sliceChapterVerses(block, trimStart, trimEnd) : block
+    );
   }
   return kept.join('');
 }

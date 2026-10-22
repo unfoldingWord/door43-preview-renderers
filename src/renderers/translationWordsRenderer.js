@@ -92,7 +92,9 @@ export function renderTranslationWordsHtml(resourceData, options = {}) {
 
   const manualOrder = buildManualOrder(resourceData.articles);
   const manuals = manualOrder
-    .map((categoryId, index) => buildManualSections(categoryId, resourceData.articles[categoryId], index))
+    .map((categoryId, index) =>
+      buildManualSections(categoryId, resourceData.articles[categoryId], index)
+    )
     .filter((manual) => manual.sections.length > 0);
 
   if (!manuals.length) {

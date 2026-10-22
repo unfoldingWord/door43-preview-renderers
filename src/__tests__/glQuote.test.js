@@ -4,7 +4,12 @@ import {
   tokenizeWords,
   expandVerseRange,
 } from '../quotes/usfmBookIndex.js';
-import { getGlQuote, parseReference, quoteGroups, dropUnbalancedBraces } from '../quotes/glQuote.js';
+import {
+  getGlQuote,
+  parseReference,
+  quoteGroups,
+  dropUnbalancedBraces,
+} from '../quotes/glQuote.js';
 import { addGlQuotes } from '../quotes/addGlQuotes.js';
 
 /**
@@ -49,17 +54,35 @@ describe('indexUsfmBook', () => {
   test('tokenises words with per-verse occurrences and alignment', () => {
     const words = target.get('1:1').filter((t) => t.type === 'word');
     expect(words.map((t) => t.text)).toEqual([
-      'Paul', 'a', 'servant', 'of', 'God', 'an', 'apostle', 'of', 'God', '’s',
+      'Paul',
+      'a',
+      'servant',
+      'of',
+      'God',
+      'an',
+      'apostle',
+      'of',
+      'God',
+      '’s',
     ]);
-    expect(words[4]).toMatchObject({ occurrence: 1, aligned: [{ content: 'Θεοῦ', occurrence: 1 }] });
-    expect(words[8]).toMatchObject({ occurrence: 2, aligned: [{ content: 'Θεοῦ', occurrence: 2 }] });
+    expect(words[4]).toMatchObject({
+      occurrence: 1,
+      aligned: [{ content: 'Θεοῦ', occurrence: 1 }],
+    });
+    expect(words[8]).toMatchObject({
+      occurrence: 2,
+      aligned: [{ content: 'Θεοῦ', occurrence: 2 }],
+    });
   });
 
   test('a verse bridge is reachable by every verse it covers', () => {
     expect(target.get('1:3')).toBe(target.get('1:4'));
-    expect(target.get('1:3').filter((t) => t.type === 'word').map((t) => t.text)).toEqual([
-      'but', 'to', 'us',
-    ]);
+    expect(
+      target
+        .get('1:3')
+        .filter((t) => t.type === 'word')
+        .map((t) => t.text)
+    ).toEqual(['but', 'to', 'us']);
     expect(target.get('1:5')).toBeUndefined();
   });
 
@@ -67,9 +90,7 @@ describe('indexUsfmBook', () => {
     expect(normalizeWord('ἀλλ’')).toBe('ἀλλ');
     expect(normalizeWord('בְּ⁠רֵאשִׁ֖ית')).toBe('בְּרֵאשִׁ֖ית');
     expect(normalizeWord('בְּרֵאשִׁ֖ית'.normalize('NFD'))).toBe('בְּרֵאשִׁ֖ית'.normalize('NFC'));
-    expect(tokenizeWords('אֶת־הַ⁠שָּׁמַ֖יִם, וְ⁠אֵ֥ת')).toEqual([
-      'אֶת', 'הַשָּׁמַ֖יִם', 'וְאֵ֥ת',
-    ]);
+    expect(tokenizeWords('אֶת־הַ⁠שָּׁמַ֖יִם, וְ⁠אֵ֥ת')).toEqual(['אֶת', 'הַשָּׁמַ֖יִם', 'וְאֵ֥ת']);
     expect(expandVerseRange('11-13')).toEqual(['11', '12', '13']);
     expect(expandVerseRange('front')).toEqual(['front']);
   });
@@ -81,7 +102,10 @@ describe('getGlQuote', () => {
   });
 
   test('a phrase keeps the text between its aligned words', () => {
-    expect(lookup('Παῦλος, δοῦλος Θεοῦ')).toEqual({ quote: 'Paul, a servant of God', occurrence: 1 });
+    expect(lookup('Παῦλος, δοῦλος Θεοῦ')).toEqual({
+      quote: 'Paul, a servant of God',
+      occurrence: 1,
+    });
   });
 
   test('the second occurrence of a word; an unaligned word after it is not part of the span', () => {
@@ -125,7 +149,9 @@ describe('getGlQuote', () => {
     // OL verses 1 and 2 each hold one θεός (verse-local occurrence 1). The GL
     // bridges 1-2, so its alignment numbers them 1 and 2 across the bridge.
     const src = indexUsfmBook(
-      ['\\id TIT', '\\c 1', '\\p', '\\v 1 \\w θεός\\w* \\w καὶ\\w*', '\\v 2 \\w θεός\\w*', ''].join('\n')
+      ['\\id TIT', '\\c 1', '\\p', '\\v 1 \\w θεός\\w* \\w καὶ\\w*', '\\v 2 \\w θεός\\w*', ''].join(
+        '\n'
+      )
     );
     const tgt = indexUsfmBook(
       [
@@ -136,10 +162,13 @@ describe('getGlQuote', () => {
         '',
       ].join('\n')
     );
-    const gl = (reference) => getGlQuote({ quote: 'θεός', occurrence: 1, reference, source: src, target: tgt });
+    const gl = (reference) =>
+      getGlQuote({ quote: 'θεός', occurrence: 1, reference, source: src, target: tgt });
     expect(gl('1:1')).toEqual({ quote: 'God', occurrence: 1 });
     expect(gl('1:2')).toEqual({ quote: 'deity', occurrence: 1 });
-    expect(getGlQuote({ quote: 'θεός', occurrence: 2, reference: '1:1-2', source: src, target: tgt })).toEqual({
+    expect(
+      getGlQuote({ quote: 'θεός', occurrence: 2, reference: '1:1-2', source: src, target: tgt })
+    ).toEqual({
       quote: 'deity',
       occurrence: 1,
     });
@@ -148,11 +177,21 @@ describe('getGlQuote', () => {
   test('GL words that differ only by internal punctuation are counted apart', () => {
     // "son’s" and "sons" share a punctuation-free norm; the highlighter
     // (locateQuoteInVerse) treats them as different words, so must the count.
-    const src = indexUsfmBook(['\\id TIT', '\\c 1', '\\p', '\\v 1 \\w υἱοί\\w* \\w υἱοῦ\\w*', ''].join('\n'));
-    const tgt = indexUsfmBook(
-      ['\\id TIT', '\\c 1', '\\p', `\\v 1 ${zaln('υἱοί', 1, 1, w('sons'))} ${zaln('υἱοῦ', 1, 1, w('son’s'))}`, ''].join('\n')
+    const src = indexUsfmBook(
+      ['\\id TIT', '\\c 1', '\\p', '\\v 1 \\w υἱοί\\w* \\w υἱοῦ\\w*', ''].join('\n')
     );
-    expect(getGlQuote({ quote: 'υἱοῦ', occurrence: 1, reference: '1:1', source: src, target: tgt })).toEqual({
+    const tgt = indexUsfmBook(
+      [
+        '\\id TIT',
+        '\\c 1',
+        '\\p',
+        `\\v 1 ${zaln('υἱοί', 1, 1, w('sons'))} ${zaln('υἱοῦ', 1, 1, w('son’s'))}`,
+        '',
+      ].join('\n')
+    );
+    expect(
+      getGlQuote({ quote: 'υἱοῦ', occurrence: 1, reference: '1:1', source: src, target: tgt })
+    ).toEqual({
       quote: 'son’s',
       occurrence: 1,
     });
@@ -176,7 +215,13 @@ describe('addGlQuotes', () => {
   test('fills GLQuotes per Bible, keeps existing ones, reports misses', () => {
     const rows = [
       { Reference: '1:1', ID: 'a', Quote: 'Παῦλος', Occurrence: '1' },
-      { Reference: '1:1', ID: 'b', Quote: 'Θεοῦ', Occurrence: '2', GLQuotes: { en_ult: { Quote: 'kept', Occurrence: 9 } } },
+      {
+        Reference: '1:1',
+        ID: 'b',
+        Quote: 'Θεοῦ',
+        Occurrence: '2',
+        GLQuotes: { en_ult: { Quote: 'kept', Occurrence: 9 } },
+      },
       { Reference: '1:1', ID: 'c', Quote: 'οὐκ', Occurrence: '1' },
       { Reference: '1:1', ID: 'd', Quote: '', Occurrence: '0' },
     ];

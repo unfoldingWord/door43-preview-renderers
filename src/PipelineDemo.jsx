@@ -32,9 +32,7 @@ export default function PipelineDemo() {
   const [booksInput, setBooksInput] = useState('tit');
   const [view, setView] = useState('screen'); // 'screen' | 'print'
 
-  const [resourceData, setResourceData] = useState(
-    () => resourceDataFixtures[0].data
-  );
+  const [resourceData, setResourceData] = useState(() => resourceDataFixtures[0].data);
   const [status, setStatus] = useState('');
   const [error, setError] = useState(null);
 
@@ -48,7 +46,10 @@ export default function PipelineDemo() {
     setError(null);
     setStatus('fetching');
     try {
-      const books = booksInput.split(',').map((b) => b.trim().toLowerCase()).filter(Boolean);
+      const books = booksInput
+        .split(',')
+        .map((b) => b.trim().toLowerCase())
+        .filter(Boolean);
       const data = await getResourceData({ owner, repo, ref, books });
       if (!data || data.error) throw new Error(data?.error || 'No resource data');
       setResourceData(data);
@@ -79,25 +80,30 @@ export default function PipelineDemo() {
     <div style={{ fontFamily: 'sans-serif', width: '100%', maxWidth: '100vw' }}>
       <h2>Full Pipeline Demo</h2>
       <p style={{ color: '#555', marginTop: 0 }}>
-        <code>getResourceData → renderHtmlData → renderHTML</code>. Pick a cached fixture
-        (instant) or fetch live, then flip the view — the pure stages re-render with no re-fetch.
+        <code>getResourceData → renderHtmlData → renderHTML</code>. Pick a cached fixture (instant)
+        or fetch live, then flip the view — the pure stages re-render with no re-fetch.
       </p>
 
       <div style={card}>
         <strong>Source</strong>
         <div style={{ marginTop: 8 }}>
           <label style={{ marginRight: 16 }}>
-            <input type="radio" checked={mode === 'fixture'} onChange={() => setMode('fixture')} /> Cached
-            fixture (instant)
+            <input type="radio" checked={mode === 'fixture'} onChange={() => setMode('fixture')} />{' '}
+            Cached fixture (instant)
           </label>
           <label>
-            <input type="radio" checked={mode === 'live'} onChange={() => setMode('live')} /> Live from DCS
+            <input type="radio" checked={mode === 'live'} onChange={() => setMode('live')} /> Live
+            from DCS
           </label>
         </div>
 
         {mode === 'fixture' ? (
           <div style={{ marginTop: 8 }}>
-            <select value={fixtureKey} onChange={(e) => loadFixture(e.target.value)} style={{ padding: 8 }}>
+            <select
+              value={fixtureKey}
+              onChange={(e) => loadFixture(e.target.value)}
+              style={{ padding: 8 }}
+            >
               {resourceDataFixtures.map((f) => (
                 <option key={f.key} value={f.key}>
                   {f.label}
@@ -106,7 +112,15 @@ export default function PipelineDemo() {
             </select>
           </div>
         ) : (
-          <div style={{ marginTop: 8, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+          <div
+            style={{
+              marginTop: 8,
+              display: 'flex',
+              gap: 8,
+              flexWrap: 'wrap',
+              alignItems: 'flex-end',
+            }}
+          >
             {ExamplePicker({
               variant: 'select',
               onPick: (ex) => {
@@ -117,11 +131,36 @@ export default function PipelineDemo() {
                 setLiveRenderOptions(ex.renderOptions || {});
               },
             })}
-            <input value={owner} onChange={(e) => setOwner(e.target.value)} placeholder="owner" style={{ padding: 8 }} />
-            <input value={repo} onChange={(e) => setRepo(e.target.value)} placeholder="repo" style={{ padding: 8 }} />
-            <input value={ref} onChange={(e) => setRef(e.target.value)} placeholder="ref" style={{ padding: 8, width: 90 }} />
-            <input value={booksInput} onChange={(e) => setBooksInput(e.target.value)} placeholder="books" style={{ padding: 8, width: 90 }} />
-            <button type="button" onClick={fetchLive} disabled={status === 'fetching'} style={{ padding: '8px 14px' }}>
+            <input
+              value={owner}
+              onChange={(e) => setOwner(e.target.value)}
+              placeholder="owner"
+              style={{ padding: 8 }}
+            />
+            <input
+              value={repo}
+              onChange={(e) => setRepo(e.target.value)}
+              placeholder="repo"
+              style={{ padding: 8 }}
+            />
+            <input
+              value={ref}
+              onChange={(e) => setRef(e.target.value)}
+              placeholder="ref"
+              style={{ padding: 8, width: 90 }}
+            />
+            <input
+              value={booksInput}
+              onChange={(e) => setBooksInput(e.target.value)}
+              placeholder="books"
+              style={{ padding: 8, width: 90 }}
+            />
+            <button
+              type="button"
+              onClick={fetchLive}
+              disabled={status === 'fetching'}
+              style={{ padding: '8px 14px' }}
+            >
               {status === 'fetching' ? 'Fetching…' : 'Fetch'}
             </button>
           </div>
@@ -134,8 +173,8 @@ export default function PipelineDemo() {
         {resourceData ? (
           <div style={{ fontSize: 13, color: '#333', marginTop: 6 }}>
             subject: <code>{resourceData.subject}</code> · type: <code>{resourceData.type}</code> ·{' '}
-            books: <code>{Object.keys(resourceData.books || {}).join(', ') || '—'}</code> ·{' '}
-            extras: <code>{Object.keys(resourceData.extras || {}).join(', ') || 'none'}</code>
+            books: <code>{Object.keys(resourceData.books || {}).join(', ') || '—'}</code> · extras:{' '}
+            <code>{Object.keys(resourceData.extras || {}).join(', ') || 'none'}</code>
           </div>
         ) : (
           <div style={{ color: '#888' }}>—</div>
@@ -146,12 +185,15 @@ export default function PipelineDemo() {
         <strong>Stage 3 · HtmlData</strong>
         {htmlData && !htmlData.__error ? (
           <div style={{ fontSize: 13, color: '#333', marginTop: 6 }}>
-            title: <code>{htmlData.title}</code> · abbreviation: <code>{htmlData.abbreviation}</code> ·{' '}
-            sections: <code>{Object.keys(htmlData.sections || {}).join(', ')}</code> ·{' '}
-            toc entries: <code>{htmlData.sections?.toc?.length ?? 0}</code>
+            title: <code>{htmlData.title}</code> · abbreviation:{' '}
+            <code>{htmlData.abbreviation}</code> · sections:{' '}
+            <code>{Object.keys(htmlData.sections || {}).join(', ')}</code> · toc entries:{' '}
+            <code>{htmlData.sections?.toc?.length ?? 0}</code>
           </div>
         ) : (
-          <div style={{ color: htmlData?.__error ? '#842029' : '#888' }}>{htmlData?.__error || '—'}</div>
+          <div style={{ color: htmlData?.__error ? '#842029' : '#888' }}>
+            {htmlData?.__error || '—'}
+          </div>
         )}
       </div>
 
@@ -159,17 +201,26 @@ export default function PipelineDemo() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <strong>Stage 4 · renderHTML</strong>
           <label>
-            <input type="radio" checked={view === 'screen'} onChange={() => setView('screen')} /> web
+            <input type="radio" checked={view === 'screen'} onChange={() => setView('screen')} />{' '}
+            web
           </label>
           <label>
-            <input type="radio" checked={view === 'print'} onChange={() => setView('print')} /> print
+            <input type="radio" checked={view === 'print'} onChange={() => setView('print')} />{' '}
+            print
           </label>
           <span style={{ color: '#888', fontSize: 13 }}>{(html.length / 1024).toFixed(0)} KB</span>
         </div>
         <iframe
           title="pipeline-preview"
           srcDoc={html}
-          style={{ width: '100%', height: '70vh', border: '1px solid #ddd', borderRadius: 6, marginTop: 8, display: 'block' }}
+          style={{
+            width: '100%',
+            height: '70vh',
+            border: '1px solid #ddd',
+            borderRadius: 6,
+            marginTop: 8,
+            display: 'block',
+          }}
         />
       </div>
     </div>

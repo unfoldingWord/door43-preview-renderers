@@ -29,22 +29,25 @@ describe('removeAlignments — parity with usfm-alignment-remover 0.1.6', () => 
     expect(removeAlignments(aligned)).toBe(expected);
   });
 
-  test.each(['ult', 'ust'])('leaves no alignment markup in en_%s Titus 1:1–8 and keeps every verse', (bible) => {
-    const aligned = fixture(`57-TIT.${bible}.aligned.usfm`);
-    const out = removeAlignments(aligned);
-    expect(out).not.toMatch(/\\zaln-[se]/);
-    expect(out).not.toMatch(/\\w[ *]/);
-    expect(out).not.toContain('x-occurrence');
-    // Titus 1:1–1:8: eight verses, each `\v N ` present exactly once.
-    expect(out.match(/\\v \d+ /g)).toHaveLength(8);
-    expect((aligned.match(/\\v \d+ /g) || []).length).toBe(8);
-    expect(out).toContain('\\c 1\n');
-    expect(out).not.toContain('\\c 2');
-    // Headers survive.
-    expect(out.startsWith('\\id TIT ')).toBe(true);
-    expect(out).toContain('\\h Titus\n');
-    expect(out).toContain('\\toc1 The Letter of Paul to Titus\n');
-  });
+  test.each(['ult', 'ust'])(
+    'leaves no alignment markup in en_%s Titus 1:1–8 and keeps every verse',
+    (bible) => {
+      const aligned = fixture(`57-TIT.${bible}.aligned.usfm`);
+      const out = removeAlignments(aligned);
+      expect(out).not.toMatch(/\\zaln-[se]/);
+      expect(out).not.toMatch(/\\w[ *]/);
+      expect(out).not.toContain('x-occurrence');
+      // Titus 1:1–1:8: eight verses, each `\v N ` present exactly once.
+      expect(out.match(/\\v \d+ /g)).toHaveLength(8);
+      expect((aligned.match(/\\v \d+ /g) || []).length).toBe(8);
+      expect(out).toContain('\\c 1\n');
+      expect(out).not.toContain('\\c 2');
+      // Headers survive.
+      expect(out.startsWith('\\id TIT ')).toBe(true);
+      expect(out).toContain('\\h Titus\n');
+      expect(out).toContain('\\toc1 The Letter of Paul to Titus\n');
+    }
+  );
 });
 
 describe('removeAlignments — hand-written cases', () => {
@@ -67,7 +70,8 @@ describe('removeAlignments — hand-written cases', () => {
   });
 
   test('passes unaligned USFM through with the same serialisation (blank line before each chapter)', () => {
-    const usfm = '\\id TIT\n\\h Titus\n\\c 1\n\\p\n\\v 1 Paul, a servant of God.\n\\v 2 Grace to you.\n\\c 2\n\\p\n\\v 1 But you.\n';
+    const usfm =
+      '\\id TIT\n\\h Titus\n\\c 1\n\\p\n\\v 1 Paul, a servant of God.\n\\v 2 Grace to you.\n\\c 2\n\\p\n\\v 1 But you.\n';
     expect(removeAlignments(usfm)).toBe(
       '\\id TIT\n\\h Titus\n\n\\c 1\n\\p\n\\v 1 Paul, a servant of God.\n\\v 2 Grace to you.\n\n\\c 2\n\\p\n\\v 1 But you.\n'
     );
@@ -133,11 +137,15 @@ describe('removeAlignments — nested character formatting without structuredClo
 
   test('keeps \\bd with nested \\+it', () => {
     const usfm = '\\id TIT\n\\c 1\n\\p\n\\v 1 \\bd bold \\+it italic\\+it*\\bd* end.\n';
-    expect(removeAlignments(usfm)).toBe('\\id TIT\n\n\\c 1\n\\p\n\\v 1 \\bd bold \\+it italic\\+it*\\bd* end.\n');
+    expect(removeAlignments(usfm)).toBe(
+      '\\id TIT\n\n\\c 1\n\\p\n\\v 1 \\bd bold \\+it italic\\+it*\\bd* end.\n'
+    );
   });
 
   test('strips word markers inside \\add', () => {
     const usfm = `\\id TIT\n\\c 1\n\\p\n\\v 1 ${W('Paul')} \\add ${W('a')} ${W('servant')}\\add* ${W('of')} ${W('God')}.\n`;
-    expect(removeAlignments(usfm)).toBe('\\id TIT\n\n\\c 1\n\\p\n\\v 1 Paul \\add a servant\\add* of God.\n');
+    expect(removeAlignments(usfm)).toBe(
+      '\\id TIT\n\n\\c 1\n\\p\n\\v 1 Paul \\add a servant\\add* of God.\n'
+    );
   });
 });

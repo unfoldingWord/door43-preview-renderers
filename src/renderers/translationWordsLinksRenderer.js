@@ -313,7 +313,8 @@ function renderVerseLayout(resourceData, ctx) {
   const { bibles, parsedScriptureExtras, isObs, obsData, resolution, options } = ctx;
   const allRcLinks = { ta: new Set(), tw: new Set() };
   const backRefs = { ta: {}, tw: {} };
-  const dedupe = options.dedupe === 'chapter' || options.dedupe === 'book' ? options.dedupe : 'none';
+  const dedupe =
+    options.dedupe === 'chapter' || options.dedupe === 'book' ? options.dedupe : 'none';
 
   const { body, toc } = renderBooks(resourceData, ctx, (b) => {
     const { bookId, book, bookTitle, bookToc, hasBookHeading, bodyParts } = b;
@@ -398,7 +399,11 @@ function renderVerseLayout(resourceData, ctx) {
         bodyParts.push(`<div class="twl-verse-block">\n`);
         bodyParts.push(
           `<span class="running-ref">${escapeHtml(
-            isIntro ? chapterLabel : isObs ? obsFrameHeaderRef(story, chapterKey, verseKey) : verseLabel
+            isIntro
+              ? chapterLabel
+              : isObs
+                ? obsFrameHeaderRef(story, chapterKey, verseKey)
+                : verseLabel
           )}</span>\n`
         );
         bodyParts.push(
@@ -621,11 +626,15 @@ export function renderTranslationWordsLinksHtml(resourceData, options = {}) {
     includeScripture: options.includeScripture !== false,
     includeArticles: options.includeArticles !== false,
     showChaptersInToc:
-      typeof options.showChaptersInToc === 'boolean' ? options.showChaptersInToc : bookIds.length === 1,
+      typeof options.showChaptersInToc === 'boolean'
+        ? options.showChaptersInToc
+        : bookIds.length === 1,
   };
 
   const rendered =
-    layout === 'glossary' ? renderGlossaryLayout(resourceData, ctx) : renderVerseLayout(resourceData, ctx);
+    layout === 'glossary'
+      ? renderGlossaryLayout(resourceData, ctx)
+      : renderVerseLayout(resourceData, ctx);
 
   const firstBook = bookIds[0] || '';
   const bookIdSet = new Set(bookIds);

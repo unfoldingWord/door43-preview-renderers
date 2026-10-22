@@ -20,9 +20,9 @@ function buildResourceData() {
         identifier: 'tit',
         sort: 57,
         chapters: {
-          '1': {
+          1: {
             verses: {
-              '1': [
+              1: [
                 {
                   ID: 'abc1',
                   Reference: '1:1',
@@ -64,7 +64,10 @@ function buildResourceData() {
           translate: {
             title: 'Translate',
             articles: {
-              'figs-abstractnouns': { title: 'Abstract Nouns', text: '## Abstract Nouns\n\nUse a verb.' },
+              'figs-abstractnouns': {
+                title: 'Abstract Nouns',
+                text: '## Abstract Nouns\n\nUse a verb.',
+              },
             },
           },
         },
@@ -85,9 +88,9 @@ function buildResourceData() {
         books: {
           tit: {
             chapters: {
-              '1': {
+              1: {
                 verses: {
-                  '1': [
+                  1: [
                     {
                       Quote: 'Παῦλος',
                       GLQuotes: {
@@ -185,7 +188,9 @@ describe('renderTranslationNotesHtml', () => {
   });
 
   test('marks the resource title and each reference for the running header', () => {
-    expect(sections.body).toContain('<span class="running-title">unfoldingWord® Translation Notes</span>');
+    expect(sections.body).toContain(
+      '<span class="running-title">unfoldingWord® Translation Notes</span>'
+    );
     expect(sections.body).toContain('<span class="running-ref">Titus 1:1</span>');
   });
 
@@ -206,9 +211,7 @@ describe('renderTranslationNotesHtml', () => {
   });
 
   test('gives the resource an H1, the book an H2, chapters H3 and verses H4', () => {
-    expect(sections.body).toContain(
-      '<h1 class="tn-resource-header" id="nav-resource"'
-    );
+    expect(sections.body).toContain('<h1 class="tn-resource-header" id="nav-resource"');
     expect(sections.body).toContain('<h2 class="tn-book-header">');
     expect(sections.body).toContain('<h3 class="tn-chapter-header"');
     expect(sections.body).toContain('<h4 class="tn-verse-header"');
@@ -286,7 +289,9 @@ describe('renderTranslationNotesHtml book introduction', () => {
   function withFrontMatter() {
     const data = buildResourceData();
     data.books.tit.chapters.front = {
-      verses: { intro: [{ ID: 'in01', Reference: 'front:intro', Note: '# Introduction to Titus' }] },
+      verses: {
+        intro: [{ ID: 'in01', Reference: 'front:intro', Note: '# Introduction to Titus' }],
+      },
     };
     return data;
   }
@@ -329,9 +334,7 @@ describe('renderTranslationNotesHtml chapter listing in the TOC', () => {
 
   test('lists chapters under the book for a single-book document', () => {
     const { sections } = renderTranslationNotesHtml(buildResourceData());
-    expect(sections.toc[0].sections[0].sections).toEqual([
-      { id: 'nav-tit-1', title: 'Titus 1' },
-    ]);
+    expect(sections.toc[0].sections[0].sections).toEqual([{ id: 'nav-tit-1', title: 'Titus 1' }]);
     expect(sections.body).toContain('data-toc-title="Titus 1"');
   });
 
@@ -361,9 +364,9 @@ describe('renderTranslationNotesHtml — OBS', () => {
         obs: {
           title: 'unfoldingWord® OBS Translation Notes',
           chapters: {
-            '1': {
+            1: {
               verses: {
-                '1': [{ ID: 'o1', Reference: '1:1', Quote: 'God made', Note: 'A note about it.' }],
+                1: [{ ID: 'o1', Reference: '1:1', Quote: 'God made', Note: 'A note about it.' }],
               },
             },
           },

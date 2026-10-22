@@ -13,8 +13,25 @@ module.exports = {
       jsx: true,
     },
   },
+  // Build output, local scratch and generated files (see .prettierignore).
+  ignorePatterns: [
+    'dist/',
+    'coverage/',
+    'styleguide/',
+    'tmp/',
+    '.claude/',
+    'src/fixtures/',
+    'src/assets/logos.generated.js',
+  ],
   rules: {
     'no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
     'no-console': ['warn', { allow: ['warn', 'error'] }],
   },
+  overrides: [
+    {
+      // Command-line scripts report on stdout.
+      files: ['scripts/**'],
+      rules: { 'no-console': 'off' },
+    },
+  ],
 };

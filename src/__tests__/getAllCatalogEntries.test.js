@@ -65,9 +65,9 @@ describe('getAllCatalogEntries', () => {
   });
 
   test('throws when required owner/repo/ref values are missing', async () => {
-    await expect(
-      getAllCatalogEntries({ owner: 'unfoldingWord', name: 'en_tw' })
-    ).rejects.toThrow('Owner, repo, and ref are required.');
+    await expect(getAllCatalogEntries({ owner: 'unfoldingWord', name: 'en_tw' })).rejects.toThrow(
+      'Owner, repo, and ref are required.'
+    );
   });
 
   test('throws when /catalog/bp returns invalid payload', async () => {

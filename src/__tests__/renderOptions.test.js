@@ -69,20 +69,28 @@ describe('resolveComposeOptions', () => {
   test('page number position defaults to bottom and honors top', () => {
     expect(resolveComposeOptions({}).print.pageNumber.position).toBe('bottom');
     expect(
-      resolveComposeOptions({ print: { pageNumber: { position: 'top' } } }).print.pageNumber.position
+      resolveComposeOptions({ print: { pageNumber: { position: 'top' } } }).print.pageNumber
+        .position
     ).toBe('top');
   });
 
   test('runningHeader defaults on, can be disabled', () => {
     expect(resolveComposeOptions({}).print.runningHeader).toBe(true);
-    expect(resolveComposeOptions({ print: { runningHeader: false } }).print.runningHeader).toBe(false);
+    expect(resolveComposeOptions({ print: { runningHeader: false } }).print.runningHeader).toBe(
+      false
+    );
   });
 });
 
 describe('supportsBodyColumns', () => {
   test('is true for the subjects the Aligned Bible renderer handles', () => {
     // Only those bodies carry .section.bible-book, which `columns` targets.
-    for (const subject of ['Aligned Bible', 'Bible', 'Greek New Testament', 'Hebrew Old Testament']) {
+    for (const subject of [
+      'Aligned Bible',
+      'Bible',
+      'Greek New Testament',
+      'Hebrew Old Testament',
+    ]) {
       expect(supportsBodyColumns(subject)).toBe(true);
     }
   });
@@ -96,7 +104,11 @@ describe('supportsBodyColumns', () => {
   test('is false where `columns` does nothing', () => {
     // Bible-versed Notes/Questions lay out per verse or per chapter, not as
     // running text; the pure OBS renderer has its own layout.
-    for (const subject of ['TSV Translation Notes', 'TSV Translation Questions', 'Open Bible Stories']) {
+    for (const subject of [
+      'TSV Translation Notes',
+      'TSV Translation Questions',
+      'Open Bible Stories',
+    ]) {
       expect(supportsBodyColumns(subject)).toBe(false);
     }
   });
@@ -110,7 +122,12 @@ describe('supportsBodyColumns', () => {
 
 describe('runningHeaderModeFor', () => {
   test('scripture shows a reference range instead of the resource name', () => {
-    for (const subject of ['Aligned Bible', 'Bible', 'Greek New Testament', 'Hebrew Old Testament']) {
+    for (const subject of [
+      'Aligned Bible',
+      'Bible',
+      'Greek New Testament',
+      'Hebrew Old Testament',
+    ]) {
       expect(runningHeaderModeFor(subject)).toBe('range');
     }
   });

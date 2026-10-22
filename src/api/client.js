@@ -2,7 +2,7 @@ import axios from 'axios';
 
 /**
  * Fetches resource content from a repository
- * 
+ *
  * @param {Object} options - Fetch options
  * @param {string} options.owner - Repository owner
  * @param {string} options.repo - Repository name
@@ -27,7 +27,7 @@ export async function fetchResource({ owner, repo, ref, path = '' }) {
 
 /**
  * Fetches raw file content from a repository
- * 
+ *
  * @param {Object} options - Fetch options
  * @param {string} options.owner - Repository owner
  * @param {string} options.repo - Repository name

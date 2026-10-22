@@ -46,11 +46,18 @@ describe('rewriteSectionAnchors', () => {
     const sections = {
       body: '',
       appendices: {
-        ta: { 'translate-figs-metaphor': { title: 'Metaphor', html: '<div id="nav-tit--ta-translate-figs-metaphor">x</div>' } },
+        ta: {
+          'translate-figs-metaphor': {
+            title: 'Metaphor',
+            html: '<div id="nav-tit--ta-translate-figs-metaphor">x</div>',
+          },
+        },
       },
     };
     const out = rewriteSectionAnchors(sections, 'tn');
-    expect(out.appendices.ta['translate-figs-metaphor'].html).toContain('id="tn-tit--ta-translate-figs-metaphor"');
+    expect(out.appendices.ta['translate-figs-metaphor'].html).toContain(
+      'id="tn-tit--ta-translate-figs-metaphor"'
+    );
   });
 
   test('rewrites the appendix article anchor recorded on `id`', () => {
@@ -67,7 +74,9 @@ describe('rewriteSectionAnchors', () => {
       },
     };
     const out = rewriteSectionAnchors(sections, 'tn');
-    expect(out.appendices.ta['translate-figs-metaphor'].id).toBe('tn-tit--ta-translate-figs-metaphor');
+    expect(out.appendices.ta['translate-figs-metaphor'].id).toBe(
+      'tn-tit--ta-translate-figs-metaphor'
+    );
   });
 
   test('returns the same object reference when prefix is falsy', () => {

@@ -1,4 +1,8 @@
-import { parseScriptureExtras, renderScriptureColumns, getBibleColumns } from '../renderers/scriptureColumns.js';
+import {
+  parseScriptureExtras,
+  renderScriptureColumns,
+  getBibleColumns,
+} from '../renderers/scriptureColumns.js';
 import { renderTranslationNotesHtml } from '../renderers/translationNotesRenderer.js';
 import { renderTsvQuestionsHtml } from '../renderers/tsvQuestionsRenderer.js';
 import { renderTranslationWordsLinksHtml } from '../renderers/translationWordsLinksRenderer.js';
@@ -18,7 +22,9 @@ const extras = {
   ust: {
     type: 'usfm',
     subject: 'Aligned Bible',
-    books: { tit: '\\id TIT\n\\c 1\n\\v 1 I, Paul, {write this letter to you, Titus. I} serve God\n' },
+    books: {
+      tit: '\\id TIT\n\\c 1\n\\v 1 I, Paul, {write this letter to you, Titus. I} serve God\n',
+    },
   },
   ugnt: {
     type: 'usfm',
@@ -32,7 +38,9 @@ describe('parseScriptureExtras and the supplied-word braces', () => {
     const parsed = parseScriptureExtras(extras);
     expect(parsed.ult.chapters.tit['1']['1']).toBe('Paul, a servant of God');
     expect(parsed.ult.chapters.tit['1']['2']).toBe('the hope of life');
-    expect(parsed.ust.chapters.tit['1']['1']).toBe('I, Paul, write this letter to you, Titus. I serve God');
+    expect(parsed.ust.chapters.tit['1']['1']).toBe(
+      'I, Paul, write this letter to you, Titus. I serve God'
+    );
     // Greek originals are never scripture columns.
     expect(parsed.ugnt).toBeUndefined();
   });
@@ -40,7 +48,9 @@ describe('parseScriptureExtras and the supplied-word braces', () => {
   test('keeps the braces under editorMode', () => {
     const parsed = parseScriptureExtras(extras, { editorMode: true });
     expect(parsed.ult.chapters.tit['1']['1']).toBe('Paul, a servant {of God}');
-    expect(parsed.ust.chapters.tit['1']['1']).toBe('I, Paul, {write this letter to you, Titus. I} serve God');
+    expect(parsed.ust.chapters.tit['1']['1']).toBe(
+      'I, Paul, {write this letter to you, Titus. I} serve God'
+    );
   });
 
   test('the rendered columns follow the parsed text', () => {
@@ -64,20 +74,49 @@ function tsvData(subject, rows) {
     type: 'tsv',
     subject,
     title: subject,
-    books: { tit: { title: 'Titus', identifier: 'tit', sort: 57, chapters: { '1': { verses: { '1': rows } } } } },
+    books: {
+      tit: {
+        title: 'Titus',
+        identifier: 'tit',
+        sort: 57,
+        chapters: { 1: { verses: { 1: rows } } },
+      },
+    },
     extras,
   };
 }
 
 describe('the TSV renderers thread editorMode into their scripture columns', () => {
-  const noteRow = [{ ID: 'n1', Reference: '1:1', Quote: 'Παῦλος', Occurrence: '1', Note: 'A note.' }];
+  const noteRow = [
+    { ID: 'n1', Reference: '1:1', Quote: 'Παῦλος', Occurrence: '1', Note: 'A note.' },
+  ];
   const questionRow = [{ ID: 'q1', Reference: '1:1', Question: 'Who?', Response: 'Paul.' }];
-  const twlRow = [{ ID: 'w1', Reference: '1:1', Quote: 'Παῦλος', Occurrence: '1', TWLink: 'rc://*/tw/dict/bible/names/paul' }];
+  const twlRow = [
+    {
+      ID: 'w1',
+      Reference: '1:1',
+      Quote: 'Παῦλος',
+      Occurrence: '1',
+      TWLink: 'rc://*/tw/dict/bible/names/paul',
+    },
+  ];
 
   test.each([
-    ['Translation Notes', () => renderTranslationNotesHtml(tsvData('TSV Translation Notes', noteRow)), (o) => renderTranslationNotesHtml(tsvData('TSV Translation Notes', noteRow), o)],
-    ['Translation Questions', () => renderTsvQuestionsHtml(tsvData('TSV Translation Questions', questionRow)), (o) => renderTsvQuestionsHtml(tsvData('TSV Translation Questions', questionRow), o)],
-    ['Translation Words Links', () => renderTranslationWordsLinksHtml(tsvData('TSV Translation Words Links', twlRow)), (o) => renderTranslationWordsLinksHtml(tsvData('TSV Translation Words Links', twlRow), o)],
+    [
+      'Translation Notes',
+      () => renderTranslationNotesHtml(tsvData('TSV Translation Notes', noteRow)),
+      (o) => renderTranslationNotesHtml(tsvData('TSV Translation Notes', noteRow), o),
+    ],
+    [
+      'Translation Questions',
+      () => renderTsvQuestionsHtml(tsvData('TSV Translation Questions', questionRow)),
+      (o) => renderTsvQuestionsHtml(tsvData('TSV Translation Questions', questionRow), o),
+    ],
+    [
+      'Translation Words Links',
+      () => renderTranslationWordsLinksHtml(tsvData('TSV Translation Words Links', twlRow)),
+      (o) => renderTranslationWordsLinksHtml(tsvData('TSV Translation Words Links', twlRow), o),
+    ],
   ])('%s: no braces by default, braces under editorMode', (label, renderDefault, renderWith) => {
     const plain = renderDefault().sections.body;
     expect(plain).toContain('Paul, a servant of God');

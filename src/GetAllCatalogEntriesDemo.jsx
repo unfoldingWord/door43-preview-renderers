@@ -52,10 +52,7 @@ export default function GetAllCatalogEntriesDemo() {
       : [];
 
     try {
-      const data = await getAllCatalogEntries(
-        { owner, repo, ref, books: booksArray },
-        optionsJSON
-      );
+      const data = await getAllCatalogEntries({ owner, repo, ref, books: booksArray }, optionsJSON);
       setResult(data);
     } catch (err) {
       setError(err.message);

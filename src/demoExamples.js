@@ -75,7 +75,12 @@ export const EXAMPLE_GROUPS = [
     group: 'TSV Bible helps',
     examples: [
       uw(`Translation Notes — Titus (${EN_RELEASE})`, 'en_tn', EN_RELEASE, 'tit'),
-      uw(`Translation Notes — Ruth + Titus, mixed OT/NT (${EN_RELEASE})`, 'en_tn', EN_RELEASE, 'rut,tit'),
+      uw(
+        `Translation Notes — Ruth + Titus, mixed OT/NT (${EN_RELEASE})`,
+        'en_tn',
+        EN_RELEASE,
+        'rut,tit'
+      ),
       uw(`Translation Questions — Titus (${EN_RELEASE})`, 'en_tq', EN_RELEASE, 'tit'),
       uw(`Translation Words Links — Titus, by verse (${EN_RELEASE})`, 'en_twl', EN_RELEASE, 'tit'),
       uw(`Translation Words Links — Titus, glossary (${EN_RELEASE})`, 'en_twl', EN_RELEASE, 'tit', {
@@ -100,8 +105,20 @@ export const EXAMPLE_GROUPS = [
       uw(`OBS Translation Questions (${RELEASES['obs-tq']})`, 'en_obs-tq', RELEASES['obs-tq']),
       uw(`OBS Study Notes (${RELEASES['obs-sn']})`, 'en_obs-sn', RELEASES['obs-sn']),
       uw(`OBS Study Questions (${RELEASES['obs-sq']})`, 'en_obs-sq', RELEASES['obs-sq']),
-      { label: 'TS: OBS — Malagasy', owner: 'Tot', repo: 'mdg_obs_text_obs', ref: 'master', books: '' },
-      { label: 'SB: OBS — Chinese (simplified)', owner: 'shower', repo: 'zhs_obs', ref: 'master', books: '' },
+      {
+        label: 'TS: OBS — Malagasy',
+        owner: 'Tot',
+        repo: 'mdg_obs_text_obs',
+        ref: 'master',
+        books: '',
+      },
+      {
+        label: 'SB: OBS — Chinese (simplified)',
+        owner: 'shower',
+        repo: 'zhs_obs',
+        ref: 'master',
+        books: '',
+      },
     ],
   },
   {
@@ -128,8 +145,20 @@ export const EXAMPLE_GROUPS = [
         ref: 'v37',
         books: '',
       },
-      { label: 'Translation Words — Arabic (BSOJ, RTL)', owner: 'BSOJ', repo: 'ar_tw', ref: 'master', books: '' },
-      { label: 'Translation Academy — Arabic (BSOJ, RTL)', owner: 'BSOJ', repo: 'ar_ta', ref: 'master', books: '' },
+      {
+        label: 'Translation Words — Arabic (BSOJ, RTL)',
+        owner: 'BSOJ',
+        repo: 'ar_tw',
+        ref: 'master',
+        books: '',
+      },
+      {
+        label: 'Translation Academy — Arabic (BSOJ, RTL)',
+        owner: 'BSOJ',
+        repo: 'ar_ta',
+        ref: 'master',
+        books: '',
+      },
     ],
   },
 ];

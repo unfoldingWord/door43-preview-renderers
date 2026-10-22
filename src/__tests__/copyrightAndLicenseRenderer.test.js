@@ -8,9 +8,8 @@ jest.unstable_mockModule('../dcsApi.js', () => ({
   fetchLicense: jest.fn(),
 }));
 
-const { generateCopyrightAndLicenseHtml, copyrightCss } = await import(
-  '../renderers/copyrightAndLicenseRenderer.js'
-);
+const { generateCopyrightAndLicenseHtml, copyrightCss } =
+  await import('../renderers/copyrightAndLicenseRenderer.js');
 
 const mainEntry = {
   repo: {
@@ -53,7 +52,9 @@ describe('generateCopyrightAndLicenseHtml', () => {
   });
 
   test('escapes raw HTML inside fetched license markdown', async () => {
-    fetchContentMock.mockResolvedValueOnce('# License\n\n<script>alert(1)</script> and <b>bold</b>');
+    fetchContentMock.mockResolvedValueOnce(
+      '# License\n\n<script>alert(1)</script> and <b>bold</b>'
+    );
     const html = await generateCopyrightAndLicenseHtml(mainEntry);
     expect(html).toContain('&lt;script&gt;alert(1)&lt;/script&gt;');
     expect(html).toContain('&lt;b&gt;bold&lt;/b&gt;');
@@ -62,7 +63,9 @@ describe('generateCopyrightAndLicenseHtml', () => {
 
   test('passes a custom DCS API URL through to the license fetch', async () => {
     fetchContentMock.mockResolvedValueOnce('');
-    await generateCopyrightAndLicenseHtml(mainEntry, [], { dcs_api_url: 'https://qa.door43.org/api/v1' });
+    await generateCopyrightAndLicenseHtml(mainEntry, [], {
+      dcs_api_url: 'https://qa.door43.org/api/v1',
+    });
     expect(fetchContentMock).toHaveBeenCalledWith(
       'unfoldingWord',
       'en_tn',
@@ -85,9 +88,13 @@ describe('generateCopyrightAndLicenseHtml', () => {
     // Dependency (top-level fields, `ref` and `repo.released` fallbacks)
     expect(html).toContain('<div class="built-with-title">unfoldingWord® Literal Text</div>');
     expect(html).toContain('<span class="built-with-label">Date:</span> 2026-09-20');
-    expect(html).toContain('<span class="built-with-label">Published by:</span> unfoldingWord</div>');
+    expect(html).toContain(
+      '<span class="built-with-label">Published by:</span> unfoldingWord</div>'
+    );
     // Order: main first, then dependencies
-    expect(html.indexOf('Translation Notes</div>')).toBeLessThan(html.indexOf('Literal Text</div>'));
+    expect(html.indexOf('Translation Notes</div>')).toBeLessThan(
+      html.indexOf('Literal Text</div>')
+    );
     expect((html.match(/class="built-with-entry"/g) || []).length).toBe(2);
   });
 
@@ -154,7 +161,9 @@ describe('generateCopyrightAndLicenseHtml', () => {
     fetchContentMock.mockResolvedValueOnce('');
     const html = await generateCopyrightAndLicenseHtml(mainEntry);
     const footer = html.slice(html.indexOf('<div class="generated-with-footer">'));
-    expect(footer).toContain('<span class="built-with-label">Generated with:</span> door43-preview-renderers</span>');
+    expect(footer).toContain(
+      '<span class="built-with-label">Generated with:</span> door43-preview-renderers</span>'
+    );
     expect(footer).not.toContain('<a ');
     expect(footer).not.toContain('Version:');
   });

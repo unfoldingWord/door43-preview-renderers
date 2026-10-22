@@ -455,9 +455,9 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
   toc.push(resourceToc);
   bodyParts.push(
     `<h1 class="tn-resource-header" id="${resourceAnchor}" data-toc-title="${escapeHtml(title)}">` +
-    `<a href="#${resourceAnchor}" class="header-link">${escapeHtml(title)}</a></h1>\n` +
-    // Names the resource in every running header from here on.
-    `<span class="running-title">${escapeHtml(title)}</span>\n`
+      `<a href="#${resourceAnchor}" class="header-link">${escapeHtml(title)}</a></h1>\n` +
+      // Names the resource in every running header from here on.
+      `<span class="running-title">${escapeHtml(title)}</span>\n`
   );
 
   for (const bookId of bookIds) {
@@ -482,12 +482,12 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
     // Book header
     bodyParts.push(
       `<section id="${bookAnchor}"` +
-      (isObs ? ' class="obs-frames-body"' : '') +
-      (hasBookHeading ? ` data-toc-title="${escapeHtml(bookTitle)}"` : '') +
-      `>\n` +
-      (hasBookHeading
-        ? `  <h2 class="tn-book-header"><a href="#${bookAnchor}" class="header-link">${escapeHtml(bookTitle)}</a></h2>\n`
-        : '')
+        (isObs ? ' class="obs-frames-body"' : '') +
+        (hasBookHeading ? ` data-toc-title="${escapeHtml(bookTitle)}"` : '') +
+        `>\n` +
+        (hasBookHeading
+          ? `  <h2 class="tn-book-header"><a href="#${bookAnchor}" class="header-link">${escapeHtml(bookTitle)}</a></h2>\n`
+          : '')
     );
 
     // Sort chapters numerically (handle 'front' as 0)
@@ -506,8 +506,8 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
           ? 'Introduction'
           : `${bookTitle} Introduction`
         : isObs
-        ? obsStoryLabel(story, chapterKey)
-        : `${bookTitle} ${chapterKey}`;
+          ? obsStoryLabel(story, chapterKey)
+          : `${bookTitle} ${chapterKey}`;
       const chapterAnchor = `nav-${bookId}-${isFront ? 'front' : chapterKey}`;
 
       if (showChaptersInTocResolved) {
@@ -518,9 +518,9 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
       // only emitted when chapters belong there; the id anchor always remains.
       bodyParts.push(
         `<${chapterTag} class="tn-chapter-header" id="${chapterAnchor}"` +
-        (showChaptersInTocResolved ? ` data-toc-title="${escapeHtml(chapterLabel)}"` : '') +
-        `>` +
-        `<a href="#${chapterAnchor}" class="header-link">${escapeHtml(chapterLabel)}</a></${chapterTag}>\n`
+          (showChaptersInTocResolved ? ` data-toc-title="${escapeHtml(chapterLabel)}"` : '') +
+          `>` +
+          `<a href="#${chapterAnchor}" class="header-link">${escapeHtml(chapterLabel)}</a></${chapterTag}>\n`
       );
 
       // Sort verses numerically (handle 'intro' as 0)
@@ -542,13 +542,11 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
         const verseLabel = isBookIntro
           ? chapterLabel
           : isIntro
-          ? `${chapterLabel} Introduction`
-          : isObs
-          ? `${chapterKey}:${verseKey}`
-          : `${bookTitle} ${chapterKey}:${verseKey}`;
-        const verseAnchor = isBookIntro
-          ? chapterAnchor
-          : `nav-${bookId}-${chapterKey}-${verseKey}`;
+            ? `${chapterLabel} Introduction`
+            : isObs
+              ? `${chapterKey}:${verseKey}`
+              : `${bookTitle} ${chapterKey}:${verseKey}`;
+        const verseAnchor = isBookIntro ? chapterAnchor : `nav-${bookId}-${chapterKey}-${verseKey}`;
 
         // Verse header
         // The running header tracks the first item on the page: the verse
@@ -558,17 +556,17 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
             isBookIntro
               ? bookTitle
               : isIntro
-              ? chapterLabel
-              : isObs
-              ? obsFrameHeaderRef(story, chapterKey, verseKey)
-              : verseLabel
+                ? chapterLabel
+                : isObs
+                  ? obsFrameHeaderRef(story, chapterKey, verseKey)
+                  : verseLabel
           )}</span>\n`
         );
 
         if (!isBookIntro) {
           bodyParts.push(
             `<${verseTag} class="tn-verse-header" id="${verseAnchor}">` +
-            `<a href="#${verseAnchor}" class="header-link">${escapeHtml(verseLabel)}</a></${verseTag}>\n`
+              `<a href="#${verseAnchor}" class="header-link">${escapeHtml(verseLabel)}</a></${verseTag}>\n`
           );
         }
 
@@ -630,8 +628,7 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
 
           // Introduction notes are marked so print CSS can let them flow; every
           // other note is kept whole on one page.
-          let noteArticle =
-            `<article class="tn-note${isIntro ? ' tn-note-intro' : ''}" id="${noteAnchor}">\n`;
+          let noteArticle = `<article class="tn-note${isIntro ? ' tn-note-intro' : ''}" id="${noteAnchor}">\n`;
           noteArticle += quoteHeader;
           noteArticle += `  <div class="tn-note-body">${noteHtml}</div>\n`;
 
@@ -715,7 +712,10 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
   const copyright = resourceData.license
     ? `<div class="license-text">${convertMarkdown(resourceData.license)}</div>`
     : '';
-  const css = { web: tnWebCss + coverCss + runningMarkerWebCss, print: isObs ? tnPrintCss + tnObsPrintCss : tnPrintCss };
+  const css = {
+    web: tnWebCss + coverCss + runningMarkerWebCss,
+    print: isObs ? tnPrintCss + tnObsPrintCss : tnPrintCss,
+  };
   const fullHtml = buildFullHtmlDocument(
     title,
     tnWebCss + tnPrintCss + coverCss + runningMarkerWebCss,

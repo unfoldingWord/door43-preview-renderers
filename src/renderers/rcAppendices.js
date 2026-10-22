@@ -22,7 +22,9 @@ import { escapeHtml } from './scriptureColumns.js';
  */
 export function twKey(ref) {
   if (!ref) return '';
-  let p = String(ref).replace(/^rc:\/\/[^/]+\/tw\/dict\//, '').replace(/^rc:\/\/[^/]+\/tw\//, '');
+  let p = String(ref)
+    .replace(/^rc:\/\/[^/]+\/tw\/dict\//, '')
+    .replace(/^rc:\/\/[^/]+\/tw\//, '');
   p = p.replace(/^bible\//, '');
   return p.replace(/\.md$/, '');
 }
@@ -61,7 +63,9 @@ export function renderAppendixArticle(anchorId, article, backRefList, bookId, he
   if (backRefList && backRefList.length > 0) {
     html += `  <div class="back-refs"><h4>${escapeHtml(BibleBookData[bookId]?.title || bookId)} References:</h4>\n`;
     html += backRefList
-      .map((ref) => `    <a href="#${ref.anchor}" class="internal-link">${escapeHtml(ref.label)}</a>`)
+      .map(
+        (ref) => `    <a href="#${ref.anchor}" class="internal-link">${escapeHtml(ref.label)}</a>`
+      )
       .join('\n');
     html += `\n  </div>\n`;
   }
@@ -152,7 +156,9 @@ export function resolveRcLinks(html, bookId, rcLinks, extras, bookIdSet = new Se
   const twAnchor = (key) =>
     `nav-${(opts.twBookFor && opts.twBookFor(key)) || bookId}--tw-${key.replace(/\//g, '-')}`;
   const twHref = (key) =>
-    rcLinks.tw.has(key) ? `href="#${twAnchor(key)}" class="internal-link"` : 'href="#" class="unresolved-link"';
+    rcLinks.tw.has(key)
+      ? `href="#${twAnchor(key)}" class="internal-link"`
+      : 'href="#" class="unresolved-link"';
 
   // Relative links between Translation Words articles, as the markdown source
   // writes them: `../kt/god.md` from another category, `./god.md` or `god.md`
@@ -168,11 +174,15 @@ export function resolveRcLinks(html, bookId, rcLinks, extras, bookIdSet = new Se
 
   // Pass 1: rewrite hrefs of existing markdown links, keeping their visible text.
   html = html.replace(/href="rc:\/\/[^"]*\/ta\/[^/]+\/([A-Za-z0-9/_-]+)"/g, (m, path) =>
-    rcLinks.ta.has(path) ? `href="#${taAnchor(path)}" class="internal-link"` : 'href="#" class="unresolved-link"'
+    rcLinks.ta.has(path)
+      ? `href="#${taAnchor(path)}" class="internal-link"`
+      : 'href="#" class="unresolved-link"'
   );
   html = html.replace(/href="(rc:\/\/[^"]*\/tw\/[^"]+)"/g, (m, rc) => {
     const key = twKey(rc);
-    return rcLinks.tw.has(key) ? `href="#${twAnchor(key)}" class="internal-link"` : 'href="#" class="unresolved-link"';
+    return rcLinks.tw.has(key)
+      ? `href="#${twAnchor(key)}" class="internal-link"`
+      : 'href="#" class="unresolved-link"';
   });
   // Scripture/TN cross-references (e.g. rc://*\/tn/help/jud/01/17 inside TW/TA articles).
   // Link internally when the target book is in this document; otherwise neutralize —

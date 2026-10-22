@@ -369,9 +369,9 @@ export function renderTsvQuestionsHtml(resourceData, options = {}) {
   toc.push(resourceToc);
   bodyParts.push(
     `<h1 class="tq-resource-header" id="${resourceAnchor}" data-toc-title="${escapeHtml(title)}">` +
-    `<a href="#${resourceAnchor}" class="header-link">${escapeHtml(title)}</a></h1>\n` +
-    // Names the resource in every running header from here on.
-    `<span class="running-title">${escapeHtml(title)}</span>\n`
+      `<a href="#${resourceAnchor}" class="header-link">${escapeHtml(title)}</a></h1>\n` +
+      // Names the resource in every running header from here on.
+      `<span class="running-title">${escapeHtml(title)}</span>\n`
   );
 
   for (const bookId of bookIds) {
@@ -395,12 +395,12 @@ export function renderTsvQuestionsHtml(resourceData, options = {}) {
 
     bodyParts.push(
       `<section id="${bookAnchor}"` +
-      (isObs ? ' class="obs-frames-body"' : '') +
-      (hasBookHeading ? ` data-toc-title="${escapeHtml(bookTitle)}"` : '') +
-      `>\n` +
-      (hasBookHeading
-        ? `  <h2 class="tq-book-header"><a href="#${bookAnchor}" class="header-link">${escapeHtml(bookTitle)}</a></h2>\n`
-        : '')
+        (isObs ? ' class="obs-frames-body"' : '') +
+        (hasBookHeading ? ` data-toc-title="${escapeHtml(bookTitle)}"` : '') +
+        `>\n` +
+        (hasBookHeading
+          ? `  <h2 class="tq-book-header"><a href="#${bookAnchor}" class="header-link">${escapeHtml(bookTitle)}</a></h2>\n`
+          : '')
     );
 
     const chapterKeys = Object.keys(book.chapters || {}).sort((a, b) => {
@@ -418,8 +418,8 @@ export function renderTsvQuestionsHtml(resourceData, options = {}) {
           ? 'Introduction'
           : `${bookTitle} Introduction`
         : isObs
-        ? obsStoryLabel(story, chapterKey)
-        : `${bookTitle} ${chapterKey}`;
+          ? obsStoryLabel(story, chapterKey)
+          : `${bookTitle} ${chapterKey}`;
       const chapterAnchor = `nav-${bookId}-${isFront ? 'front' : chapterKey}`;
 
       if (showChaptersInTocResolved) {
@@ -430,9 +430,9 @@ export function renderTsvQuestionsHtml(resourceData, options = {}) {
       // when chapters belong there; the id anchor always remains.
       bodyParts.push(
         `<${chapterTag} class="tq-chapter-header" id="${chapterAnchor}"` +
-        (showChaptersInTocResolved ? ` data-toc-title="${escapeHtml(chapterLabel)}"` : '') +
-        `>` +
-        `<a href="#${chapterAnchor}" class="header-link">${escapeHtml(chapterLabel)}</a></${chapterTag}>\n`
+          (showChaptersInTocResolved ? ` data-toc-title="${escapeHtml(chapterLabel)}"` : '') +
+          `>` +
+          `<a href="#${chapterAnchor}" class="header-link">${escapeHtml(chapterLabel)}</a></${chapterTag}>\n`
       );
 
       const verseKeys = Object.keys(chapter.verses || {}).sort((a, b) => {
@@ -453,13 +453,11 @@ export function renderTsvQuestionsHtml(resourceData, options = {}) {
         const verseLabel = isBookIntro
           ? chapterLabel
           : isIntro
-          ? `${chapterLabel} Introduction`
-          : isObs
-          ? `${chapterKey}:${verseKey}`
-          : `${bookTitle} ${chapterKey}:${verseKey}`;
-        const verseAnchor = isBookIntro
-          ? chapterAnchor
-          : `nav-${bookId}-${chapterKey}-${verseKey}`;
+            ? `${chapterLabel} Introduction`
+            : isObs
+              ? `${chapterKey}:${verseKey}`
+              : `${bookTitle} ${chapterKey}:${verseKey}`;
+        const verseAnchor = isBookIntro ? chapterAnchor : `nav-${bookId}-${chapterKey}-${verseKey}`;
 
         // A verse is one unit of work — its scripture, its questions and their
         // responses are wrapped together so print CSS can keep them on one page.
@@ -474,17 +472,17 @@ export function renderTsvQuestionsHtml(resourceData, options = {}) {
             isBookIntro
               ? bookTitle
               : isIntro
-              ? chapterLabel
-              : isObs
-              ? obsFrameHeaderRef(story, chapterKey, verseKey)
-              : verseLabel
+                ? chapterLabel
+                : isObs
+                  ? obsFrameHeaderRef(story, chapterKey, verseKey)
+                  : verseLabel
           )}</span>\n`
         );
 
         if (!isBookIntro) {
           bodyParts.push(
             `<${verseTag} class="tq-verse-header" id="${verseAnchor}">` +
-            `<a href="#${verseAnchor}" class="header-link">${escapeHtml(verseLabel)}</a></${verseTag}>\n`
+              `<a href="#${verseAnchor}" class="header-link">${escapeHtml(verseLabel)}</a></${verseTag}>\n`
           );
         }
 
@@ -548,7 +546,10 @@ export function renderTsvQuestionsHtml(resourceData, options = {}) {
     ? `<div class="license-text">${convertMarkdown(resourceData.license)}</div>`
     : '';
   const body = bodyParts.join('');
-  const css = { web: tqWebCss + coverCss + runningMarkerWebCss, print: isObs ? tqPrintCss + tqObsPrintCss : tqPrintCss };
+  const css = {
+    web: tqWebCss + coverCss + runningMarkerWebCss,
+    print: isObs ? tqPrintCss + tqObsPrintCss : tqPrintCss,
+  };
   const fullHtml = buildFullHtmlDocument(
     title,
     tqWebCss + tqPrintCss + coverCss + runningMarkerWebCss,

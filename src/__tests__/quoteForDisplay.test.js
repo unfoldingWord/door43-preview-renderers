@@ -1,7 +1,4 @@
-import {
-  quoteForDisplay,
-  renderQuoteHeader,
-} from '../renderers/scriptureColumns.js';
+import { quoteForDisplay, renderQuoteHeader } from '../renderers/scriptureColumns.js';
 import { renderTranslationNotesHtml } from '../renderers/translationNotesRenderer.js';
 
 /**
@@ -79,9 +76,9 @@ describe('Translation Words Links quotes in the notes renderer', () => {
         identifier: 'mat',
         sort: 40,
         chapters: {
-          '5': {
+          5: {
             verses: {
-              '27': [
+              27: [
                 {
                   ID: 'q1',
                   Reference: '5:27',
@@ -119,9 +116,9 @@ describe('Translation Words Links quotes in the notes renderer', () => {
         books: {
           mat: {
             chapters: {
-              '5': {
+              5: {
                 verses: {
-                  '27': [
+                  27: [
                     {
                       Quote: 'μοιχεύσεις',
                       GLQuotes: {

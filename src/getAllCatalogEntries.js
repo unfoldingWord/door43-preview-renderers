@@ -138,13 +138,20 @@ export async function getAllCatalogEntries(source, options = {}) {
     // Downstream treats the first entry as the resource to render. DCS lists
     // the queried repo first; should a blueprint ever not, put it there.
     const mainIndex = catalogEntries.findIndex(
-      (e) => e?.owner === owner && e?.name === repo && (!e.branch_or_tag_name || e.branch_or_tag_name === ref)
+      (e) =>
+        e?.owner === owner &&
+        e?.name === repo &&
+        (!e.branch_or_tag_name || e.branch_or_tag_name === ref)
     );
     if (mainIndex > 0) {
-      catalogEntries = [catalogEntries[mainIndex], ...catalogEntries.filter((_, i) => i !== mainIndex)];
+      catalogEntries = [
+        catalogEntries[mainIndex],
+        ...catalogEntries.filter((_, i) => i !== mainIndex),
+      ];
     }
     const main = catalogEntries[0] || {};
-    const resourceVersion = mainIndex === -1 ? ref : main.branch_or_tag_name || main.release?.tag_name || ref;
+    const resourceVersion =
+      mainIndex === -1 ? ref : main.branch_or_tag_name || main.release?.tag_name || ref;
 
     return {
       resourceVersion,

@@ -1,0 +1,13 @@
+# Build output and local scratch
+dist/
+coverage/
+styleguide/
+tmp/
+.claude/
+
+# Lockfile
+pnpm-lock.yaml
+
+# Generated: the CLI writes the demo fixtures, scripts/fetch-logos.mjs writes the logos
+src/fixtures/
+src/assets/logos.generated.js

@@ -57,8 +57,15 @@ export function parseScriptureExtras(extras, { editorMode = false } = {}) {
           out[ch] = {};
           for (const [v, verseData] of Object.entries(verses)) {
             if (v === 'front') continue;
-            const raw = extractVerseObjectsText(verseData?.verseObjects).replace(/\s+/g, ' ').trim();
-            const text = editorMode ? raw : raw.replace(/[{}]/g, '').replace(/\s{2,}/g, ' ').trim();
+            const raw = extractVerseObjectsText(verseData?.verseObjects)
+              .replace(/\s+/g, ' ')
+              .trim();
+            const text = editorMode
+              ? raw
+              : raw
+                  .replace(/[{}]/g, '')
+                  .replace(/\s{2,}/g, ' ')
+                  .trim();
             if (text) out[ch][v] = text;
           }
         }
