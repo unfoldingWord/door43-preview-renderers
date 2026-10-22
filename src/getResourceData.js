@@ -56,13 +56,17 @@ export async function getCatalogEntry(
  *   - a catalog entry object
  *   - existing **ResourceData** (returned unchanged — passthrough)
  * @param {Object} [options]
- * @param {string} [options.dcs_api_url] - DCS API base URL (default: https://git.door43.org/api/v1)
+ * @param {string} [options.dcsApiUrl] - DCS API base URL (default: https://git.door43.org/api/v1;
+ *   the deprecated `dcs_api_url` is still read)
  * @param {boolean} [options.quiet] - Suppress progress logging (warnings still reach the logger)
  * @param {Object} [options.logger] - `{ info, warn }` in place of the console
  * @param {Array<string>} [options.books] - Books (when not carried on `input`)
  * @param {Array<string>} [options.extraSubjects] - Blueprint subjects to fetch as
  *   extras beyond the ones the subject requires, e.g. `['TSV Translation
  *   Questions']` so Translation Notes can show the questions under each verse
+ * @param {number} [options.archiveMaxBytes] - Largest repository archive accepted
+ *   (TA, TW, OBS, tS are read from their archive; default 100 MB)
+ * @param {number} [options.archiveTimeoutMs] - Archive download time limit (default 120 s)
  * @param {Object} [internal] - Private plumbing between this call and its extras
  *   (`isExtra`, `catalogEntry`, `glBibleEntries`, `contentSource`); not for callers.
  *   1.x still honors these on `options`, with a deprecation warning

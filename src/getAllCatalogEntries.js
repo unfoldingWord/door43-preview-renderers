@@ -63,7 +63,7 @@ function resolveDescriptor(source, options) {
  *   (the preferred publisher is found first, see findResources.js; its current
  *   release is used unless `ref` names one) | a catalog entry | a CatalogSet (returned as-is)
  * @param {Object} [options]
- * @param {string} [options.dcs_api_url] - DCS API base URL
+ * @param {string} [options.dcsApiUrl] - DCS API base URL (`dcs_api_url`, deprecated, still read)
  * @param {boolean} [options.quiet] - Suppress logging
  * @param {Array<string>} [options.books] - Books (used with the catalog-entry source form)
  * @returns {Promise<{resourceVersion: string, libraryVersion: string, catalogEntries: Array, source: Object}>}

@@ -58,6 +58,8 @@ catalog entry object, or an existing `resourceData` (returned unchanged).
 | `options.throwOnError` | boolean | `false` | ✅ | Throw the `ResourceError` when the catalog lookup for an `{ owner, repo, ref }` fails, instead of returning `{ error, code, status, url }`. Every other failure already throws. The returned form is deprecated; 2.0 will always throw. |
 | `options.logger` | `{ info, warn }` | the console | ✅ | Where progress (`info`) and warnings (`warn`) go, per call. Also taken by `getAllCatalogEntries` and the stage-0 functions. The CLI passes one that writes to stderr. |
 | `options.books` | string[] | `[]` | ✅ | Books, when `input` does not carry them (catalog-entry form). |
+| `options.archiveMaxBytes` | number | `104857600` (100 MB) | ✅ | Largest repository archive accepted. Translation Academy, Translation Words, Open Bible Stories and tS repositories are read from their DCS archive (the largest today, en_tw, is about 1 MB). |
+| `options.archiveTimeoutMs` | number | `120000` | ✅ | Time limit for an archive download. The archive URL must be on the `dcs_api_url` host, and redirects are not followed. |
 | `options.extraSubjects` | string[] | `[]` | ✅ | Blueprint subjects to fetch as extras beyond the ones the subject requires. `['TSV Translation Questions']` on Translation Notes (`['TSV OBS Translation Questions']` on OBS Translation Notes) fetches the package's questions, which the notes then show under each verse or frame (`includeQuestions`). A subject the blueprint lacks is ignored. |
 
 ### `getResourceDataFromDirectory(catalogEntries, dirPath, options?)`

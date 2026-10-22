@@ -338,7 +338,7 @@ pnpm run styleguide:build  # style guide → styleguide/
 pnpm run fetch-logos       # refresh src/assets/logos.generated.js from the CDN
 ```
 
-The cover logos are bundled as data URIs in `src/assets/logos.generated.js`, which is committed; `prebuild` only fetches them when that file is missing. Only `dist/index.esm.js` and `src/cli.js` are published.
+The build leaves the dependencies (`axios`, `jszip`, `markdown-it`, `usfm-js`, `js-yaml`, Proskomma) as imports for your package manager to install, so an app that uses them too doesn't carry two copies. The cover logos are bundled as data URIs in `src/assets/logos.generated.js`, which is committed; `pnpm fetch-logos` regenerates it, and the build stops if it is missing rather than fetching. `pnpm install` doesn't build; `npm publish` does (`prepublishOnly`). Only `dist/index.esm.js` and `src/cli.js` are published. Node 20 or later.
 
 ### Checks
 
@@ -349,15 +349,34 @@ pnpm run format:check      # Prettier: check (what CI runs)
 pnpm test                  # Jest (ESM; runs with --experimental-vm-modules)
 pnpm run test:watch
 pnpm run test:coverage     # enforces the global coverage threshold
+pnpm run test:live         # the current releases from the real DCS (network; nightly in CI)
 ```
 
-CI (`.github/workflows/ci.yml`) runs lint, the format check, the coverage-gated tests, the build, and a check that the built package exports every public name, on every pull request and push to `main`.
+CI (`.github/workflows/ci.yml`) runs lint, the format check, the coverage-gated tests, the build, and a check that the built package exports every public name, on every pull request and push to `main`. `.github/workflows/live.yml` runs `pnpm test:live` nightly and by hand, never on pull requests, so a DCS outage can't block a merge.
 
 ### Releasing
 
 1. Bump `version` in `package.json` in a pull request and merge it.
 2. Publish a GitHub release whose tag is that version with a `v` in front (`v1.7.0`).
-3. `npm-publish.yml` runs the tests, checks that the tag matches `package.json`, and publishes to npm; a version that is already on the registry is skipped. The workflow publishes with the `NPM_TOKEN` organization secret.
+3. `npm-publish.yml` runs the tests, checks that the tag matches `package.json`, and publishes to npm; a version that is already on the registry is skipped. It publishes with npm trusted publishing (OIDC): this workflow uses no npm token, and npm accepts the publish because the package's Trusted Publisher on npmjs.com names this repository and `npm-publish.yml`. Renaming the workflow file means updating that setting. The workflow tests and packs in one job and publishes that tarball from another, which alone holds the publishing credential and runs no dependency code. (The org secret `NPM_TOKEN` is not used here, but other packages may still publish with it, so don't delete it just for this one.)
+
+### Trying an unreleased build in another project
+
+To try a change in door43-preview-app (or any project that uses this package) before it is released, link your checkout instead of publishing:
+
+```bash
+pnpm build                                  # here: the app imports dist/
+cd ../door43-preview-app
+pnpm link ../door43-preview-renderers       # use the local checkout
+```
+
+When you're done, go back to the published version:
+
+```bash
+pnpm unlink @unfoldingword/door43-preview-renderers && pnpm install
+```
+
+Rebuild here after each change, and don't commit a lockfile that points at a link.
 
 ## Project structure
 

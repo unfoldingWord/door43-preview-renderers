@@ -54,7 +54,7 @@ function isNotFound(err) {
  * @param {string} [query.owner] - Owner (user or organisation) to restrict to
  * @param {string} [query.stage='prod'] - Catalog stage: `prod`, `preprod`, `latest`, `branch`
  * @param {Object} [options]
- * @param {string} [options.dcs_api_url] - DCS API base URL
+ * @param {string} [options.dcsApiUrl] - DCS API base URL (`dcs_api_url`, deprecated, still read)
  * @returns {Promise<Array<Object>>} Catalog entries as DCS returns them
  */
 export async function findResources({ lang, subject, owner, stage = 'prod' } = {}, options = {}) {

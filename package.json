@@ -20,12 +20,13 @@
   ],
   "scripts": {
     "fetch-logos": "node scripts/fetch-logos.mjs",
-    "prebuild": "node -e \"const f='src/assets/logos.generated.js';require('fs').existsSync(f)||require('child_process').execSync('node scripts/fetch-logos.mjs',{stdio:'inherit'})\"",
+    "prebuild": "node -e \"require('fs').existsSync('src/assets/logos.generated.js')||(console.error('src/assets/logos.generated.js is missing: run pnpm fetch-logos'),process.exit(1))\"",
     "build": "rollup -c",
     "dev": "rollup -c -w",
     "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js",
     "test:watch": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --watch",
     "test:coverage": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --coverage",
+    "test:live": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config jest.live.config.cjs",
     "cli": "node src/cli.js",
     "lint": "eslint . --ext .js,.jsx,.mjs,.cjs --ignore-path .prettierignore --max-warnings 0",
     "format": "prettier --write .",
@@ -33,7 +34,7 @@
     "styleguide": "styleguidist server --config styleguide.config.cjs",
     "styleguide:dev": "styleguidist server --config styleguide.config.cjs",
     "styleguide:build": "pnpm run build && styleguidist build --config styleguide.config.cjs",
-    "prepare": "pnpm run build"
+    "prepublishOnly": "pnpm run build"
   },
   "keywords": [
     "door43",
@@ -66,7 +67,6 @@
     "css-loader": "^6.8.1",
     "eslint": "^8.51.0",
     "jest": "^29.7.0",
-    "netlify-cli": "^23.11.1",
     "prettier": "^3.0.3",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
@@ -84,12 +84,8 @@
     "proskomma-json-tools": "0.9.1",
     "usfm-js": "^3.4.3"
   },
-  "peerDependencies": {
-    "react": "^16.8.0 || ^17.0.0 || ^18.0.0",
-    "react-dom": "^16.8.0 || ^17.0.0 || ^18.0.0"
-  },
   "engines": {
-    "node": ">=16.0.0",
+    "node": ">=20.0.0",
     "pnpm": ">=8.0.0"
   }
 }

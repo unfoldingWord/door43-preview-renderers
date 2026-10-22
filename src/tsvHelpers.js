@@ -355,8 +355,9 @@ export async function extractRcTsvData(catalogEntry, books, options = {}, catalo
               logger: options.logger,
             },
             {
-              // Extras come from where the resource came from.
-              contentSource: options.contentSource,
+              // Extras come from where the resource came from, with the same
+              // limits (an explicit DCS source carries the archive limits).
+              contentSource: contentSourceFor(options),
               glBibleEntries: bibleEntriesForGl,
               catalogEntry: entry,
               isExtra: true, // prevent recursive dependency fetching

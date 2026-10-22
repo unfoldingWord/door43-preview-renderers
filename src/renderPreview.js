@@ -17,7 +17,7 @@ const SOURCE_KEYS = ['owner', 'repo', 'ref', 'books', 'lang', 'subject', 'stage'
  * The request names the resource the way getAllCatalogEntries() does — `{ owner,
  * repo, ref?, books? }`, or `{ lang, subject, books?, owner?, stage?, ref? }` to
  * find the publisher — and carries every stage's options in the same object;
- * each stage reads its own (`dcs_api_url`, `quiet`, `extraSubjects`,
+ * each stage reads its own (`dcsApiUrl`, `quiet`, `extraSubjects`,
  * `renderOptions`, `media`, `show`, `print`, `outputPath`, …). An owner/repo
  * without a ref renders the latest release. The blueprint is fetched once.
  *
