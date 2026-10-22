@@ -6,11 +6,6 @@ import { jest } from '@jest/globals';
 const axiosGetMock = jest.fn();
 jest.unstable_mockModule('axios', () => ({ default: { get: axiosGetMock } }));
 
-// tsv-quote-converters: never run Proskomma here; just echo the TSV back and
-// record what it was called with.
-const addGLQuoteColsMock = jest.fn(async ({ tsvContent }) => ({ output: tsvContent, errors: [] }));
-jest.unstable_mockModule('tsv-quote-converters', () => ({ addGLQuoteCols: addGLQuoteColsMock }));
-
 // TWL trimming needs the full tree and is tested on its own.
 jest.unstable_mockModule('../twlQuoteTrimming.js', () => ({ applyTwlQuoteTrimming: jest.fn() }));
 
@@ -117,13 +112,13 @@ describe('extractRcTsvData download accounting', () => {
       expect({ url, n }).toEqual({ url, n: 1 });
     }
 
-    // The converter got the preloaded USFM and the blueprint's pinned OL Bible.
-    expect(addGLQuoteColsMock).toHaveBeenCalledTimes(1);
-    const args = addGLQuoteColsMock.mock.calls[0][0];
-    expect(args.bibleLinks).toEqual(['unfoldingWord/en_ult/v91']);
-    expect(args.bibleContents).toEqual({ 'unfoldingWord/en_ult/v91': ULT_USFM });
-    expect(args.olBibleLink).toBe('unfoldingWord/el-x-koine_ugnt/v0.34');
-    expect(args.olBibleContent).toBe(UGNT_USFM);
+    // The GL quote was looked up locally from the preloaded USFM and the
+    // blueprint's pinned OL Bible: Παῦλος (UGNT 1:1) is aligned to "Paul".
+    const notes = result.books.tit.chapters['1'].verses;
+    expect(notes['1'][0].GLQuotes).toEqual({ en_ult: { Quote: 'Paul', Occurrence: 1 } });
+    // 1:2 is not in the fixture Bibles, so that row keeps only its OL quote.
+    expect(notes['2'][0].GLQuotes).toBeUndefined();
+    expect(notes['2'][0].Quote).toBe('Θεοῦ');
 
     // Display copies came through, alignment stripped.
     expect(Object.keys(result.extras)).toEqual(['ult', 'ugnt']);
@@ -132,7 +127,7 @@ describe('extractRcTsvData download accounting', () => {
     expect(result.extras.ult.license).toBe(LICENSE);
   });
 
-  test('a failed original-language preload leaves the converter to its own resolution', async () => {
+  test('a failed original-language preload leaves the OL quotes in place', async () => {
     axiosGetMock.mockImplementation(async (url) => {
       if (url === URLS.ugnt) {
         const err = new Error(`404 ${url}`);
@@ -146,25 +141,24 @@ describe('extractRcTsvData download accounting', () => {
       ultEntry,
       ugntEntry,
     ]);
-    expect(addGLQuoteColsMock).toHaveBeenCalledTimes(1);
-    const args = addGLQuoteColsMock.mock.calls[0][0];
-    expect(args.bibleContents).toEqual({ 'unfoldingWord/en_ult/v91': ULT_USFM });
-    // Neither the link nor the content: the converter falls back to resolving
-    // the original-language Bible itself, as it did before preloading.
-    expect(args).not.toHaveProperty('olBibleLink');
-    expect(args).not.toHaveProperty('olBibleContent');
+    // Without the original-language verse there is nothing to match against:
+    // no GL quotes, the rows keep their OL quote, the render still completes.
+    const notes = result.books.tit.chapters['1'].verses;
+    expect(notes['1'][0].GLQuotes).toBeUndefined();
+    expect(notes['1'][0].Quote).toBe('Παῦλος');
     // The unreadable extra is skipped, the rest of the render stands.
     expect(Object.keys(result.extras)).toEqual(['ult']);
   });
 
-  test('Translation Questions with no Quote never call the quote converter', async () => {
+  test('Translation Questions with no Quote get no GL quotes', async () => {
     const result = await extractRcTsvData(tqEntry, ['tit'], { dcs_api_url: API, quiet: true }, [
       tqEntry,
       ultEntry,
       ugntEntry,
     ]);
-    expect(addGLQuoteColsMock).not.toHaveBeenCalled();
-    expect(result.books.tit.chapters['1'].verses['1'][0].Question).toBe('Who wrote this?');
+    const row = result.books.tit.chapters['1'].verses['1'][0];
+    expect(row.Question).toBe('Who wrote this?');
+    expect(row.GLQuotes).toBeUndefined();
     // Bibles are still fetched once each, for the scripture columns.
     const counts = countByUrl();
     expect(counts[URLS.ult]).toBe(1);
