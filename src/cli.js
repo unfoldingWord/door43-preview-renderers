@@ -55,6 +55,10 @@ function parseArgs(args) {
       parsed.quiet = true;
       continue;
     }
+    if (arg === '--include-questions') {
+      parsed.includeQuestions = true;
+      continue;
+    }
 
     // Handle key-value pairs
     if (arg.startsWith('--')) {
@@ -117,6 +121,8 @@ Options:
                           repo (en_tn, en_ult, …), instead of from DCS
   --catalog <file>        Start from a CatalogSet saved with getAllCatalogEntries --output instead of
                           asking DCS; with --dir, nothing is fetched
+  --include-questions     Translation Notes: fetch the package's Translation Questions and show
+                          each verse's (or OBS frame's) questions under its notes
 
 Examples:
   # What is published for a language?
@@ -183,17 +189,23 @@ async function main() {
     process.exit(0);
   }
 
-  const { command, params, output, quiet } = parseArgs(args);
+  const { command, params, output, quiet, includeQuestions } = parseArgs(args);
 
   const dcsApiUrl = params.dcsApiUrl || 'https://git.door43.org/api/v1';
+  // getResourceData options. --include-questions asks for both questions
+  // subjects; the blueprint keeps only the one the package has.
+  const dataOptions = {
+    dcs_api_url: dcsApiUrl,
+    quiet,
+    ...(includeQuestions
+      ? { extraSubjects: ['TSV Translation Questions', 'TSV OBS Translation Questions'] }
+      : {}),
+  };
   // Stage 2 from DCS, or from local checkouts with --dir.
   const loadResourceData = (set) =>
     params.dir
-      ? getResourceDataFromDirectory(set, path.resolve(params.dir), {
-          dcs_api_url: dcsApiUrl,
-          quiet,
-        })
-      : getResourceData(set, { dcs_api_url: dcsApiUrl, quiet });
+      ? getResourceDataFromDirectory(set, path.resolve(params.dir), dataOptions)
+      : getResourceData(set, dataOptions);
   const byLanguage = !!(params.lang && params.subject);
 
   if (command === 'findResources') {

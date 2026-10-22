@@ -24,6 +24,12 @@ import {
 } from './rcAppendices.js';
 import { renderTwlTable } from './twlTable.js';
 import {
+  renderQuestionArticle,
+  placeQuestions,
+  questionEntryWebCss,
+  questionEntryPrintCss,
+} from './questionEntries.js';
+import {
   isObsSubject,
   findObsExtra,
   findObsStory,
@@ -376,6 +382,33 @@ hr.note-divider {
 }
 `;
 
+// Added whenever a questions extra is shown (even one with no rows for these
+// books), so a render without the extra, or with includeQuestions: false, is unchanged.
+const tnQuestionsWebCss = `
+.tn-verse-questions-header {
+  font-size: 0.85em;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #555;
+  margin: 8px 0 1px 0;
+}
+
+.tn-verse-questions-ref {
+  font-size: 0.85em;
+  color: #555;
+  margin: 4px 0 0 12px;
+}
+${questionEntryWebCss}`;
+
+const tnQuestionsPrintCss = `
+/* The heading (and a range's reference) stays with the first question. */
+.tn-verse-questions-header,
+.tn-verse-questions-ref {
+  break-after: avoid;
+}
+${questionEntryPrintCss}`;
+
 const tnObsPrintCss = `
 /* ─── OBS overrides ──────────────────────────────────────── */
 /* An OBS frame carries a picture, a few lines of story and one or two notes —
@@ -412,6 +445,10 @@ const tnObsPrintCss = `
  * @param {string} [options.resolution='none'] - OBS frame picture resolution:
  *   'none' omits the pictures, '360px' / '2160px' include them. The frame *text*
  *   is always rendered — the notes are about it.
+ * @param {boolean} [options.includeQuestions] - Show each verse's (or frame's)
+ *   Translation Questions after its notes. Default: on when the data carries a
+ *   Translation Questions extra, which getResourceData() fetches only when asked
+ *   (`extraSubjects: ['TSV Translation Questions']`, or the OBS subject)
  * @returns {Object} Rendered HTML package
  */
 export function renderTranslationNotesHtml(resourceData, options = {}) {
@@ -431,6 +468,11 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
   // repo identifier, `twl` for the Bible notes and `obs-twl` for the OBS notes).
   const twlSubject = isObs ? 'TSV OBS Translation Words Links' : 'TSV Translation Words Links';
   const twlExtra = Object.values(extras).find((e) => e?.subject === twlSubject);
+  // The Translation Questions extra, present only when the caller asked
+  // getResourceData() for it; shown unless includeQuestions is false.
+  const questionsSubject = isObs ? 'TSV OBS Translation Questions' : 'TSV Translation Questions';
+  const questionsExtra = Object.values(extras).find((e) => e?.subject === questionsSubject);
+  const includeQuestions = Boolean(questionsExtra) && options.includeQuestions !== false;
   // Parse aligned-Bible USFM once up front so per-verse scripture lookups are cheap.
   const parsedScriptureExtras = isObs
     ? {}
@@ -502,15 +544,26 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
           : '')
     );
 
+    // With questions, a chapter that has questions but no notes is visited too,
+    // so none of its questions is dropped.
+    const questionChapters = includeQuestions
+      ? Object.entries(questionsExtra.books?.[bookId]?.chapters || {})
+          .filter(([, ch]) =>
+            Object.values(ch?.verses || {}).some((rows) => Array.isArray(rows) && rows.length)
+          )
+          .map(([key]) => key)
+      : [];
     // Sort chapters numerically (handle 'front' as 0)
-    const chapterKeys = Object.keys(book.chapters || {}).sort((a, b) => {
+    const chapterKeys = [
+      ...new Set([...Object.keys(book.chapters || {}), ...questionChapters]),
+    ].sort((a, b) => {
       if (a === 'front') return -1;
       if (b === 'front') return 1;
       return parseInt(a, 10) - parseInt(b, 10);
     });
 
     for (const chapterKey of chapterKeys) {
-      const chapter = book.chapters[chapterKey];
+      const chapter = book.chapters?.[chapterKey] || { verses: {} };
       const isFront = chapterKey === 'front';
       const story = isObs ? findObsStory(obsData, chapterKey) : null;
       const chapterLabel = isFront
@@ -542,9 +595,16 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
         return parseInt(a, 10) - parseInt(b, 10);
       });
 
-      for (const verseKey of verseKeys) {
-        const notes = chapter.verses[verseKey];
-        if (!notes || notes.length === 0) continue;
+      // With questions, a verse that has questions but no notes gets a block too.
+      const placed = placeQuestions(
+        verseKeys.filter((k) => chapter.verses[k]?.length),
+        includeQuestions ? questionsExtra.books?.[bookId]?.chapters?.[chapterKey]?.verses || {} : {}
+      );
+
+      for (const verseKey of placed.keys) {
+        const notes = chapter.verses[verseKey] || [];
+        const questionGroups = placed.questions.get(verseKey) || [];
+        if (notes.length === 0 && questionGroups.length === 0) continue;
 
         const isIntro = verseKey === 'intro';
         // The book intro is the only content under the "front" chapter, so its own
@@ -681,6 +741,39 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
             })
           );
         }
+
+        // Translation Questions for this verse (and any range ending in it),
+        // after its notes and words.
+        if (questionGroups.length) {
+          let html = `<div class="tn-verse-questions">\n`;
+          html += `  <h4 class="tn-verse-questions-header">Translation Questions</h4>\n`;
+          for (const group of questionGroups) {
+            // A range or chapter-level question placed under this verse says
+            // which verses it asks about.
+            if (group.key !== verseKey) {
+              const groupLabel =
+                group.key === 'intro'
+                  ? chapterLabel
+                  : isObs
+                    ? `${chapterKey}:${group.key}`
+                    : `${bookTitle} ${chapterKey}:${group.key}`;
+              html += `  <div class="tn-verse-questions-ref">${escapeHtml(groupLabel)}</div>\n`;
+            }
+            group.rows.forEach((row, i) => {
+              html += renderQuestionArticle(row, {
+                anchor: `nav-${bookId}-${chapterKey}-${group.key}-tq-${row.ID || i + 1}`,
+                bookId,
+                chapterKey,
+                // The question is the verse's; the notes above already quote it.
+                bibles: [],
+                isObs,
+                headingTag: 'h5',
+              });
+            });
+          }
+          html += `</div>\n`;
+          bodyParts.push(html);
+        }
       }
     }
 
@@ -730,12 +823,18 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
     ? `<div class="license-text">${convertMarkdown(resourceData.license)}</div>`
     : '';
   const css = {
-    web: tnWebCss + coverCss + runningMarkerWebCss,
-    print: isObs ? tnPrintCss + tnObsPrintCss : tnPrintCss,
+    web: tnWebCss + (includeQuestions ? tnQuestionsWebCss : '') + coverCss + runningMarkerWebCss,
+    print:
+      (isObs ? tnPrintCss + tnObsPrintCss : tnPrintCss) +
+      (includeQuestions ? tnQuestionsPrintCss : ''),
   };
   const fullHtml = buildFullHtmlDocument(
     title,
-    tnWebCss + tnPrintCss + coverCss + runningMarkerWebCss,
+    tnWebCss +
+      tnPrintCss +
+      (includeQuestions ? tnQuestionsWebCss + tnQuestionsPrintCss : '') +
+      coverCss +
+      runningMarkerWebCss,
     `<div class="section cover-page">${cover}</div>\n${body}${renderAppendicesHtml(appendices, { titles: appendixTitles })}`,
     resourceData
   );

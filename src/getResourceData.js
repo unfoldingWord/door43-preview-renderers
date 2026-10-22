@@ -67,6 +67,9 @@ export async function getCatalogEntry(
  * @param {string} [options.dcs_api_url] - DCS API base URL (default: https://git.door43.org/api/v1)
  * @param {boolean} [options.quiet] - Suppress logging
  * @param {Array<string>} [options.books] - Books (when not carried on `input`)
+ * @param {Array<string>} [options.extraSubjects] - Blueprint subjects to fetch as
+ *   extras beyond the ones the subject requires, e.g. `['TSV Translation
+ *   Questions']` so Translation Notes can show the questions under each verse
  * @param {boolean} [options.isExtra] - Internal: this is a dependency; skip resolving its own deps
  * @param {Object} [options.contentSource] - Internal: where the files are read
  *   (contentSource.js); DCS unless getResourceDataFromDirectory() set it
@@ -375,7 +378,11 @@ async function getFilteredCatalogEntries(catalogEntry, books, options) {
 
   // The selection rules live in catalogSelection.js (exported, so a caller can
   // derive the same set from a CatalogSet without re-implementing them).
-  return filterCatalogEntries(catalogEntries, { subject: catalogEntry.subject, books });
+  return filterCatalogEntries(catalogEntries, {
+    subject: catalogEntry.subject,
+    books,
+    extraSubjects: options.extraSubjects,
+  });
 }
 
 /**

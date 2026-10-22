@@ -94,6 +94,28 @@ describe('filterCatalogEntries', () => {
     ]);
   });
 
+  test('extraSubjects keeps a subject the main subject does not require (#23)', () => {
+    expect(
+      filterCatalogEntries(blueprint, { extraSubjects: ['TSV Translation Questions'] })
+    ).toEqual([tn, ult, ust, ta, tw, tq, twl, uhb, ugnt]);
+    // Asking for a subject the blueprint lacks changes nothing.
+    expect(filterCatalogEntries(blueprint, { extraSubjects: ['Open Bible Stories'] })).toEqual(
+      filterCatalogEntries(blueprint)
+    );
+    // Non-strings are ignored.
+    expect(filterCatalogEntries(blueprint, { extraSubjects: [null, 7] })).toEqual(
+      filterCatalogEntries(blueprint)
+    );
+  });
+
+  test('extraSubjects on a subject with no requirements keeps only the main entry and those', () => {
+    const manual = entry('en_ta', 'Translation Academy', 'ta');
+    expect(filterCatalogEntries([manual, tw, tq])).toEqual([manual, tw, tq]);
+    expect(
+      filterCatalogEntries([manual, tw, tq], { extraSubjects: ['TSV Translation Questions'] })
+    ).toEqual([manual, tq]);
+  });
+
   test('applies the Aligned Bible selection to more than two Bibles', () => {
     expect(filterCatalogEntries([tn, other1, ust, other2, ult, ta])).toEqual([tn, ult, ust, ta]);
   });

@@ -1,4 +1,4 @@
-import { convertNoteFromMD2HTML, convertMarkdown } from '../converters/markdownConverter.js';
+import { convertMarkdown } from '../converters/markdownConverter.js';
 import { buildCoverPage, coverCss, runningMarkerWebCss } from './printDocumentAssembler.js';
 import { BibleBookData } from '../constants.js';
 import {
@@ -6,7 +6,6 @@ import {
   parseScriptureExtras,
   getBibleColumns,
   renderScriptureColumns,
-  renderQuoteHeader,
   htmlRootAttributes,
 } from './scriptureColumns.js';
 import {
@@ -17,6 +16,11 @@ import {
   obsFrameHeaderRef,
   renderObsFrame,
 } from './obsFrames.js';
+import {
+  renderQuestionArticle,
+  questionEntryWebCss,
+  questionEntryPrintCss,
+} from './questionEntries.js';
 
 // OBS question/note subjects are story-based (no Bible verses). For these the
 // story frame text takes the place of the scripture panel.
@@ -124,57 +128,7 @@ td.tq-scripture-text {
   vertical-align: middle;
 }
 
-/* Questions + collapsible answers (click the chevron to reveal). */
-.tq-question {
-  margin: 6px 0;
-}
-
-.tq-entry {
-  margin-left: 12px;
-}
-
-.tq-entry-question {
-  font-size: 1em;
-  font-weight: bold;
-  margin: 4px 0;
-  display: inline-block;
-}
-
-.tq-note-body {
-  padding: 2px 0;
-}
-
-.response-show-checkbox {
-  display: none;
-}
-
-.tq-entry-response {
-  display: none;
-  margin: 4px 0 8px 16px;
-}
-
-.response-show-checkbox:checked ~ .tq-entry-response {
-  display: block;
-}
-
-.response-show-label {
-  cursor: pointer;
-  user-select: none;
-  display: inline-block;
-  margin-left: 10px;
-  font-size: 0.82em;
-  font-weight: bold;
-  color: #014263;
-}
-
-.response-show-label::after {
-  content: ' ▸';
-}
-
-.response-show-checkbox:checked ~ .response-show-label::after {
-  content: ' ▾';
-}
-
+${questionEntryWebCss}
 .header-title {
   display: block;
   margin-bottom: 0.5rem;
@@ -230,77 +184,12 @@ table.tq-scripture-cols,
   break-inside: avoid;
 }
 
-article.tq-question {
-  break-inside: avoid;
-  orphans: 2;
-  widows: 2;
-}
-
-/* Keep the quote box and the question line whole and glued to what follows. */
-.tq-quote-header,
-.tq-entry-question {
-  break-inside: avoid;
-  break-after: avoid;
-}
-
-/* In print/PDF there is no interactivity: always show answers, hide the toggle. */
-.response-show-checkbox,
-.response-show-label {
-  display: none !important;
-}
-
-.tq-entry-response {
-  display: block !important;
-}
-`;
+${questionEntryPrintCss}`;
 
 /**
  * Find the OBS resource among the extras (keyed by short identifier, e.g. 'obs').
  * Returns the OBS resourceData ({ stories: {...} }) or null.
  */
-/**
- * Render a single question/note row: optional quote header (Bible-versed only),
- * then either a question with a collapsible answer, or a study-note body.
- */
-function renderQuestionArticle(row, { anchor, bookId, chapterKey, bibles, isObs }) {
-  let html = `<article class="tq-question" id="${anchor}">\n`;
-
-  // Quote header (study questions / study notes that target a scripture quote).
-  if (!isObs && bibles.length && (row.Quote || row.GLQuotes)) {
-    html += renderQuoteHeader(row, bibles, {
-      header: 'tq-quote-header',
-      quote: 'tq-quote',
-      tag: 'tq-bible-tag',
-    });
-  }
-
-  const questionText = row.Question || '';
-  const responseText = row.Response || '';
-  const noteText = row.Note || '';
-
-  if (questionText) {
-    html += `  <div class="tq-entry">\n`;
-    html += `    <h4 class="tq-entry-question"><a href="#${anchor}" class="header-link">${escapeHtml(questionText)}</a></h4>\n`;
-    if (responseText) {
-      const checkboxId = `chk-${anchor}`;
-      const responseHtml = convertNoteFromMD2HTML(responseText, bookId, chapterKey);
-      html += `    <input type="checkbox" class="response-show-checkbox" id="${checkboxId}">\n`;
-      html += `    <label class="response-show-label" for="${checkboxId}">Answer</label>\n`;
-      html += `    <div class="tq-entry-response">${responseHtml}</div>\n`;
-    }
-    html += `  </div>\n`;
-  } else if (noteText) {
-    // Study Notes: a note body, no question/answer toggle.
-    html += `  <div class="tq-note-body">${convertNoteFromMD2HTML(noteText, bookId, chapterKey)}</div>\n`;
-  } else if (responseText) {
-    // Orphan response with no question — show it plainly so it isn't hidden.
-    html += `  <div class="tq-note-body">${convertNoteFromMD2HTML(responseText, bookId, chapterKey)}</div>\n`;
-  }
-
-  html += `</article>\n`;
-  return html;
-}
-
 const tqObsPrintCss = `
 /* ─── OBS overrides ──────────────────────────────────────── */
 /* The story title opens its page. It deliberately does NOT use "column-span: all"

@@ -48,7 +48,7 @@ const htmlData = renderHtmlData(resourceData, {
 | Translation Academy | `renderTranslationAcademyHtml` |
 | Translation Words | `renderTranslationWordsHtml` |
 | Open Bible Stories | `renderObsHtml` |
-| TSV Translation Notes, TSV OBS Translation Notes | `renderTranslationNotesHtml` |
+| TSV Translation Notes, TSV OBS Translation Notes | `renderTranslationNotesHtml` — each verse (or OBS frame) with its scripture, notes and Translation Words; with Translation Questions in the data (`extraSubjects`), the verse's questions follow (`renderOptions.includeQuestions`). |
 | TSV Translation Questions, TSV Study Questions, TSV Study Notes, TSV OBS Translation Questions, TSV OBS Study Notes, TSV OBS Study Questions | `renderTsvQuestionsHtml` |
 | TSV Translation Words Links, TSV OBS Translation Words Links | `renderTranslationWordsLinksHtml` — the Translation Words for a book, by verse (scripture columns and the words in each verse, articles as an appendix) or as a glossary (`renderOptions.layout: 'glossary'`: one entry per article, grouped Key Terms / Names / Other, article body inline, references listed). The OBS variant shows each story frame in place of the scripture columns. |
 
@@ -106,6 +106,7 @@ the identity fields.
 - `scriptureColumns.js` — parallel ULT | UST scripture columns and GL-quote headers
 - `rcAppendices.js` — `rc://` link resolution and the Translation Academy / Translation Words appendices
 - `twlTable.js` — the per-verse Translation Words table used by Translation Notes and Translation Words Links
+- `questionEntries.js` — a question with its answer toggle, shared by the TSV Questions renderer and Translation Notes, and `placeQuestions`, which places a chapter's questions among its notes
 - `obsFrames.js` — Open Bible Stories frame panels for the OBS-based TSV subjects
 - `anchors.js` — the `nav-` → `<abbreviation>-` anchor rewrite
 - `printDocumentAssembler.js` — cover page, table of contents, appendices, print CSS, `PAGE_SIZES`

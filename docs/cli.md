@@ -56,6 +56,7 @@ Other options:
 - `--columns <n>` — `assemblePrint` / `generatePdf`: body column count (continuous-flow bodies only; see [options](./options.md))
 - `--dir <path>` — the data commands read the files from repositories checked out under `<path>`, one folder per repository named as its catalog entry names it (`en_tn`, `en_ult`, …), instead of from DCS (`getResourceDataFromDirectory`)
 - `--catalog <file>` — start from a CatalogSet saved with `getAllCatalogEntries --output` instead of asking DCS; `--book` overrides its books. With `--dir`, nothing is fetched
+- `--include-questions` — Translation Notes: fetch the package's Translation Questions (or OBS Translation Questions) and show each verse's or frame's questions under its notes. The data commands pass `extraSubjects` to `getResourceData`
 - `--pdf-service-url <url>` — `generatePdf`: POST the assembled HTML to a hosted WeasyPrint service instead of running the local binary. The service receives the complete document, text and all, so use only a host you trust
 
 ## Examples
@@ -86,6 +87,9 @@ door43-renderers generatePdf --owner unfoldingWord --repo en_tn --ref v91 --book
 # Offline, from local checkouts: save the package once, then render from disk
 door43-renderers getAllCatalogEntries --owner unfoldingWord --repo en_tn --ref v91 --book tit --quiet --output tn_tit.set.json
 door43-renderers generatePdf --catalog tn_tit.set.json --dir ~/checkouts --output tit_tn.pdf
+
+# Translation Notes with each verse's Translation Questions
+door43-renderers generatePdf --owner unfoldingWord --repo en_tn --ref v91 --book tit --include-questions --output tit_tn_tq.pdf
 
 # The same PDF via a hosted WeasyPrint service
 door43-renderers generatePdf --owner unfoldingWord --repo en_tn --ref v91 --book tit \
