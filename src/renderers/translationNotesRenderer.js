@@ -13,7 +13,13 @@ import {
   renderScriptureColumns,
   renderQuoteHeader,
 } from './scriptureColumns.js';
-import { twKey, extractRcLinks, collectAppendices, resolveRcLinks } from './rcAppendices.js';
+import {
+  twKey,
+  extractRcLinks,
+  collectAppendices,
+  resolveRcLinks,
+  findTwArticle,
+} from './rcAppendices.js';
 import { renderTwlTable } from './twlTable.js';
 import {
   isObsSubject,
@@ -419,6 +425,9 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
   const isObs = isObsSubject(resourceData.subject);
   const resolution = options.resolution || 'none';
   const obsData = isObs ? findObsExtra(extras) : null;
+  // The Translation Words Links extra is keyed by repo identifier: `twl` for the
+  // Bible notes, `obs-twl` for the OBS notes.
+  const twlExtra = extras.twl || extras['obs-twl'];
   // Parse aligned-Bible USFM once up front so per-verse scripture lookups are cheap.
   const parsedScriptureExtras = isObs
     ? {}
@@ -642,9 +651,9 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
           bodyParts.push(noteArticle);
         }
 
-        // Translation Words Links for this verse (from extras.twl), as the same
-        // table the Translation Words Links renderer draws.
-        const twlRows = extras?.twl?.books?.[bookId]?.chapters?.[chapterKey]?.verses?.[verseKey];
+        // Translation Words Links for this verse or OBS frame (from the twl extra),
+        // as the same table the Translation Words Links renderer draws.
+        const twlRows = twlExtra?.books?.[bookId]?.chapters?.[chapterKey]?.verses?.[verseKey];
         if (twlRows?.length) {
           bodyParts.push(
             renderTwlTable(twlRows, {
@@ -659,6 +668,7 @@ export function renderTranslationNotesHtml(resourceData, options = {}) {
                 label: 'tn-col-label',
                 cell: 'tn-verse-twl-cell',
               },
+              hasArticle: (key) => Boolean(findTwArticle(extras.tw, key)),
               // Register each article for the appendix and note the verse citing it.
               onArticle: (key) => {
                 allRcLinks.tw.add(key);

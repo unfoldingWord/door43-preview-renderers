@@ -376,6 +376,7 @@ function renderVerseLayout(resourceData, ctx) {
             label: 'twl-col-label',
             cell: 'twl-verse-cell',
           },
+          hasArticle: (key) => Boolean(findTwArticle(ctx.twResource, key)),
           skip: (row, key) => {
             if (dedupe === 'none' || !key) return false;
             if (seen.has(key)) return true;

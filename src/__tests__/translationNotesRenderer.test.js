@@ -441,6 +441,78 @@ describe('renderTranslationNotesHtml — OBS', () => {
     expect(sections.body).toContain('class="obs-frames-body"');
   });
 
+  test("lists the frame's Translation Words from the obs-twl extra, linking to the TW appendix", () => {
+    const data = buildObsData();
+    data.extras.tw = {
+      type: 'tw',
+      subject: 'Translation Words',
+      articles: {
+        kt: { title: 'Key Terms', god: { title: 'God', text: '## God\n\nThe one true God.' } },
+      },
+    };
+    // getResourceData keys the extra by repo identifier: en_obs-twl → `obs-twl`.
+    data.extras['obs-twl'] = {
+      type: 'tsv',
+      subject: 'TSV OBS Translation Words Links',
+      books: {
+        obs: {
+          chapters: {
+            1: {
+              verses: {
+                1: [
+                  {
+                    Reference: '1:1',
+                    ID: 'aoaa',
+                    Quote: 'God',
+                    Occurrence: '1',
+                    TWLink: 'rc://*/tw/dict/bible/kt/god',
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
+    };
+    const { sections } = renderTranslationNotesHtml(data);
+    expect(sections.body).toContain('tn-verse-twl-table');
+    // No aligned Bibles for OBS: one column with the GL words the TSV already has.
+    expect(sections.body).toContain('>Quote</th>');
+    expect(sections.body).toContain('href="#nav-obs--tw-kt-god" class="internal-link">God</a>');
+    expect(sections.appendices.tw['kt/god'].title).toBe('God');
+  });
+
+  test('does not link a Translation Words row whose article the TW resource lacks', () => {
+    // en_obs-twl v3 still links other/peoplegroup, which en_tw v87 no longer has.
+    const data = buildObsData();
+    data.extras.tw = { type: 'tw', subject: 'Translation Words', articles: { kt: {} } };
+    data.extras['obs-twl'] = {
+      type: 'tsv',
+      subject: 'TSV OBS Translation Words Links',
+      books: {
+        obs: {
+          chapters: {
+            1: {
+              verses: {
+                1: [
+                  {
+                    Reference: '1:1',
+                    Quote: 'people',
+                    TWLink: 'rc://*/tw/dict/bible/other/peoplegroup',
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
+    };
+    const { sections } = renderTranslationNotesHtml(data);
+    expect(sections.body).toContain('<span class="unresolved-link">people</span>');
+    expect(sections.body).not.toContain('--tw-other-peoplegroup');
+    expect(sections.appendices?.tw?.['other/peoplegroup']).toBeUndefined();
+  });
+
   test('keeps the per-verse page break for Bible-versed notes', () => {
     const { sections } = renderTranslationNotesHtml(buildResourceData());
     expect(sections.css.print).not.toMatch(/\.tn-verse-header\s*{[^}]*break-before:\s*auto/);

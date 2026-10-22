@@ -22,6 +22,9 @@ import { twKey } from './rcAppendices.js';
  * @param {function} [opts.onArticle] - Called with each row's TW article key
  *   (`category/slug`) so the caller can collect appendix articles / back-references
  * @param {function} [opts.skip] - Called with (row, key); return true to leave the row out
+ * @param {function} [opts.hasArticle] - Called with each key; return false when the
+ *   Translation Words resource has no such article, and the row's words are shown
+ *   unlinked (and not passed to onArticle) instead of pointing at a missing anchor
  * @param {boolean} [opts.id=true] - Emit the `twl-<book>-<ch>-<v>` id on the wrapper
  * @returns {string} HTML, or '' when no row is rendered
  */
@@ -35,6 +38,7 @@ export function renderTwlTable(rows, opts = {}) {
     heading = 'Translation Words',
     onArticle,
     skip,
+    hasArticle,
   } = opts;
   const classes = {
     wrapper: 'verse-twls',
@@ -53,8 +57,11 @@ export function renderTwlTable(rows, opts = {}) {
   for (const row of rows) {
     const key = twKey(row.TWLink || row.SupportReference || '');
     if (skip && skip(row, key)) continue;
-    if (key && onArticle) onArticle(key, row);
-    const twAnchor = key ? `nav-${anchorBookId}--tw-${key.replace(/\//g, '-')}` : '';
+    // A link to an article the Translation Words resource lacks would point at an
+    // appendix entry that is never written.
+    const linked = Boolean(key) && (!hasArticle || hasArticle(key));
+    if (linked && onArticle) onArticle(key, row);
+    const twAnchor = linked ? `nav-${anchorBookId}--tw-${key.replace(/\//g, '-')}` : '';
     const cells = cols
       .map((b) => {
         const q = quoteForDisplay(
@@ -62,7 +69,9 @@ export function renderTwlTable(rows, opts = {}) {
         );
         const inner = twAnchor
           ? `<a href="#${twAnchor}" class="internal-link">${escapeHtml(q)}</a>`
-          : escapeHtml(q);
+          : key
+            ? `<span class="unresolved-link">${escapeHtml(q)}</span>`
+            : escapeHtml(q);
         return `<td class="${classes.cell}">${inner}</td>`;
       })
       .join('');
