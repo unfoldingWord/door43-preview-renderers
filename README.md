@@ -349,9 +349,10 @@ pnpm run format:check      # Prettier: check (what CI runs)
 pnpm test                  # Jest (ESM; runs with --experimental-vm-modules)
 pnpm run test:watch
 pnpm run test:coverage     # enforces the global coverage threshold
+pnpm run test:live         # the current releases from the real DCS (network; nightly in CI)
 ```
 
-CI (`.github/workflows/ci.yml`) runs lint, the format check, the coverage-gated tests, the build, and a check that the built package exports every public name, on every pull request and push to `main`.
+CI (`.github/workflows/ci.yml`) runs lint, the format check, the coverage-gated tests, the build, and a check that the built package exports every public name, on every pull request and push to `main`. `.github/workflows/live.yml` runs `pnpm test:live` nightly and by hand, never on pull requests, so a DCS outage can't block a merge.
 
 ### Releasing
 
