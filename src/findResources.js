@@ -1,4 +1,4 @@
-import { fetchJson } from './dcsApi.js';
+import { fetchJson as fetchDcsJson } from './dcsApi.js';
 import { ResourceError } from './errors.js';
 import { requiredSubjectsMap } from './constants.js';
 import { filterCatalogEntries, testamentOf } from './catalogSelection.js';
@@ -30,9 +30,18 @@ function isReleaseTag(ref) {
   return /^v?\d+(\.\d+)*$/.test(String(ref));
 }
 
+/** A DCS request; a failure is thrown as a ResourceError with its status (or NETWORK) and URL. */
+function fetchJson(url) {
+  return fetchDcsJson(url).catch((error) => {
+    throw error instanceof ResourceError
+      ? error
+      : ResourceError.fromRequest('DCS request failed', error, url);
+  });
+}
+
 /** Only a definite "not there" (HTTP 404) may fall through; anything else is an outage and aborts. */
 function isNotFound(err) {
-  return err?.response?.status === 404;
+  return err?.status === 404;
 }
 
 /**

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { ResourceError } from './errors.js';
 
 /**
  * Request-level fetch cache.
@@ -105,7 +106,7 @@ export async function fetchContent(owner, repo, ref, filePath, dcs_api_url) {
       const base64Content = response?.data?.content;
       if (typeof base64Content !== 'string') {
         forget();
-        throw new Error(`No file content in response from ${url}`);
+        throw new ResourceError(`No file content in response from ${url}`, { code: 'HTTP', url });
       }
       return decodeBase64(base64Content);
     })
@@ -122,7 +123,7 @@ export async function fetchJson(url) {
       const body = response?.data;
       if (body === null || typeof body !== 'object') {
         forget();
-        throw new Error(`Unexpected response from ${url}`);
+        throw new ResourceError(`Unexpected response from ${url}`, { code: 'HTTP', url });
       }
       return body;
     })

@@ -67,8 +67,9 @@ function resolveDescriptor(source, options) {
  */
 export async function getAllCatalogEntries(source, options = {}) {
   if (!source || typeof source !== 'object') {
-    throw new Error(
-      'getAllCatalogEntries: source must be an object ({ owner, repo, ref }, a catalog entry, or a CatalogSet).'
+    throw new ResourceError(
+      'getAllCatalogEntries: source must be an object ({ owner, repo, ref }, a catalog entry, or a CatalogSet).',
+      { code: 'INVALID_INPUT' }
     );
   }
 
@@ -113,7 +114,7 @@ export async function getAllCatalogEntries(source, options = {}) {
 
   const { owner, repo, ref, books, dcsApiUrl } = resolveDescriptor(source, options);
   if (!owner || !repo || !ref) {
-    throw new Error('Owner, repo, and ref are required.');
+    throw new ResourceError('Owner, repo, and ref are required.', { code: 'INVALID_INPUT' });
   }
 
   const bpUrl = `${dcsApiUrl}/catalog/bp/${owner}/${repo}/${ref}`;

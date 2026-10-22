@@ -54,25 +54,7 @@ export async function extractRcAlignedBibleData(catalogEntry, books = [], option
       const usfmContent = await source.readFile(catalogEntry, filePath);
       booksContent[bookId] = removeAlignments(usfmContent);
     } catch (error) {
-      const message = `Failed to fetch or process USFM content for book ${bookId}`;
-      // An inner ResourceError keeps its code, status and URL.
-      if (error instanceof ResourceError) {
-        throw new ResourceError(`${message}: ${error.message}`, {
-          code: error.code,
-          status: error.status,
-          url: error.url,
-          cause: error,
-        });
-      }
-      // A failed request keeps its status (a 404 is NOT_FOUND), or is NETWORK
-      // when there was no answer, and the URL requested.
-      if (error?.isAxiosError || error?.response || error?.request) {
-        throw ResourceError.fromRequest(message, error, error?.config?.url);
-      }
-      throw new ResourceError(`${message}: ${error?.message}`, {
-        status: error?.status,
-        cause: error,
-      });
+      throw ResourceError.wrap(`Failed to fetch or process USFM content for book ${bookId}`, error);
     }
   }
 

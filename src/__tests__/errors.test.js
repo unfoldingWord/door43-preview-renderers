@@ -13,6 +13,8 @@ const { getCatalogEntry, getResourceData, getResourceDataFromDirectory } =
 const { getAllCatalogEntries } = await import('../getAllCatalogEntries.js');
 const { renderHtmlData } = await import('../renderHtmlData.js');
 const { extractRcAlignedBibleData } = await import('../rcAlignedBibleHelpers.js');
+const { extractRcTsvData } = await import('../tsvHelpers.js');
+const { resolveRef, findResources } = await import('../findResources.js');
 const lib = await import('../index.js');
 
 /**
@@ -111,8 +113,65 @@ describe('USFM book failures', () => {
     expect(await failWith(inner)).toMatchObject({ code: 'NETWORK', url });
     const parse = await failWith(new TypeError('bad usfm'));
     expect(parse).toBeInstanceOf(ResourceError);
-    expect(parse.code).not.toBe('NETWORK');
+    expect(parse.code).toBe('INVALID_INPUT');
     expect(parse.cause).toBeInstanceOf(TypeError);
+  });
+
+  test('a file missing from a local checkout is NOT_FOUND', async () => {
+    const missing = Object.assign(new Error('ENOENT: no such file'), { code: 'ENOENT' });
+    expect(await failWith(missing)).toMatchObject({ name: 'ResourceError', code: 'NOT_FOUND' });
+  });
+});
+
+describe('TSV book failures', () => {
+  const entry = {
+    owner: 'o',
+    name: 'en_tn',
+    branch_or_tag_name: 'v1',
+    subject: 'TSV Translation Notes',
+    ingredients: [{ identifier: 'tit', path: './tn_TIT.tsv' }],
+  };
+  const failWith = (error) =>
+    extractRcTsvData(entry, ['tit'], {
+      ...quiet,
+      contentSource: { readFile: () => Promise.reject(error), readLicense: async () => '' },
+    }).catch((e) => e);
+
+  test('a read failure is a ResourceError with a documented code', async () => {
+    const url = 'https://dcs.test/api/v1/repos/o/en_tn/contents/tn_TIT.tsv?ref=v1';
+    const notFound = Object.assign(httpError(404), { isAxiosError: true, config: { url } });
+    expect(await failWith(notFound)).toMatchObject({ code: 'NOT_FOUND', status: 404, url });
+    const missing = Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
+    expect(await failWith(missing)).toMatchObject({ name: 'ResourceError', code: 'NOT_FOUND' });
+    expect(await failWith(new Error('refused'))).toMatchObject({ code: 'INVALID_INPUT' });
+  });
+});
+
+describe('arguments and stage 0', () => {
+  test('getAllCatalogEntries: a bad source or a missing ref is INVALID_INPUT', async () => {
+    await expect(getAllCatalogEntries(null, quiet)).rejects.toMatchObject({
+      name: 'ResourceError',
+      code: 'INVALID_INPUT',
+    });
+    await expect(getAllCatalogEntries({ owner: 'o', repo: 'r' }, quiet)).rejects.toMatchObject({
+      name: 'ResourceError',
+      code: 'INVALID_INPUT',
+    });
+  });
+
+  test('stage 0: a failed DCS request is a ResourceError with its status or NETWORK', async () => {
+    const api = { dcs_api_url: 'https://stage0.test/api/v1' };
+    axiosGetMock.mockRejectedValueOnce(httpError(503));
+    await expect(resolveRef({ owner: 'o', repo: 'r' }, api)).rejects.toMatchObject({
+      name: 'ResourceError',
+      code: 'HTTP',
+      status: 503,
+    });
+    axiosGetMock.mockRejectedValueOnce(new Error('getaddrinfo ENOTFOUND'));
+    await expect(findResources({ lang: 'xx' }, api)).rejects.toMatchObject({
+      name: 'ResourceError',
+      code: 'NETWORK',
+    });
   });
 });
 
