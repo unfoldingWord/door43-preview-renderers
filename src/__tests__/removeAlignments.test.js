@@ -168,9 +168,25 @@ describe('removeAlignments — the verse marker is cut off exactly once (#55)', 
   });
 
   test('an empty verse is empty, and the verses after it are kept', () => {
+    // No verse objects: usfm-js writes just "\\v 1".
     expect(getUsfmForVerseContent({ verseObjects: [] })).toBe('');
-    const out = removeAlignments(`\\id TIT\n\\c 1\n\\p\n\\v 1\n\\v 2 ${W('Paul')}.\n`);
-    expect(out).toMatch(/\\v 1 *\n?\\v 2 Paul\./);
+    // A verse whose line ends at its marker holds one "\n" text object, which
+    // usfm-js writes as "\\v 1\n"; the newline is the verse's and stays.
+    expect(removeAlignments(`\\id TIT\n\\c 1\n\\p\n\\v 1\n\\v 2 ${W('Paul')}.\n`)).toBe(
+      '\\id TIT\n\n\\c 1\n\\p\n\\v 1 \n\\v 2 Paul.\n'
+    );
+  });
+
+  test('only the marker and one space are cut: a newline after the marker stays', () => {
+    const spy = jest.spyOn(usfmjs, 'toUSFM');
+    try {
+      spy.mockReturnValue('\\v 1\n\\q line');
+      expect(getUsfmForVerseContent({ verseObjects: [] })).toBe('\n\\q line');
+      spy.mockReturnValue('\\v 1  two spaces');
+      expect(getUsfmForVerseContent({ verseObjects: [] })).toBe(' two spaces');
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   test('a serialised verse without its marker throws instead of vanishing', () => {

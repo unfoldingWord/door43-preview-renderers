@@ -172,7 +172,7 @@ function convertVerseDataToUSFM(verseData) {
   const marker = USFM.match(/^\\v 1(?=\s|$) ?/);
   if (!marker) {
     throw new Error(
-      `Could not serialise a verse without its alignment: expected "\\v 1" at the start, got ${JSON.stringify(USFM.slice(0, 40))}`
+      `usfm-js wrote a verse without its marker: expected "\\v 1" at the start, got ${JSON.stringify(USFM.slice(0, 40))}`
     );
   }
   return USFM.slice(marker[0].length);
