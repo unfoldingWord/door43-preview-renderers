@@ -125,7 +125,9 @@ describe('mixed-direction quotes', () => {
     expect(textDirection('\u060C \u03A0\u03B1\u1FE6\u03BB\u03BF\u03C2')).toBe('ltr');
     expect(textDirection('\u0661\u0662 \u03A0\u03B1\u1FE6\u03BB\u03BF\u03C2')).toBe('ltr');
     expect(textDirection('\u0661\u0662\u060C')).toBe('');
-    expect(isolatedQuoteHtml('\u060C \u03A0\u03B1\u1FE6\u03BB\u03BF\u03C2', 'rtl')).toBe('<bdi dir="ltr">\u060C \u03A0\u03B1\u1FE6\u03BB\u03BF\u03C2</bdi>');
+    expect(isolatedQuoteHtml('\u060C \u03A0\u03B1\u1FE6\u03BB\u03BF\u03C2', 'rtl')).toBe(
+      '<bdi dir="ltr">\u060C \u03A0\u03B1\u1FE6\u03BB\u03BF\u03C2</bdi>'
+    );
   });
 
   test('a language code cannot break out of the lang attribute', () => {
