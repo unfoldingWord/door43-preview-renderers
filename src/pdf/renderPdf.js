@@ -1,4 +1,5 @@
-import { assemblePrintDocument, resolvePageSize } from '../renderers/printDocumentAssembler.js';
+import { resolvePageSize } from '../renderers/printDocumentAssembler.js';
+import { renderHTML } from '../renderHTML.js';
 import { generatePdf } from './generatePdf.js';
 import { generatePdfViaService } from './generatePdfViaService.js';
 
@@ -9,20 +10,21 @@ export { resolvePageSize };
 /**
  * Render a print-ready PDF from a renderHtmlData() result.
  *
- * Pipeline: assemblePrintDocument(sections) → WeasyPrint (generatePdf). The
- * assembler builds the cover, copyright, TOC and @page CSS; WeasyPrint renders
- * the paged document natively (no browser, no PagedJS reflow).
+ * Pipeline: renderHTML(htmlData, { media: 'print' }) → WeasyPrint (generatePdf).
+ * The print document is the one renderHTML composes — cover, copyright, TOC,
+ * appendices, @page CSS, running headers by subject — so a PDF and the print
+ * HTML take the same options and cannot drift apart. WeasyPrint renders the
+ * paged document natively (no browser, no PagedJS reflow).
  *
  * Requires the `weasyprint` binary on PATH (or pass `options.weasyprintPath`).
  *
  * @param {Object} renderResult - The object returned by renderHtmlData()
  *   (uses `renderResult.sections`; `title`/`abbreviation`/`version` seed cover fallbacks)
- * @param {Object} [options]
- * @param {string|{width:string,height:string}} [options.pageSize='A4_PORTRAIT'] - PDF page size
- * @param {number} [options.columns] - Number of body columns
- * @param {'ltr'|'rtl'} [options.direction] - Text direction (defaults to renderResult.direction)
- * @param {string} [options.language] - Language code for `lang` (defaults to renderResult.language)
- * @param {string} [options.footerHtml] - Optional footer HTML (e.g. app version)
+ * @param {Object} [options] - renderHTML's composition options (`show`, `columns`,
+ *   `language`, `direction`, `print.*`; `media` is always 'print'), plus:
+ * @param {string|{width:string,height:string}} [options.pageSize] - Alias of
+ *   `print.pageSize` (default 'A4_PORTRAIT')
+ * @param {string} [options.footerHtml] - Alias of `print.footerHtml`
  * @param {string} [options.title] - Cover title override (defaults to renderResult.title)
  * @param {string} [options.version] - Cover version override
  * @param {string} [options.abbreviation] - Cover abbreviation override (logo selection)
@@ -44,10 +46,7 @@ export async function renderPdf(renderResult, options = {}) {
   }
 
   const {
-    pageSize = 'A4_PORTRAIT',
-    columns,
-    direction,
-    language,
+    pageSize,
     footerHtml,
     title,
     version,
@@ -59,27 +58,32 @@ export async function renderPdf(renderResult, options = {}) {
     baseUrl,
     timeoutMs,
     quiet,
+    ...composeOptions
   } = options;
 
-  const size = resolvePageSize(pageSize);
-
-  const assembled = assemblePrintDocument(renderResult.sections, {
-    title: title ?? renderResult.title,
-    version: version ?? renderResult.version,
-    abbreviation: abbreviation ?? renderResult.abbreviation,
-    pageWidth: size.width,
-    pageHeight: size.height,
-    engine: 'weasyprint',
-    ...(columns != null ? { columns } : {}),
-    // The resource's own direction and language unless the caller overrides them.
-    direction: direction ?? renderResult.direction,
-    language: language ?? renderResult.language,
-    ...(footerHtml != null ? { footerHtml } : {}),
-  });
+  const html = renderHTML(
+    {
+      ...renderResult,
+      title: title ?? renderResult.title,
+      version: version ?? renderResult.version,
+      abbreviation: abbreviation ?? renderResult.abbreviation,
+    },
+    {
+      ...composeOptions,
+      media: 'print',
+      engine: 'weasyprint',
+      print: {
+        ...(pageSize != null ? { pageSize } : {}),
+        ...(footerHtml != null ? { footerHtml } : {}),
+        // The nested names win over the flat aliases.
+        ...(composeOptions.print || {}),
+      },
+    }
+  );
 
   // Remote service (no local binary needed) vs the local `weasyprint` binary.
   if (pdfServiceUrl) {
-    return generatePdfViaService(assembled.html, { pdfServiceUrl, outputPath, timeoutMs });
+    return generatePdfViaService(html, { pdfServiceUrl, outputPath, timeoutMs });
   }
-  return generatePdf(assembled.html, { outputPath, weasyprintPath, baseUrl, timeoutMs, quiet });
+  return generatePdf(html, { outputPath, weasyprintPath, baseUrl, timeoutMs, quiet });
 }

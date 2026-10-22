@@ -238,7 +238,7 @@ Returns an **HtmlData** package:
 Stage 4. Composes an HtmlData package into **one self-contained HTML document** for the screen or for print. Pure and synchronous; returns a string.
 
 - `options.media`: `'screen'` (default; continuous page, cover/copyright/toc off) or `'print'` (paged, PagedJS/WeasyPrint-ready, cover/copyright/toc on)
-- `options.show`, `options.columns`, `options.language`, `options.direction` (both default to the resource's), `options.engine`, `options.print.*` (`pageSize`, `footerHtml`, `runningHeader`, `pageNumber.position`)
+- `options.show` (`appendices` can list kinds: `['tw']`), `options.columns`, `options.language`, `options.direction` (both default to the resource's), `options.engine`, `options.print.*` (`pageSize`, `margins`, `footerHtml`, `runningHeader`, `pageNumber.position`, `pageNumber.show`)
 
 ```javascript
 const webHtml = renderHTML(htmlData);                       // continuous web page
@@ -249,7 +249,7 @@ const printHtml = renderHTML(htmlData, { media: 'print' }); // PagedJS/WeasyPrin
 
 ### `renderPdf(htmlData, options?)`
 
-Stage 5. Composes the print document and renders it with WeasyPrint: the local `weasyprint` binary, or a hosted service when `options.pdfServiceUrl` is set. Returns PDF bytes, or writes to `options.outputPath`. [More →](docs/render-pdf.md)
+Stage 5. Composes the print document (with `renderHTML(htmlData, { media: 'print' })`, so it takes the same options) and renders it with WeasyPrint: the local `weasyprint` binary, or a hosted service when `options.pdfServiceUrl` is set. Returns PDF bytes, or writes to `options.outputPath`. [More →](docs/render-pdf.md)
 
 ### Also exported
 

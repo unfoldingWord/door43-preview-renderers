@@ -1,6 +1,8 @@
 import {
   parseBooksOption,
   resolveComposeOptions,
+  normalizeMargins,
+  selectAppendices,
   supportsBodyColumns,
   runningHeaderModeFor,
 } from '../renderOptions.js';
@@ -150,5 +152,56 @@ describe('runningHeaderModeFor', () => {
 
   test('accepts anything carrying a subject', () => {
     expect(runningHeaderModeFor({ subject: 'Aligned Bible' })).toBe('range');
+  });
+});
+
+describe('normalizeMargins', () => {
+  test('keeps plain CSS lengths and fills the missing sides with the theme default', () => {
+    expect(normalizeMargins({ top: '15mm', left: '1in' })).toEqual({
+      top: '15mm',
+      right: '20mm',
+      bottom: '1cm',
+      left: '1in',
+    });
+  });
+
+  test('a bare number is millimetres; zero is allowed', () => {
+    expect(normalizeMargins({ top: 12, bottom: 0 })).toMatchObject({ top: '12mm', bottom: '0mm' });
+    expect(normalizeMargins({ right: '0' })).toMatchObject({ right: '0' });
+  });
+
+  test('anything but a plain length is ignored, so nothing reaches the stylesheet', () => {
+    expect(normalizeMargins({ top: '1cm; } body { display: none' })).toBeUndefined();
+    expect(normalizeMargins({ top: 'calc(1cm + 2px)', left: -5, right: '2em' })).toBeUndefined();
+    expect(normalizeMargins({})).toBeUndefined();
+    expect(normalizeMargins('1cm')).toBeUndefined();
+    expect(normalizeMargins(undefined)).toBeUndefined();
+  });
+
+  test('resolveComposeOptions normalises print.margins', () => {
+    expect(resolveComposeOptions({ print: { margins: { top: 10 } } }).print.margins).toEqual({
+      top: '10mm',
+      right: '20mm',
+      bottom: '1cm',
+      left: '30mm',
+    });
+    expect(resolveComposeOptions({}).print.margins).toBeUndefined();
+  });
+});
+
+describe('selectAppendices', () => {
+  const appendices = { ta: { a: {} }, tw: { b: {} } };
+  test('true or unset keeps all, false or an empty list keeps none', () => {
+    expect(selectAppendices(appendices, true)).toBe(appendices);
+    expect(selectAppendices(appendices, undefined)).toBe(appendices);
+    expect(selectAppendices(appendices, false)).toBeNull();
+    expect(selectAppendices(appendices, [])).toBeNull();
+    expect(selectAppendices(null, true)).toBeNull();
+  });
+
+  test('a list keeps the kinds it names', () => {
+    expect(selectAppendices(appendices, ['tw'])).toEqual({ tw: { b: {} } });
+    expect(selectAppendices(appendices, ['tw', 'ta', 'xx'])).toEqual(appendices);
+    expect(selectAppendices(appendices, ['xx'])).toBeNull();
   });
 });

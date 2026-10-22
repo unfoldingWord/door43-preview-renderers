@@ -5,7 +5,7 @@ import {
   buildAppendicesToc,
   renderAppendicesHtml,
 } from './renderers/printDocumentAssembler.js';
-import { resolveComposeOptions, runningHeaderModeFor } from './renderOptions.js';
+import { resolveComposeOptions, runningHeaderModeFor, selectAppendices } from './renderOptions.js';
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -52,7 +52,9 @@ export function renderHTML(htmlData, options = {}) {
       engine: options.engine || 'weasyprint',
       footerHtml: opts.print.footerHtml,
       show: opts.show,
+      margins: opts.print.margins,
       pageNumberPosition: opts.print.pageNumber.position,
+      pageNumberShow: opts.print.pageNumber.show,
       // `print.runningHeader: false` turns headers off; otherwise the layout is
       // chosen by subject (scripture gets a reference range, OBS gets none).
       runningHeader: opts.print.runningHeader === false ? false : runningHeaderModeFor(htmlData),
@@ -74,6 +76,12 @@ function buildScreenDocument(htmlData, opts) {
   const dir = opts.direction;
   // Resource-level anchor (e.g. `#tn`) so the app can scroll to the whole resource.
   const resourceId = htmlData.abbreviation ? ` id="${escapeHtml(htmlData.abbreviation)}"` : '';
+  const appendices = selectAppendices(sections.appendices, opts.show.appendices);
+  // Columns on screen: the same continuous-flow bodies and the same rule as print.
+  const columnsCss =
+    opts.columns > 1
+      ? `\n.section.bible-book,\n.obs-frames-body {\n  columns: ${Math.floor(opts.columns)};\n}\n`
+      : '';
   const parts = [];
 
   if (opts.show.cover && sections.cover) {
@@ -85,19 +93,16 @@ function buildScreenDocument(htmlData, opts) {
   if (opts.show.toc && Array.isArray(sections.toc) && sections.toc.length) {
     // Appendices are composed here rather than carried in sections.body, so their
     // TOC entries are appended only when the appendices are actually shown.
-    const tocEntries = opts.show.appendices
-      ? [...sections.toc, ...buildAppendicesToc(sections.appendices)]
-      : sections.toc;
+    // The body's entries only when the body is shown.
+    const tocEntries = [...(opts.show.body ? sections.toc : []), ...buildAppendicesToc(appendices)];
     parts.push(`<div class="section toc-page" id="toc">${generateTocHtml(tocEntries)}</div>`);
   }
   if (opts.show.body && sections.body) {
     parts.push(sections.body);
   }
   // Appendices keyed by kind (e.g. TN's TA + TW), rendered with section headings.
-  if (opts.show.appendices && sections.appendices) {
-    const appendicesHtml = renderAppendicesHtml(sections.appendices, {
-      titles: sections.appendixTitles,
-    });
+  if (appendices) {
+    const appendicesHtml = renderAppendicesHtml(appendices, { titles: sections.appendixTitles });
     if (appendicesHtml) parts.push(appendicesHtml);
   }
 
@@ -107,7 +112,7 @@ function buildScreenDocument(htmlData, opts) {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${escapeHtml(htmlData.title || 'Document')}</title>
-  <style>${css}</style>
+  <style>${css}${columnsCss}</style>
 </head>
 <body>
   <div class="door43-preview"${resourceId} dir="${dir}" data-direction="${dir}">
