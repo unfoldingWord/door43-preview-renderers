@@ -12,6 +12,7 @@ const { getCatalogEntry, getResourceData, getResourceDataFromDirectory } =
   await import('../getResourceData.js');
 const { getAllCatalogEntries } = await import('../getAllCatalogEntries.js');
 const { renderHtmlData } = await import('../renderHtmlData.js');
+const { extractRcAlignedBibleData } = await import('../rcAlignedBibleHelpers.js');
 const lib = await import('../index.js');
 
 /**
@@ -75,6 +76,43 @@ describe('catalog requests', () => {
     await expect(getAllCatalogEntries(source, quiet)).rejects.toMatchObject({ code: 'NETWORK' });
     axiosGetMock.mockResolvedValueOnce({ data: { data: [] } });
     await expect(getAllCatalogEntries(source, quiet)).rejects.toMatchObject({ code: 'NOT_FOUND' });
+  });
+});
+
+describe('USFM book failures', () => {
+  const url = 'https://dcs.test/api/v1/repos/o/en_ult/contents/57-TIT.usfm?ref=v1';
+  const entry = {
+    owner: 'o',
+    name: 'en_ult',
+    branch_or_tag_name: 'v1',
+    subject: 'Aligned Bible',
+    ingredients: [{ identifier: 'tit', path: './57-TIT.usfm' }],
+  };
+  const failWith = (error) =>
+    extractRcAlignedBibleData(entry, ['tit'], {
+      ...quiet,
+      contentSource: { readFile: () => Promise.reject(error) },
+    }).catch((e) => e);
+
+  test('a timeout is NETWORK and an HTTP failure keeps its status, both with the URL', async () => {
+    const timeout = Object.assign(new Error('timeout of 30000ms exceeded'), {
+      isAxiosError: true,
+      code: 'ECONNABORTED',
+      config: { url },
+      request: {},
+    });
+    expect(await failWith(timeout)).toMatchObject({ name: 'ResourceError', code: 'NETWORK', url });
+    const notFound = Object.assign(httpError(404), { isAxiosError: true, config: { url } });
+    expect(await failWith(notFound)).toMatchObject({ code: 'NOT_FOUND', status: 404, url });
+  });
+
+  test("an inner ResourceError keeps its code and URL; a processing error isn't NETWORK", async () => {
+    const inner = new ResourceError('x', { code: 'NETWORK', url });
+    expect(await failWith(inner)).toMatchObject({ code: 'NETWORK', url });
+    const parse = await failWith(new TypeError('bad usfm'));
+    expect(parse).toBeInstanceOf(ResourceError);
+    expect(parse.code).not.toBe('NETWORK');
+    expect(parse.cause).toBeInstanceOf(TypeError);
   });
 });
 
