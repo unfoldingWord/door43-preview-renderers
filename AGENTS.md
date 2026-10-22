@@ -51,7 +51,7 @@ Every page in `docs/` is listed in `styleguide.config.cjs` (the style guide's se
 
 ## Checks
 
-`pnpm lint` (ESLint over the whole repo, `--max-warnings 0`), `pnpm format:check` (Prettier; `pnpm format` writes), `pnpm test` (Jest with `--experimental-vm-modules`; `pnpm test:coverage` enforces the global threshold), `pnpm build`. Generated files (`src/fixtures/`, `src/assets/logos.generated.js`) are excluded from lint and format. When agent worktrees exist under `.claude/worktrees/`, run Jest with `--testPathIgnorePatterns '/node_modules/' '/.claude/' '/.history/' '/dist/' '/styleguide/'` from the main checkout, and with Jest's default ignores from inside a worktree. CI (`.github/workflows/ci.yml`) runs all of this, plus the export-name check on the built package, on every pull request and push to `main`; `main` requires the `test` check.
+`pnpm lint` (ESLint over the whole repo, `--max-warnings 0`), `pnpm format:check` (Prettier; `pnpm format` writes), `pnpm test` (Jest with `--experimental-vm-modules`; `pnpm test:coverage` enforces the global threshold), `pnpm build`. `.prettierignore` is the one ignore list for both (lint passes it as `--ignore-path`): build output, the lockfile, generated fixture JSON and the generated logos; Markdown prose is not reformatted, except the demo pages in `src/`. When agent worktrees exist under `.claude/worktrees/`, run Jest with `--testPathIgnorePatterns '/node_modules/' '/.claude/' '/.history/' '/dist/' '/styleguide/'` from the main checkout, and with Jest's default ignores from inside a worktree. CI (`.github/workflows/ci.yml`) runs all of this, plus the export-name check on the built package, on every pull request and push to `main`; `main` requires the `test` check.
 
 ## Building and releasing
 
