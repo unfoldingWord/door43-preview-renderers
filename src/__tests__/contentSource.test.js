@@ -34,6 +34,8 @@ describe('dcsContentSource.readArchive', () => {
         timeout: ARCHIVE_LIMITS.timeoutMs,
         maxContentLength: ARCHIVE_LIMITS.maxBytes,
         maxRedirects: 0,
+        signal: expect.any(AbortSignal),
+        onDownloadProgress: expect.any(Function),
       }
     );
     expect(ARCHIVE_LIMITS).toEqual({ maxBytes: 100 * 1024 * 1024, timeoutMs: 120000 });
@@ -47,6 +49,9 @@ describe('dcsContentSource.readArchive', () => {
     // Same host name, other scheme or port: another origin.
     await expect(
       source.readArchive(entry('http://git.door43.org/unfoldingWord/en_tw/archive/v91.zip'))
+    ).rejects.toThrow('not on the DCS host');
+    await expect(
+      source.readArchive(entry('https://git.door43.org:8443/unfoldingWord/en_tw/archive/v91.zip'))
     ).rejects.toThrow('not on the DCS host');
     await expect(source.readArchive(entry('not a url'))).rejects.toThrow('is not a URL');
     expect(axiosGetMock).not.toHaveBeenCalled();
@@ -63,6 +68,18 @@ describe('dcsContentSource.readArchive', () => {
 
   test('an archive larger than the cap is refused even when the transport does not enforce it', async () => {
     axiosGetMock.mockResolvedValue({ data: new Uint8Array(2048) });
+    const source = dcsContentSource('https://git.door43.org/api/v1', { maxBytes: 1024 });
+    await expect(
+      source.readArchive(entry('https://git.door43.org/unfoldingWord/en_tw/archive/v91.zip'))
+    ).rejects.toThrow('larger than 1024 bytes');
+  });
+
+  test('the download is aborted once its progress passes the cap', async () => {
+    axiosGetMock.mockImplementation(async (url, config) => {
+      config.onDownloadProgress({ loaded: 2048 });
+      if (config.signal.aborted) throw new Error('canceled');
+      return { data: new Uint8Array(10) };
+    });
     const source = dcsContentSource('https://git.door43.org/api/v1', { maxBytes: 1024 });
     await expect(
       source.readArchive(entry('https://git.door43.org/unfoldingWord/en_tw/archive/v91.zip'))

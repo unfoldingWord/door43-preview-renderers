@@ -48,8 +48,9 @@ export const ARCHIVE_LIMITS = { maxBytes: 100 * 1024 * 1024, timeoutMs: 120000 }
  * @param {number} [limits.timeoutMs=ARCHIVE_LIMITS.timeoutMs] - Download time limit
  */
 export function dcsContentSource(dcs_api_url = 'https://git.door43.org/api/v1', limits = {}) {
-  const maxBytes = limits.maxBytes > 0 ? limits.maxBytes : ARCHIVE_LIMITS.maxBytes;
-  const timeoutMs = limits.timeoutMs > 0 ? limits.timeoutMs : ARCHIVE_LIMITS.timeoutMs;
+  const limit = (value, fallback) => (Number.isFinite(value) && value > 0 ? value : fallback);
+  const maxBytes = limit(limits.maxBytes, ARCHIVE_LIMITS.maxBytes);
+  const timeoutMs = limit(limits.timeoutMs, ARCHIVE_LIMITS.timeoutMs);
   return {
     readFile(entry, path) {
       const { owner, repo, ref } = entryCoords(entry);
@@ -73,14 +74,23 @@ export function dcsContentSource(dcs_api_url = 'https://git.door43.org/api/v1', 
       if (url.origin !== host) {
         throw new Error(`Archive URL ${url.href} is not on the DCS host ${host}.`);
       }
-      const response = await axios.get(url.href, {
-        responseType: 'arraybuffer',
-        timeout: timeoutMs,
-        maxContentLength: maxBytes, // enforced while downloading, in Node
-        maxRedirects: 0, // a redirect could leave the host checked above
-      });
-      // Browsers do not enforce maxContentLength; check what arrived.
-      if ((response.data?.byteLength ?? 0) > maxBytes) {
+      // Browsers do not enforce maxContentLength: abort once progress passes the cap.
+      const abort = new AbortController();
+      let response;
+      try {
+        response = await axios.get(url.href, {
+          responseType: 'arraybuffer',
+          timeout: timeoutMs,
+          maxContentLength: maxBytes, // enforced while downloading, in Node
+          maxRedirects: 0, // a redirect could leave the host checked above
+          signal: abort.signal,
+          onDownloadProgress: ({ loaded }) => loaded > maxBytes && abort.abort(),
+        });
+      } catch (error) {
+        if (!abort.signal.aborted) throw error;
+      }
+      // Aborted (no response), or a transport that sent no progress: check what arrived.
+      if (!response || (response.data?.byteLength ?? 0) > maxBytes) {
         throw new Error(`Archive ${url.href} is larger than ${maxBytes} bytes.`);
       }
       return JSZip.loadAsync(response.data);
