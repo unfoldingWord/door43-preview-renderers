@@ -146,7 +146,10 @@ describe('door43-renderers CLI, stage 0 → CatalogSet hand-off', () => {
       '--book',
       'tit',
     ]);
-    expect(stderr).toBe('');
+    // --quiet silences progress, not warnings: the fake blueprint's
+    // dependencies are incomplete, so their skips are reported on stderr.
+    expect(stderr).not.toMatch(/https?:\/\//);
+    expect(stderr).toContain('Skipping extra resource es-419_ta');
     expect(code).toBe(0);
     const data = JSON.parse(stdout);
     expect(data.subject).toBe('TSV Translation Notes');
@@ -235,7 +238,7 @@ describe('door43-renderers CLI, stage 0 → CatalogSet hand-off', () => {
     expect(requests.some((u) => u.includes('es-419_tq'))).toBe(false);
 
     const withQuestions = await run([...args, '--include-questions', '--book', 'tit']);
-    expect(withQuestions.stderr).toBe('');
+    expect(withQuestions.stderr).not.toMatch(/https?:\/\//); // no progress under --quiet
     expect(withQuestions.code).toBe(0);
     const { body } = JSON.parse(withQuestions.stdout).sections;
     expect(body).toContain('¿Quién escribió?');

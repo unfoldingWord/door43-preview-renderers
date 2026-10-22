@@ -1,4 +1,6 @@
 import axios from 'axios';
+import { loggerFor } from './logger.js';
+import { REQUEST_TIMEOUT_MS } from './dcsApi.js';
 import { resolveResource } from './findResources.js';
 
 // The npm package version of this renderer library (distinct from the *resource*
@@ -7,11 +9,6 @@ const libraryVersion =
   typeof process !== 'undefined' && process?.env?.npm_package_version
     ? process.env.npm_package_version
     : '0.0.0';
-
-let isQuiet = false;
-function log(...args) {
-  if (!isQuiet) console.warn(...args);
-}
 
 /**
  * Resolve a `source` into { owner, repo, ref, books, dcsApiUrl }.
@@ -74,8 +71,6 @@ export async function getAllCatalogEntries(source, options = {}) {
     );
   }
 
-  isQuiet = options.quiet || false;
-
   // CatalogSet passthrough — already resolved upstream.
   if (Array.isArray(source.catalogEntries)) {
     return source;
@@ -121,10 +116,10 @@ export async function getAllCatalogEntries(source, options = {}) {
   }
 
   const bpUrl = `${dcsApiUrl}/catalog/bp/${owner}/${repo}/${ref}`;
-  log(bpUrl);
+  loggerFor(options).info(bpUrl);
 
   try {
-    const response = await axios.get(bpUrl);
+    const response = await axios.get(bpUrl, { timeout: REQUEST_TIMEOUT_MS });
 
     if (!response.data || !response.data.data) {
       throw new Error('Invalid response from /catalog/bp endpoint');

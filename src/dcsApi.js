@@ -90,10 +90,18 @@ function decodeBase64(base64Content) {
  * a directory listing or an error page served as 200) is forgotten and
  * rejected rather than cached for the TTL.
  */
+/**
+ * Time limit for a DCS API request. A request is shared while in flight, so
+ * without one a stalled request would hold every caller of that URL until the
+ * socket died; with it, the request fails, is forgotten, and the next caller
+ * retries.
+ */
+export const REQUEST_TIMEOUT_MS = 30000;
+
 export async function fetchContent(owner, repo, ref, filePath, dcs_api_url) {
   const url = `${dcs_api_url}/repos/${owner}/${repo}/contents/${filePath}?ref=${ref}`;
   return remember(url, (forget) =>
-    axios.get(url).then((response) => {
+    axios.get(url, { timeout: REQUEST_TIMEOUT_MS }).then((response) => {
       const base64Content = response?.data?.content;
       if (typeof base64Content !== 'string') {
         forget();
@@ -110,7 +118,7 @@ export async function fetchContent(owner, repo, ref, filePath, dcs_api_url) {
  */
 export async function fetchJson(url) {
   return remember(url, (forget) =>
-    axios.get(url).then((response) => {
+    axios.get(url, { timeout: REQUEST_TIMEOUT_MS }).then((response) => {
       const body = response?.data;
       if (body === null || typeof body !== 'object') {
         forget();

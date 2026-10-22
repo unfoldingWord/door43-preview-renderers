@@ -51,7 +51,7 @@ Other options:
 - `--book <bookId>` — one book id (e.g. `gen`, `tit`, `1jn`). `findResources` ignores it; `getAllCatalogEntries` records it on the CatalogSet (and with `--lang` the package must carry it). The data commands (`getResourceData`, `renderHtml`, `assemblePrint`, `generatePdf`) pass it on as `books`; which resources use it, and what happens without it, is [the `books` rule](https://github.com/unfoldingWord/door43-preview-renderers/blob/main/skills/door43-renderers-maintainer/references/contracts.md#books-at-stage-2)
 - `--dcs-api-url <url>` — DCS API base (default `https://git.door43.org/api/v1`)
 - `--output <file>` — write to a file instead of stdout
-- `--quiet`, `-q` — no progress logging; JSON only, so the output pipes cleanly into `jq`
+- `--quiet`, `-q` — no progress messages. Output always goes to stdout and messages to stderr, so the JSON pipes cleanly into `jq` either way; warnings (a resource that could not be read) still show on stderr
 - `--page-size <size>` — `assemblePrint` / `generatePdf`: a short key mapped to a `PAGE_SIZES` key — `A4` → `A4_PORTRAIT` (default), `A5` → `A5_PORTRAIT`, `USL` → `US_LETTER_PORTRAIT`, `TRADE` → `TRADE`, `CQ` → `CROWN_QUARTO`; anything else falls back to `A4_PORTRAIT`
 - `--columns <n>` — `assemblePrint` / `generatePdf`: body column count (continuous-flow bodies only; see [options](./options.md))
 - `--dir <path>` — the data commands read the files from repositories checked out under `<path>`, one folder per repository named as its catalog entry names it (`en_tn`, `en_ult`, …), instead of from DCS (`getResourceDataFromDirectory`)

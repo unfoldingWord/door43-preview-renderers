@@ -1,0 +1,47 @@
+name: Live DCS
+
+# The live smoke tests (src/__live__, `pnpm test:live`): the whole pipeline against
+# the real DCS at the current releases (src/demoExamples.js). They need the network
+# and take minutes, so they run nightly and by hand, never on pull requests: a DCS
+# outage must not block a merge. A red run here means DCS changed shape, or a
+# release moved, or the library regressed on real data.
+on:
+  schedule:
+    - cron: '17 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: live-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
+        with:
+          version: 11
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Live tests
+        run: pnpm test:live

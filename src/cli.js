@@ -192,11 +192,15 @@ async function main() {
   const { command, params, output, quiet, includeQuestions } = parseArgs(args);
 
   const dcsApiUrl = params.dcsApiUrl || 'https://git.door43.org/api/v1';
+  // The library's progress and warnings go to stderr, so stdout carries only the
+  // result (JSON, HTML). --quiet silences the progress; warnings still show.
+  const logger = { info: (...a) => console.error(...a), warn: (...a) => console.error(...a) };
   // getResourceData options. --include-questions asks for both questions
   // subjects; the blueprint keeps only the one the package has.
   const dataOptions = {
     dcs_api_url: dcsApiUrl,
     quiet,
+    logger,
     ...(includeQuestions
       ? { extraSubjects: ['TSV Translation Questions', 'TSV OBS Translation Questions'] }
       : {}),
@@ -261,11 +265,15 @@ async function main() {
       } else {
         const ref =
           params.ref ||
-          (await resolveRef({ owner: params.owner, repo: params.repo }, { dcs_api_url: dcsApiUrl }))
-            .ref;
+          (
+            await resolveRef(
+              { owner: params.owner, repo: params.repo },
+              { dcs_api_url: dcsApiUrl, logger }
+            )
+          ).ref;
         descriptor = { owner: params.owner, repo: params.repo, ref, books };
       }
-      set = await getAllCatalogEntries(descriptor, { dcs_api_url: dcsApiUrl, quiet });
+      set = await getAllCatalogEntries(descriptor, { dcs_api_url: dcsApiUrl, quiet, logger });
       // A requested owner is a preference: when its package was incomplete the
       // next publisher is used, and that substitution is said even when quiet.
       if (byLanguage && params.owner && params.owner !== set.source.owner) {
@@ -284,7 +292,7 @@ async function main() {
         if (!quiet) console.error(`Searching the catalog for ${params.lang}...`);
         const entries = await findResources(
           { lang: params.lang, subject: params.subject, owner: params.owner, stage: params.stage },
-          { dcs_api_url: dcsApiUrl, quiet }
+          { dcs_api_url: dcsApiUrl, quiet, logger }
         );
         result = entries.map((e) => ({
           owner: e.owner,
