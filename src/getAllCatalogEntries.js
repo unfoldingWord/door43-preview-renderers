@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { loggerFor } from './logger.js';
 import { ResourceError } from './errors.js';
+import { dcsApiUrlFrom } from './options.js';
 import { REQUEST_TIMEOUT_MS } from './dcsApi.js';
 import { resolveResource } from './findResources.js';
 
@@ -15,11 +16,12 @@ const libraryVersion =
  * Resolve a `source` into { owner, repo, ref, books, dcsApiUrl }.
  *
  * `source` is either:
- *  - a descriptor: `{ owner, repo, ref, books?, dcs_api_url? }`  (has `ref`)
+ *  - a descriptor: `{ owner, repo, ref, books?, dcsApiUrl? }`  (has `ref`; the
+ *    deprecated `dcs_api_url` is still read)
  *  - a catalog entry: `{ owner, name, branch_or_tag_name, url, ... }`
  */
 function resolveDescriptor(source, options) {
-  let dcsApiUrl = options.dcs_api_url || 'https://git.door43.org/api/v1';
+  let dcsApiUrl = dcsApiUrlFrom(options);
 
   if (source.ref) {
     return {
@@ -27,7 +29,8 @@ function resolveDescriptor(source, options) {
       repo: source.repo,
       ref: source.ref,
       books: source.books || options.books || [],
-      dcsApiUrl: options.dcs_api_url || source.dcs_api_url || dcsApiUrl,
+      // The options win over the descriptor; either may use the old spelling.
+      dcsApiUrl: dcsApiUrlFrom(options, source),
     };
   }
 
@@ -38,7 +41,7 @@ function resolveDescriptor(source, options) {
       dcsApiUrl = `${parts[0]}//${parts[2]}/${parts[3]}/${parts[4]}`;
     }
   }
-  if (options.dcs_api_url) dcsApiUrl = options.dcs_api_url;
+  if (options.dcsApiUrl || options.dcs_api_url) dcsApiUrl = dcsApiUrlFrom(options);
 
   return {
     owner: source.owner,
@@ -92,7 +95,10 @@ export async function getAllCatalogEntries(source, options = {}) {
         stage: source.stage,
         ref: source.ref,
       },
-      { ...options, dcs_api_url: options.dcs_api_url || source.dcs_api_url }
+      {
+        ...options,
+        dcsApiUrl: dcsApiUrlFrom(options, source),
+      }
     );
     // The version is the ref that was resolved, not whatever row the blueprint lists first.
     return {
@@ -104,7 +110,7 @@ export async function getAllCatalogEntries(source, options = {}) {
         repo: resolved.repo,
         ref: resolved.ref,
         books,
-        dcsApiUrl: options.dcs_api_url || source.dcs_api_url || 'https://git.door43.org/api/v1',
+        dcsApiUrl: dcsApiUrlFrom(options, source),
         lang: source.lang,
         subject: source.subject,
       },

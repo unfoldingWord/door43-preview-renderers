@@ -15,7 +15,7 @@ import { getResourceData, renderHtmlData, renderHTML, renderPdf } from '@unfoldi
 // 1. Fetch + parse the resource (network)
 const resourceData = await getResourceData(
   { owner: 'unfoldingWord', repo: 'en_ult', ref: 'v91', books: ['tit'] },
-  { dcs_api_url: 'https://git.door43.org/api/v1' }
+  { dcsApiUrl: 'https://git.door43.org/api/v1' }
 );
 
 // 2. Render to reusable HTML sections (pure, no network — pass cached data here to skip step 1)
@@ -53,7 +53,7 @@ catalog entry object, or an existing `resourceData` (returned unchanged).
 | `input.repo` | string | — | ✅ | Repository name (e.g. `en_tn`). |
 | `input.ref` | string | — | ✅ | Tag, branch, or commit (e.g. `v91`, `master`). |
 | `input.books` | string[] | `[]` | ✅ | Book ids to fetch (e.g. `['tit','rom']`). What an empty list means, and which subjects ignore it: [the `books` rule](https://github.com/unfoldingWord/door43-preview-renderers/blob/main/skills/door43-renderers-maintainer/references/contracts.md#books-at-stage-2). |
-| `options.dcs_api_url` | string | `https://git.door43.org/api/v1` | ✅ | DCS API base URL. |
+| `options.dcsApiUrl` | string | `https://git.door43.org/api/v1` | ✅ | DCS API base URL. The old spelling `dcs_api_url` still works in 1.x (one deprecation warning per process) and goes away in 2.0. Every function that talks to DCS takes it. |
 | `options.quiet` | boolean | `false` | ✅ | Suppress progress logging (the URLs fetched). Warnings (a book or supporting resource that could not be read, GL quotes that could not be worked out) are still reported. |
 | `options.throwOnError` | boolean | `false` | ✅ | Throw the `ResourceError` when the catalog lookup for an `{ owner, repo, ref }` fails, instead of returning `{ error, code, status, url }`. Every other failure already throws. The returned form is deprecated; 2.0 will always throw. |
 | `options.logger` | `{ info, warn }` | the console | ✅ | Where progress (`info`) and warnings (`warn`) go, per call. Also taken by `getAllCatalogEntries` and the stage-0 functions. The CLI passes one that writes to stderr. |

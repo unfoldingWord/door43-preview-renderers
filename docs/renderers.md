@@ -97,6 +97,8 @@ import { renderTranslationNotesHtml } from '@unfoldingword/door43-preview-render
 const { sections } = renderTranslationNotesHtml(resourceData, { showChaptersInToc: false });
 ```
 
+Called directly, some renderers also return `fullHtml`, a complete document. It is **deprecated** (removed in 2.0): `renderHtmlData()` drops it, and `renderHTML()` composes the document.
+
 Going through `renderHtmlData()` is preferable: it applies the `books` selection
 (USFM subjects) and the reference ranges, rewrites the anchor prefix, and promotes
 the identity fields.

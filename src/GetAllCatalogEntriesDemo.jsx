@@ -33,7 +33,7 @@ export default function GetAllCatalogEntriesDemo() {
     setResult(null);
 
     let optionsJSON = {
-      dcs_api_url: 'https://git.door43.org/api/v1',
+      dcsApiUrl: 'https://git.door43.org/api/v1',
     };
 
     try {
@@ -124,7 +124,7 @@ export default function GetAllCatalogEntriesDemo() {
           <textarea
             value={options}
             onChange={(e) => setOptions(e.target.value)}
-            placeholder='{"dcs_api_url": "https://git.door43.org/api/v1"}'
+            placeholder='{"dcsApiUrl": "https://git.door43.org/api/v1"}'
             rows={3}
             style={{
               width: '100%',

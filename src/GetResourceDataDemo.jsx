@@ -32,7 +32,7 @@ export default function GetResourceDataDemo() {
     setResult(null);
 
     let optionsJSON = {
-      dcs_api_url: 'https://git.door43.org/api/v1',
+      dcsApiUrl: 'https://git.door43.org/api/v1',
     };
 
     try {

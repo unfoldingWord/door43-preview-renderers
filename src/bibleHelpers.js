@@ -1,4 +1,5 @@
 import * as usfm from 'usfm-js';
+import { dcsApiUrlFrom } from './options.js';
 import { fetchContent } from './dcsApi.js';
 import { BibleBookData } from './constants.js';
 
@@ -10,7 +11,7 @@ import { BibleBookData } from './constants.js';
  * @returns {Promise<Object>} Parsed USFM data for each book
  */
 export async function getBookChapterVersesData(catalogEntry, books, options) {
-  const { dcs_api_url = 'https://git.door43.org/api/v1' } = options;
+  const dcs_api_url = dcsApiUrlFrom(options);
 
   const bookData = {};
 

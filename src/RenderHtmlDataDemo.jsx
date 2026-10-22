@@ -6,7 +6,7 @@ import { EN_RELEASE } from './demoExamples';
 import ExamplePicker from './ExamplePicker';
 
 const DEFAULT_RENDER_OPTIONS = { includeRawUsfmView: false, editorMode: false };
-const DEFAULT_OPTIONS = { dcs_api_url: 'https://git.door43.org/api/v1' };
+const DEFAULT_OPTIONS = { dcsApiUrl: 'https://git.door43.org/api/v1' };
 
 /**
  * Demo component for renderHtmlData function.

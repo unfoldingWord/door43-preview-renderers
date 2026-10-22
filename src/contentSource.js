@@ -1,6 +1,7 @@
 import axios from 'axios';
 import JSZip from 'jszip';
 import { fetchContent, fetchLicense } from './dcsApi.js';
+import { dcsApiUrlOf } from './options.js';
 
 /**
  * Where the extractors read a resource's files from.
@@ -209,7 +210,7 @@ export function directoryContentSource(dirPath) {
   };
 }
 
-/** The content source the options name, or DCS at `dcs_api_url`. */
+/** The content source the options name, or DCS at `dcsApiUrl`. */
 export function contentSourceFor(options = {}) {
-  return options.contentSource || dcsContentSource(options.dcs_api_url);
+  return options.contentSource || dcsContentSource(dcsApiUrlOf(options));
 }

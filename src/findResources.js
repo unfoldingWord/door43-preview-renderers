@@ -1,5 +1,6 @@
 import { fetchJson } from './dcsApi.js';
 import { ResourceError } from './errors.js';
+import { dcsApiUrlFrom } from './options.js';
 import { requiredSubjectsMap } from './constants.js';
 import { filterCatalogEntries, testamentOf } from './catalogSelection.js';
 
@@ -12,13 +13,12 @@ import { filterCatalogEntries, testamentOf } from './catalogSelection.js';
  * read-only DCS catalog lookups through the request cache in dcsApi.js.
  */
 
-const DEFAULT_API = 'https://git.door43.org/api/v1';
 const PAGE_SIZE = 100;
 /** A search that never returns a short page is a broken endpoint, not a big catalog. */
 const MAX_PAGES = 50;
 
 function apiBase(options = {}) {
-  return (options.dcs_api_url || DEFAULT_API).replace(/\/+$/, '');
+  return dcsApiUrlFrom(options).replace(/\/+$/, '');
 }
 
 function enc(value) {

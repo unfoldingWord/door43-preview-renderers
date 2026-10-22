@@ -44,7 +44,7 @@ import {
 // 1–2. Fetch + parse a resource and what it depends on (network).
 const resourceData = await getResourceData(
   { owner: 'unfoldingWord', repo: 'en_tn', ref: 'v91', books: ['tit'] },
-  { dcs_api_url: 'https://git.door43.org/api/v1' }
+  { dcsApiUrl: 'https://git.door43.org/api/v1' }
 );
 
 // 3. Render to reusable HTML sections (pure, no network).

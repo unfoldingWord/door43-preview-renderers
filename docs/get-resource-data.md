@@ -21,7 +21,7 @@ getResourceData(input, options?)
   - a **catalog entry** object from the DCS API
   - an existing **ResourceData** object (returned unchanged — passthrough)
 - **options** (object, optional):
-  - **dcs_api_url** (string): DCS API base URL (default `https://git.door43.org/api/v1`)
+  - **dcsApiUrl** (string): DCS API base URL (default `https://git.door43.org/api/v1`)
   - **quiet** (boolean): suppress progress logging (default `false`); warnings are still reported
   - **logger** (object): `{ info, warn }` to receive progress and warnings instead of the console
   - **books** (array): book ids, when `input` does not carry them

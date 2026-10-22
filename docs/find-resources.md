@@ -118,5 +118,5 @@ door43-renderers renderHtml --lang es-419 --subject "TSV Translation Notes" --bo
 door43-renderers getResourceData --owner unfoldingWord --repo en_tn --book tit --quiet   # ref = latest release
 ```
 
-`options.dcs_api_url` (default `https://git.door43.org/api/v1`) and `options.quiet`
+`options.dcsApiUrl` (default `https://git.door43.org/api/v1`) and `options.quiet`
 work as everywhere else in the library.

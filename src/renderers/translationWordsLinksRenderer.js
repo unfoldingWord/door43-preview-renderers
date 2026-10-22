@@ -719,6 +719,8 @@ export function renderTranslationWordsLinksHtml(resourceData, options = {}) {
       appendixTitles,
     },
     renderedBooks: {},
+    // Deprecated: renderHtmlData drops it and renderHTML composes the document.
+    // Kept for callers of this renderer in 1.x; removed in 2.0.
     fullHtml,
   };
 }

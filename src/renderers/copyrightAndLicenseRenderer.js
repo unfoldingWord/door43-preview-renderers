@@ -1,4 +1,5 @@
 import MarkdownIt from 'markdown-it';
+import { dcsApiUrlFrom } from '../options.js';
 import { fetchContent } from '../dcsApi.js';
 
 const md = new MarkdownIt();
@@ -28,15 +29,15 @@ function formatDate(isoDate) {
  * @param {Object} catalogEntry - The main resource catalog entry
  * @param {Array<Object>} builtWith - Array of catalog entries for resources used in rendering
  * @param {Object} [options] - Options
- * @param {string} [options.dcs_api_url] - DCS API base URL
+ * @param {string} [options.dcsApiUrl] - DCS API base URL (`dcs_api_url`, deprecated, still read)
  * @param {string} [options.generatorName] - Name of the generating tool
  * @param {string} [options.generatorVersion] - Version of the generating tool
  * @param {string} [options.generatorUrl] - URL of the generating tool
  * @returns {Promise<string>} Copyright page HTML
  */
 export async function generateCopyrightAndLicenseHtml(catalogEntry, builtWith = [], options = {}) {
+  const dcsApiUrl = dcsApiUrlFrom(options);
   const {
-    dcs_api_url = 'https://git.door43.org/api/v1',
     generatorName = 'door43-preview-renderers',
     generatorVersion = '',
     generatorUrl = '',
@@ -51,7 +52,7 @@ export async function generateCopyrightAndLicenseHtml(catalogEntry, builtWith = 
 
   let licenseHtml = '';
   try {
-    const licenseContent = await fetchContent(owner, repo, ref, 'LICENSE.md', dcs_api_url);
+    const licenseContent = await fetchContent(owner, repo, ref, 'LICENSE.md', dcsApiUrl);
     if (licenseContent) {
       licenseHtml = md.render(licenseContent);
     }

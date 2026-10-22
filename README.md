@@ -79,7 +79,7 @@ import {
 // 1–2. Fetch + parse a resource and the resources it depends on (network)
 const resourceData = await getResourceData(
   { owner: 'unfoldingWord', repo: 'en_tn', ref: 'v91', books: ['tit'] },
-  { dcs_api_url: 'https://git.door43.org/api/v1' }
+  { dcsApiUrl: 'https://git.door43.org/api/v1' }
 );
 
 // 3. Render to reusable HTML sections (pure, no network).
@@ -165,7 +165,7 @@ For callers that know a language rather than an `owner/repo/ref`. Read-only DCS 
 Stage 1. Fetches the full book-package catalog (the blueprint) for a resource in one call to the DCS `/catalog/bp/` endpoint: the main entry plus every related resource at the versions that belong together. (The language form fetches the blueprint of each publisher it tries, and returns the chosen one without fetching it again.)
 
 - `source`: a descriptor `{ owner, repo, ref, books? }`; the language form `{ lang, subject, books?, owner?, stage?, ref? }` (stage 0 first, then its blueprint is the result); a catalog entry object (its `url` gives the DCS API base); or an existing CatalogSet (returned unchanged)
-- `options.dcs_api_url` (default `https://git.door43.org/api/v1`), `options.quiet`, `options.books` (with the catalog-entry form)
+- `options.dcsApiUrl` (default `https://git.door43.org/api/v1`), `options.quiet`, `options.books` (with the catalog-entry form)
 
 Returns a **CatalogSet**:
 
@@ -185,7 +185,7 @@ The blueprint is the single source of truth for which resources and versions bel
 Stage 2. Fetches one resource, parses it, fetches the supporting resources its subject needs, and returns normalized **ResourceData**.
 
 - `input`: a descriptor `{ owner, repo, ref, books? }`, a CatalogSet (reused, no second blueprint call; this is how the language form reaches stage 2), a catalog entry object, or existing ResourceData (returned unchanged)
-- `options.dcs_api_url`, `options.quiet` (progress only; warnings still show), `options.logger` (`{ info, warn }`), `options.throwOnError` (throw a `ResourceError` rather than return `{ error }`), `options.books`, `options.extraSubjects` (blueprint subjects to fetch beyond the required ones, e.g. `['TSV Translation Questions']` for Translation Notes with questions)
+- `options.dcsApiUrl`, `options.quiet` (progress only; warnings still show), `options.logger` (`{ info, warn }`), `options.throwOnError` (throw a `ResourceError` rather than return `{ error }`), `options.books`, `options.extraSubjects` (blueprint subjects to fetch beyond the required ones, e.g. `['TSV Translation Questions']` for Translation Notes with questions)
 - `books`: the books to fetch; what an empty list means, and which subjects ignore it, is [the `books` rule](skills/door43-renderers-maintainer/references/contracts.md#books-at-stage-2)
 
 ```javascript
@@ -265,7 +265,7 @@ Stage 5. Composes the print document (with `renderHTML(htmlData, { media: 'print
 
 ### `renderPreview(request)`
 
-The whole pipeline in one call. The request names the resource as `getAllCatalogEntries` does (`{ owner, repo, ref?, books? }`, an owner/repo without a ref meaning the latest release, or `{ lang, subject, books?, … }`), carries every stage's options in the same object (`dcs_api_url`, `extraSubjects`, `renderOptions`, `media`, `show`, `print`, …), and says what to return: `output: 'html'` (default; screen or print per `media`) or `'pdf'`. Returns the HTML string, or the PDF bytes (the path when `outputPath` is given). [More →](docs/pipeline.md)
+The whole pipeline in one call. The request names the resource as `getAllCatalogEntries` does (`{ owner, repo, ref?, books? }`, an owner/repo without a ref meaning the latest release, or `{ lang, subject, books?, … }`), carries every stage's options in the same object (`dcsApiUrl`, `extraSubjects`, `renderOptions`, `media`, `show`, `print`, …), and says what to return: `output: 'html'` (default; screen or print per `media`) or `'pdf'`. Returns the HTML string, or the PDF bytes (the path when `outputPath` is given). [More →](docs/pipeline.md)
 
 ### Also exported
 

@@ -137,6 +137,8 @@ export function renderTranslationAcademyHtml(resourceData, options = {}) {
       },
     },
     manuals,
+    // Deprecated: renderHtmlData drops it and renderHTML composes the document.
+    // Kept for callers of this renderer in 1.x; removed in 2.0.
     fullHtml: buildFullHtmlDocument(title, cssWeb, pageBody, resourceData),
   };
 }

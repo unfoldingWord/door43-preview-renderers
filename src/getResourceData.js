@@ -1,4 +1,5 @@
 import { ResourceError } from './errors.js';
+import { dcsApiUrlOf, splitInternalOptions } from './options.js';
 import {
   extractRcSbObsData,
   extractTsObsData,
@@ -62,9 +63,9 @@ export async function getCatalogEntry(
  * @param {Array<string>} [options.extraSubjects] - Blueprint subjects to fetch as
  *   extras beyond the ones the subject requires, e.g. `['TSV Translation
  *   Questions']` so Translation Notes can show the questions under each verse
- * @param {boolean} [options.isExtra] - Internal: this is a dependency; skip resolving its own deps
- * @param {Object} [options.contentSource] - Internal: where the files are read
- *   (contentSource.js); DCS unless getResourceDataFromDirectory() set it
+ * @param {Object} [internal] - Private plumbing between this call and its extras
+ *   (`isExtra`, `catalogEntry`, `glBibleEntries`, `contentSource`); not for callers.
+ *   1.x still honors these on `options`, with a deprecation warning
  * @returns {Promise<Object>} ResourceData
  *
  * @example
@@ -75,28 +76,31 @@ export async function getCatalogEntry(
  */
 const RESOURCE_TYPES = new Set(['usfm', 'tsv', 'obs', 'ta', 'tw']);
 
-export async function getResourceData(input, options = {}) {
+export async function getResourceData(input, rawOptions = {}, internal = {}) {
   // ResourceData passthrough — already parsed upstream or restored from cache.
   if (input && typeof input === 'object' && RESOURCE_TYPES.has(input.type) && input.subject) {
     return input;
   }
 
-  const { dcs_api_url = 'https://git.door43.org/api/v1', quiet = false } = options;
+  // `options` are the caller's; `context` adds the plumbing between this call
+  // and its extras (the private third argument), and is what the extractors get.
+  const { options, context } = splitInternalOptions(rawOptions, internal);
+  const quiet = options.quiet || false;
 
   // Books selection comes from the descriptor / CatalogSet source, or options.
   const books =
     (input && input.books) || (input && input.source && input.source.books) || options.books || [];
 
   let catalogEntry;
-  if (options.catalogEntry) {
+  if (context.catalogEntry) {
     // Parent passed a pre-resolved entry (e.g. when fetching an extra) — avoids a
     // redundant /catalog/entry/ round-trip.
-    catalogEntry = options.catalogEntry;
+    catalogEntry = context.catalogEntry;
   } else if (input && Array.isArray(input.catalogEntries)) {
     // CatalogSet — reuse it. The main entry is first, and the filtered-entries
-    // step reuses these (via options.preEntries) instead of re-calling /catalog/bp/.
+    // step reuses these (via context.preEntries) instead of re-calling /catalog/bp/.
     catalogEntry = input.catalogEntries[0];
-    options.preEntries = input.catalogEntries;
+    context.preEntries = input.catalogEntries;
   } else if (input && input.ref && input.repo) {
     // Descriptor { owner, repo, ref }
     try {
@@ -104,7 +108,7 @@ export async function getResourceData(input, options = {}) {
         input.owner,
         input.repo,
         input.ref,
-        dcs_api_url,
+        dcsApiUrlOf(options),
         quiet,
         options.logger
       );
@@ -134,7 +138,7 @@ export async function getResourceData(input, options = {}) {
     throw new ResourceError('Catalog entry not found.', { code: 'NOT_FOUND' });
   }
 
-  return withLanguage(await extractResourceData(catalogEntry, books, options), catalogEntry);
+  return withLanguage(await extractResourceData(catalogEntry, books, context), catalogEntry);
 }
 
 /**
@@ -170,10 +174,9 @@ export async function getResourceDataFromDirectory(catalogEntries, dirPath, opti
       code: 'INVALID_INPUT',
     });
   }
-  return getResourceData(
-    { catalogEntries: set.catalogEntries, source: set.source },
-    { ...options, contentSource: directoryContentSource(dirPath) }
-  );
+  return getResourceData({ catalogEntries: set.catalogEntries, source: set.source }, options, {
+    contentSource: directoryContentSource(dirPath),
+  });
 }
 
 /**
