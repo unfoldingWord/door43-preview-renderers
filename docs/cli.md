@@ -46,9 +46,9 @@ Every other command names the resource either by repository (`--owner` and
 - `--stage <stage>` — catalog stage for `--lang` lookups: `prod` (default), `preprod`, `latest`, `branch`
 - `--ref <ref>` — git tag, branch, or commit. Omitted: the latest release (the default branch if there is none). With `--lang`, a given ref is the one each publisher's package is checked at
 
-The rest apply to every command:
+Other options:
 
-- `--book <bookId>` — one book id (e.g. `gen`, `tit`, `1jn`); omitted, a USFM Bible gives every book, a TSV subject fails (`No valid books were processed from the TSV data`), and OBS, TA and TW ignore it
+- `--book <bookId>` — one book id (e.g. `gen`, `tit`, `1jn`). `findResources` ignores it; `getAllCatalogEntries` records it on the CatalogSet (and with `--lang` the package must carry it); the data commands (`getResourceData`, `renderHtml`, `assemblePrint`, `generatePdf`) fetch only that book. Omitted there, a USFM Bible gives every book, a TSV subject fails (`No valid books were processed from the TSV data`), and OBS, TA and TW ignore it
 - `--dcs-api-url <url>` — DCS API base (default `https://git.door43.org/api/v1`)
 - `--output <file>` — write to a file instead of stdout
 - `--quiet`, `-q` — no progress logging; JSON only, so the output pipes cleanly into `jq`

@@ -8,7 +8,7 @@ A headless JavaScript library (no React) that fetches unfoldingWord resources fr
 
 ```
 resolveResource(query, opts)         → owner/repo/ref  src/findResources.js         (stage 0, optional: language + subject → publisher + release)
-getAllCatalogEntries(source, opts)   → CatalogSet      src/getAllCatalogEntries.js   (one /catalog/bp/ call)
+getAllCatalogEntries(source, opts)   → CatalogSet      src/getAllCatalogEntries.js   (one /catalog/bp/ call for a descriptor)
 getResourceData(input, opts)         → ResourceData    src/getResourceData.js        (fetch + parse; extras per requiredSubjectsMap; an existing ResourceData passes through)
 renderHtmlData(resourceData, opts)   → HtmlData        src/renderHtmlData.js         (pure; routes by subject)
 renderHTML(htmlData, opts)           → HTML string     src/renderHTML.js             (pure; media 'screen' | 'print')
@@ -26,7 +26,6 @@ Stage 0 is reached through `getAllCatalogEntries({ lang, subject, books?, owner?
 - Subject renderers in `src/renderers/`: `alignedBibleRenderer.js` (Proskomma/sofria), `obsRenderer.js`, `translationNotesRenderer.js`, `tsvQuestionsRenderer.js`, `translationWordsLinksRenderer.js`, `translationAcademyRenderer.js`, `translationWordsRenderer.js` (both via `manualResourceRenderer.js`).
 - Shared renderer helpers: `scriptureColumns.js` (ULT | UST columns, GL-quote headers), `rcAppendices.js` (rc:// resolution, TA/TW appendices), `twlTable.js` (per-verse Translation Words table), `obsFrames.js` (OBS frame panels), `anchors.js` (`nav-` → `<abbr>-` rewrite), `printDocumentAssembler.js` (cover, TOC, appendices, print CSS, `PAGE_SIZES`).
 - Constants: `src/constants.js` (`BibleBookData`, `requiredSubjectsMap`, `subjectIdentifierMap`, `alignedBibleSubjects`); the pure blueprint filtering in `src/catalogSelection.js` (`filterCatalogEntries`, `selectAlignedBibles`, `testamentOf`, exported).
-- Known stub: `TSV OBS Translation Words Links` in `getResourceData.js` returns metadata only (#21).
 - CLI: `src/cli.js` uses `dist/` when it exists and `src/` otherwise, so rebuild (or delete `dist/`) after changing `src/` before trying it.
 
 ## Renderer contract

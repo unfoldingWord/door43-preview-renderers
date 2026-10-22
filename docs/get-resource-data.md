@@ -52,7 +52,7 @@ by `type`:
 | `type` | Subjects | Content |
 |---|---|---|
 | `usfm` | Aligned Bible, Bible, Greek New Testament, Hebrew Old Testament | `books: { [bookId]: usfmString }` (alignment markers removed) |
-| `tsv` | TSV Translation Notes / Questions / Study Notes / Study Questions / Translation Words Links, and the OBS variants of Notes, Questions, Study Notes and Study Questions | `books: { [bookId]: { title, chapters: { [ch]: { verses: { [v]: [row, …] } } } } }` plus `extras` (the supporting resources, keyed by short identifier such as `ult`, `ust`, `ta`, `tw`, `twl`, `ugnt`) |
+| `tsv` | TSV Translation Notes / Questions / Study Notes / Study Questions / Translation Words Links, and their OBS variants (one `obs` book; stories as chapters, frames as verses) | `books: { [bookId]: { title, chapters: { [ch]: { verses: { [v]: [row, …] } } } } }` plus `extras` (the supporting resources, keyed by repo identifier such as `ult`, `ust`, `ta`, `tw`, `twl`, `ugnt`, or `obs`, `obs-twl` for the OBS resources) |
 | `obs` | Open Bible Stories | `stories: { [num]: { title, reference, frames: { [n]: { text, img } } } }`, `front`, `back` |
 | `ta` | Translation Academy | `manuals: { [manualId]: { title, toc, articles: { [articleId]: { title, text } } } }` |
 | `tw` | Translation Words | `articles: { kt: {…}, names: {…}, other: {…} }` |
@@ -66,11 +66,6 @@ Gateway Language words aligned to it. A quote that cannot be matched leaves that
 Bible out of the row's `GLQuotes`, and the renderers show the original-language
 quote instead; without the original-language Bible no `GLQuotes` are added. A row
 that already has a GL quote for a Bible keeps it.
-
-Not extracted yet: **`TSV OBS Translation Words Links`**. `getResourceData()`
-returns only its catalog metadata (no `type`, `books`, or `extras`), so it cannot
-be rendered, and the OBS Translation Notes renderer does not get a words list from
-it. Tracked in [#21](https://github.com/unfoldingWord/door43-preview-renderers/issues/21).
 
 ## Usage
 

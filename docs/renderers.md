@@ -50,7 +50,7 @@ const htmlData = renderHtmlData(resourceData, {
 | Open Bible Stories | `renderObsHtml` |
 | TSV Translation Notes, TSV OBS Translation Notes | `renderTranslationNotesHtml` |
 | TSV Translation Questions, TSV Study Questions, TSV Study Notes, TSV OBS Translation Questions, TSV OBS Study Notes, TSV OBS Study Questions | `renderTsvQuestionsHtml` |
-| TSV Translation Words Links, TSV OBS Translation Words Links | `renderTranslationWordsLinksHtml` — the Translation Words for a book, by verse (scripture columns and the words in each verse, articles as an appendix) or as a glossary (`renderOptions.layout: 'glossary'`: one entry per article, grouped Key Terms / Names / Other, article body inline, references listed) (`TSV OBS Translation Words Links` is routed here too, but its data extraction is still a stub — see [#21](https://github.com/unfoldingWord/door43-preview-renderers/issues/21)) |
+| TSV Translation Words Links, TSV OBS Translation Words Links | `renderTranslationWordsLinksHtml` — the Translation Words for a book, by verse (scripture columns and the words in each verse, articles as an appendix) or as a glossary (`renderOptions.layout: 'glossary'`: one entry per article, grouped Key Terms / Names / Other, article body inline, references listed). The OBS variant shows each story frame in place of the scripture columns. |
 
 Any other subject throws `HTML rendering is not implemented yet for subject …`.
 

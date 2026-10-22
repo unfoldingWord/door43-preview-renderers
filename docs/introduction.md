@@ -22,7 +22,7 @@ renderPdf(htmlData, opts)            → PDF             (WeasyPrint)
 ```
 
 0. **Find** (optional) — `resolveResource()` turns a language and subject into the publisher and release to render; `getAllCatalogEntries({ lang, subject })` does it for you. [Learn more →](find-resources.md)
-1. **Catalog** — `getAllCatalogEntries()` calls the DCS Book Package endpoint once and returns every related resource at the versions that belong together. [Learn more →](get-all-catalog-entries.md)
+1. **Catalog** — `getAllCatalogEntries()` calls the DCS Book Package endpoint once (the language form once per publisher it tries) and returns every related resource at the versions that belong together. [Learn more →](get-all-catalog-entries.md)
 2. **Data** — `getResourceData()` fetches and parses one resource into a normalized object (USFM, TSV, Markdown, or OBS), pulling in the supporting resources it needs. [Learn more →](get-resource-data.md)
 3. **HTML sections** — `renderHtmlData()` routes that data to the renderer for its subject and returns packaged sections (cover, copyright, body, TOC, CSS, appendices). [Learn more →](renderers.md)
 4. **Document** — `renderHTML()` composes the sections into one self-contained HTML document, for the screen or for print. [Learn more →](render-html.md)
@@ -95,7 +95,7 @@ const data = await getResourceData({ owner: 'adipatealberto', repo: 'pid_rut_tex
 | Open Bible Stories | `renderObsHtml` |
 | TSV Translation Notes, TSV OBS Translation Notes | `renderTranslationNotesHtml` |
 | TSV Translation Questions, TSV Study Notes, TSV Study Questions, TSV OBS Translation Questions, TSV OBS Study Notes, TSV OBS Study Questions | `renderTsvQuestionsHtml` |
-| TSV Translation Words Links, TSV OBS Translation Words Links | `renderTranslationWordsLinksHtml` (by verse, or as a glossary) (`TSV OBS Translation Words Links` is routed here too, but its data extraction is still a stub — see [#21](https://github.com/unfoldingWord/door43-preview-renderers/issues/21)) |
+| TSV Translation Words Links, TSV OBS Translation Words Links | `renderTranslationWordsLinksHtml` (by verse or story frame, or as a glossary) |
 | Translation Academy | `renderTranslationAcademyHtml` |
 | Translation Words | `renderTranslationWordsHtml` |
 
@@ -145,7 +145,7 @@ const data = await getResourceData({ owner: 'adipatealberto', repo: 'pid_rut_tex
 ## Architecture
 
 - **src/findResources.js** — stage 0: from a language and subject to `{ owner, repo, ref }`
-- **src/getAllCatalogEntries.js** — stage 1: the Book Package catalog (one `/catalog/bp/` call)
+- **src/getAllCatalogEntries.js** — stage 1: the Book Package catalog (one `/catalog/bp/` call for a descriptor)
 - **src/getResourceData.js** — stage 2: fetch and parse (rc / sb / ts / tc), filtering the blueprint to what the subject needs via **src/catalogSelection.js**
 - **src/\*Helpers.js** (`rcAlignedBibleHelpers`, `tsBibleHelpers`, `tsvHelpers`, `obsHelpers`, `taHelpers`, `twHelpers`, `bibleHelpers`) — the per-format extractors behind stage 2; `twlQuoteTrimming.js` / `twQuoteTrim.js` narrow Translation Words Links quotes to the term
 - **src/quotes/** — the original-language → Gateway Language quote lookup that fills TSV rows' `GLQuotes` (`usfmBookIndex.js`, `glQuote.js`, `addGlQuotes.js`)
