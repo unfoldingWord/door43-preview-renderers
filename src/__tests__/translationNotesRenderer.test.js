@@ -153,7 +153,9 @@ describe('renderTranslationNotesHtml', () => {
     // Each assertion is tied to the link's own text, in any attribute order.
     expect(article).toMatch(/<a [^>]*href="#nav-tit-1-1"[^>]*>Titus 1:1<\/a>/);
     expect(article).not.toContain('nav-tit-3-1');
-    expect(article).toMatch(/<a [^>]*href="#"[^>]*class="external-ref"[^>]*>Titus 3:1<\/a>/);
+    expect(article).toMatch(
+      /<a (?=[^>]*href="#")(?=[^>]*class="external-ref")[^>]*>Titus 3:1<\/a>/
+    );
   });
 
   test('collects a TW appendix (keyed by kind) from TWL references', () => {

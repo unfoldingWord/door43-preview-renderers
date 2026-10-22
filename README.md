@@ -178,7 +178,7 @@ Stage 2. Fetches one resource, parses it, fetches the supporting resources its s
 
 - `input`: a descriptor `{ owner, repo, ref, books? }`, a CatalogSet (reused, no second blueprint call; this is how the language form reaches stage 2), a catalog entry object, or existing ResourceData (returned unchanged)
 - `options.dcs_api_url`, `options.quiet`, `options.books`
-- `books`: for the USFM subjects an empty list means every book; the TSV subjects need at least one book; OBS, Translation Academy and Translation Words ignore it
+- `books`: for the USFM subjects an empty list means every book; the Bible-book TSV subjects (notes, questions, words links) need at least one book; Open Bible Stories and its TSV resources, Translation Academy and Translation Words ignore it
 
 ```javascript
 const resourceData = await getResourceData(

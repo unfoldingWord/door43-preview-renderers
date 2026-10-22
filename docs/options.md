@@ -52,7 +52,7 @@ catalog entry object, or an existing `resourceData` (returned unchanged).
 | `input.owner` | string | — | ✅ | Repository owner (e.g. `unfoldingWord`). |
 | `input.repo` | string | — | ✅ | Repository name (e.g. `en_tn`). |
 | `input.ref` | string | — | ✅ | Tag, branch, or commit (e.g. `v91`, `master`). |
-| `input.books` | string[] | `[]` | ✅ | Book ids to fetch (e.g. `['tit','rom']`). Empty = every book for the USFM subjects; the TSV subjects need at least one; OBS, TA and TW ignore it. |
+| `input.books` | string[] | `[]` | ✅ | Book ids to fetch (e.g. `['tit','rom']`). Empty = every book for the USFM subjects; the Bible-book TSV subjects need at least one; OBS and the OBS TSV subjects, TA and TW ignore it. |
 | `options.dcs_api_url` | string | `https://git.door43.org/api/v1` | ✅ | DCS API base URL. |
 | `options.quiet` | boolean | `false` | ✅ | Suppress progress logging. |
 | `options.books` | string[] | `[]` | ✅ | Books, when `input` does not carry them (catalog-entry form). |
