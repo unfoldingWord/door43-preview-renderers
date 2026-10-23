@@ -6,11 +6,8 @@ const extractRcTaDataMock = jest.fn();
 const extractRcTwDataMock = jest.fn();
 const extractRcTsvDataMock = jest.fn();
 const getAllCatalogEntriesMock = jest.fn();
-const extractRcSbObsDataMock = jest.fn();
-const extractTsObsDataMock = jest.fn();
+const extractObsDataMock = jest.fn();
 const formatObsDataMock = jest.fn();
-const getObsContentPathMock = jest.fn(() => './stories-folder');
-const extractTsBibleDataMock = jest.fn();
 
 jest.unstable_mockModule('axios', () => ({
   default: {
@@ -39,14 +36,8 @@ jest.unstable_mockModule('../getAllCatalogEntries.js', () => ({
 }));
 
 jest.unstable_mockModule('../obsHelpers.js', () => ({
-  extractRcSbObsData: extractRcSbObsDataMock,
-  extractTsObsData: extractTsObsDataMock,
+  extractObsData: extractObsDataMock,
   formatObsData: formatObsDataMock,
-  getObsContentPath: getObsContentPathMock,
-}));
-
-jest.unstable_mockModule('../tsBibleHelpers.js', () => ({
-  extractTsBibleData: extractTsBibleDataMock,
 }));
 
 const { getCatalogEntry, getResourceData } = await import('../getResourceData.js');
@@ -332,241 +323,49 @@ describe('getResourceData', () => {
     expect(result.direction).toBe('rtl');
   });
 
-  test('routes RC OBS resources through extractRcSbObsData + formatObsData', async () => {
-    const catalogEntry = {
-      title: 'OBS',
-      subject: 'Open Bible Stories',
-      ingredients: [{ identifier: 'obs', path: './content' }],
-      metadata_type: 'rc',
-    };
-    const obsData = { stories: {} };
-    const formatted = { type: 'obs' };
-
-    axiosGetMock.mockResolvedValueOnce({ data: catalogEntry });
-    extractRcSbObsDataMock.mockResolvedValueOnce(obsData);
-    formatObsDataMock.mockReturnValueOnce(formatted);
-
-    const result = await getResourceData(
-      { owner: 'unfoldingWord', repo: 'en_obs', ref: 'v1', books: [] },
-      { quiet: true }
-    );
-
-    expect(getObsContentPathMock).toHaveBeenCalledWith(catalogEntry);
-    expect(extractRcSbObsDataMock).toHaveBeenCalledWith(
-      catalogEntry,
-      { path: './stories-folder' },
-      expect.any(Object) // the options, which carry the content source
-    );
-    expect(formatObsDataMock).toHaveBeenCalledWith(obsData, catalogEntry);
-    expect(result).toEqual(formatted);
-  });
-
-  test('throws for RC OBS resource without ingredients', async () => {
-    axiosGetMock.mockResolvedValueOnce({
-      data: {
+  // Every repository is read as the burrito DCS converts it to, so a subject
+  // takes one route whatever the repository's metadata type.
+  test.each(['rc', 'sb', 'ts'])(
+    'routes %s Open Bible Stories through extractObsData + formatObsData',
+    async (metadataType) => {
+      const catalogEntry = {
         title: 'OBS',
         subject: 'Open Bible Stories',
-        ingredients: [],
-        metadata_type: 'rc',
-      },
-    });
-
-    await expect(
-      getResourceData({ owner: 'u', repo: 'r', ref: 'ref', books: [] }, { quiet: true })
-    ).rejects.toThrow('No ingredients found in catalog entry');
-  });
-
-  test.each([
-    ['Bible', './ingredients/TIT.usfm'],
-    ['Aligned Bible', './57-TIT.usfm'],
-  ])(
-    'delegates an SB scripture/textTranslation %s to extractRcAlignedBibleData',
-    async (subject, path) => {
-      // Scripture Burrito Bibles keep one USFM per book at the ingredient path,
-      // like RC and TC Bibles, so the same extractor fetches and strips them.
-      const catalogEntry = {
-        title: 'SB Bible',
-        subject,
-        ingredients: [{ identifier: 'tit', path }],
-        metadata_type: 'sb',
-        flavor_type: 'scripture',
-        flavor: 'textTranslation',
+        metadata_type: metadataType,
+        flavor_type: 'gloss',
+        flavor: 'textStories',
       };
+      const obsData = { stories: {} };
+      const formatted = { type: 'obs' };
       axiosGetMock.mockResolvedValueOnce({ data: catalogEntry });
-      extractRcAlignedBibleDataMock.mockResolvedValueOnce({
-        type: 'usfm',
-        subject,
-        books: { tit: '\\id TIT\n\\c 1\n\\v 1 Paul, a servant of God' },
-      });
+      extractObsDataMock.mockResolvedValueOnce(obsData);
+      formatObsDataMock.mockReturnValueOnce(formatted);
 
       const result = await getResourceData(
-        { owner: 'u', repo: 'r', ref: 'ref', books: ['tit'] },
+        { owner: 'unfoldingWord', repo: 'en_obs', ref: 'v1', books: [] },
         { quiet: true }
       );
 
-      expect(extractRcAlignedBibleDataMock).toHaveBeenCalledWith(
-        expect.objectContaining({ metadata_type: 'sb', flavor: 'textTranslation', subject }),
-        ['tit'],
-        expect.any(Object)
+      expect(extractObsDataMock).toHaveBeenCalledWith(
+        catalogEntry,
+        expect.any(Object) // the options, which carry the content source
       );
-      expect(result).toEqual(
-        expect.objectContaining({
-          type: 'usfm',
-          subject,
-          books: { tit: expect.stringContaining('\\v 1') },
-        })
-      );
-      // No placeholder fields from the old stub.
-      expect(result).not.toHaveProperty('flavorType');
-      expect(result).not.toHaveProperty('options');
+      expect(formatObsDataMock).toHaveBeenCalledWith(obsData, catalogEntry);
+      expect(result).toEqual(formatted);
     }
   );
 
-  test('throws for unsupported SB scripture flavor', async () => {
-    axiosGetMock.mockResolvedValueOnce({
-      data: {
-        title: 'SB Bible',
-        subject: 'Bible',
-        ingredients: [{ identifier: 'tit' }],
-        metadata_type: 'sb',
-        flavor_type: 'scripture',
-        flavor: 'unknownFlavor',
-      },
-    });
-
-    await expect(
-      getResourceData({ owner: 'u', repo: 'r', ref: 'ref', books: ['tit'] }, { quiet: true })
-    ).rejects.toThrow('Conversion of SB flavor `unknownFlavor` is not currently supported.');
-  });
-
-  test('routes SB gloss/textStories through OBS extraction', async () => {
-    const catalogEntry = {
-      title: 'SB OBS',
-      subject: 'Open Bible Stories',
-      ingredients: [{ identifier: 'obs', path: './content' }],
-      metadata_type: 'sb',
-      flavor_type: 'gloss',
-      flavor: 'textStories',
-    };
-    const obsData = { stories: {} };
-    const formatted = { type: 'obs' };
-
-    axiosGetMock.mockResolvedValueOnce({ data: catalogEntry });
-    extractRcSbObsDataMock.mockResolvedValueOnce(obsData);
-    formatObsDataMock.mockReturnValueOnce(formatted);
-
-    const result = await getResourceData(
-      { owner: 'u', repo: 'r', ref: 'ref', books: [] },
-      { quiet: true }
-    );
-
-    expect(getObsContentPathMock).toHaveBeenCalledWith(catalogEntry);
-    expect(extractRcSbObsDataMock).toHaveBeenCalledWith(
-      catalogEntry,
-      { path: './stories-folder' },
-      expect.any(Object) // the options, which carry the content source
-    );
-    expect(result).toEqual(formatted);
-  });
-
-  test('throws for unsupported SB gloss flavor', async () => {
-    axiosGetMock.mockResolvedValueOnce({
-      data: {
-        title: 'SB OBS',
-        subject: 'Open Bible Stories',
-        ingredients: [{ identifier: 'obs', path: './content' }],
-        metadata_type: 'sb',
-        flavor_type: 'gloss',
-        flavor: 'other',
-      },
-    });
-
-    await expect(
-      getResourceData({ owner: 'u', repo: 'r', ref: 'ref', books: [] }, { quiet: true })
-    ).rejects.toThrow('Conversion of SB gloss flavor `other` is not currently supported.');
-  });
-
-  test('routes TS OBS resources through extractTsObsData + formatObsData', async () => {
-    const catalogEntry = {
-      title: 'TS OBS',
-      subject: 'Open Bible Stories',
-      ingredients: [{ identifier: 'obs', path: './content' }],
-      metadata_type: 'ts',
-    };
-    const obsData = { stories: {} };
-    const formatted = { type: 'obs' };
-
-    axiosGetMock.mockResolvedValueOnce({ data: catalogEntry });
-    extractTsObsDataMock.mockResolvedValueOnce(obsData);
-    formatObsDataMock.mockReturnValueOnce(formatted);
-
-    const result = await getResourceData(
-      { owner: 'u', repo: 'r', ref: 'ref', books: [] },
-      { quiet: true }
-    );
-
-    expect(getObsContentPathMock).toHaveBeenCalledWith(catalogEntry);
-    expect(extractTsObsDataMock).toHaveBeenCalledWith(
-      catalogEntry,
-      { path: './stories-folder' },
-      expect.any(Object) // the options, which carry the content source
-    );
-    expect(result).toEqual(formatted);
-  });
-
-  test('delegates TS Bible to extractTsBibleData', async () => {
-    const catalogEntry = {
-      title: 'TS Bible',
-      subject: 'Bible',
-      ingredients: [{ identifier: 'tit' }],
-      metadata_type: 'ts',
-    };
-    axiosGetMock.mockResolvedValueOnce({ data: catalogEntry });
-    extractTsBibleDataMock.mockResolvedValueOnce({
-      type: 'usfm',
-      subject: 'Bible',
-      books: { tit: '\\id TIT' },
-    });
-
-    const result = await getResourceData(
-      { owner: 'u', repo: 'r', ref: 'ref', books: ['tit'] },
-      { quiet: true }
-    );
-
-    expect(extractTsBibleDataMock).toHaveBeenCalledWith(
-      expect.objectContaining({ metadata_type: 'ts', subject: 'Bible' }),
-      ['tit'],
-      expect.any(Object)
-    );
-    expect(result).toEqual(expect.objectContaining({ type: 'usfm', books: { tit: '\\id TIT' } }));
-  });
-
-  test('throws for unsupported TS subject', async () => {
-    axiosGetMock.mockResolvedValueOnce({
-      data: {
-        title: 'TS Resource',
-        subject: 'Translation Notes',
-        ingredients: [{ identifier: 'tit' }],
-        metadata_type: 'ts',
-      },
-    });
-
-    await expect(
-      getResourceData({ owner: 'u', repo: 'r', ref: 'ref', books: [] }, { quiet: true })
-    ).rejects.toThrow('Conversion of translationStudio repositories is currently not supported.');
-  });
-
-  test('delegates TC Bible to extractRcAlignedBibleData', async () => {
-    const catalogEntry = {
-      title: 'TC Bible',
-      subject: 'Bible',
-      ingredients: [{ identifier: 'tit' }],
-      metadata_type: 'tc',
-    };
+  test.each([
+    ['rc', 'Aligned Bible'],
+    ['sb', 'Bible'],
+    ['ts', 'Bible'],
+    ['tc', 'Aligned Bible'],
+  ])('routes a %s %s to extractRcAlignedBibleData', async (metadataType, subject) => {
+    const catalogEntry = { title: 'A Bible', subject, metadata_type: metadataType };
     axiosGetMock.mockResolvedValueOnce({ data: catalogEntry });
     extractRcAlignedBibleDataMock.mockResolvedValueOnce({
       type: 'usfm',
-      subject: 'Bible',
+      subject,
       books: { tit: '\\id TIT' },
     });
 
@@ -576,66 +375,52 @@ describe('getResourceData', () => {
     );
 
     expect(extractRcAlignedBibleDataMock).toHaveBeenCalledWith(
-      expect.objectContaining({ metadata_type: 'tc', subject: 'Bible' }),
+      expect.objectContaining({ metadata_type: metadataType, subject }),
       ['tit'],
       expect.any(Object)
     );
     expect(result).toEqual(expect.objectContaining({ type: 'usfm', books: { tit: '\\id TIT' } }));
   });
 
-  test('throws for unsupported TC subject', async () => {
+  test('a burrito whose subject is not one of ours is read by its flavor', async () => {
     axiosGetMock.mockResolvedValueOnce({
-      data: {
-        title: 'TC Resource',
-        subject: 'Translation Questions',
-        ingredients: [{ identifier: 'tit' }],
-        metadata_type: 'tc',
-      },
+      data: { title: 'B', subject: 'Some Bible', flavor: 'textTranslation' },
+    });
+    extractRcAlignedBibleDataMock.mockResolvedValueOnce({ type: 'usfm', books: {} });
+    await getResourceData({ owner: 'u', repo: 'r', ref: 'ref', books: ['tit'] }, { quiet: true });
+    expect(extractRcAlignedBibleDataMock).toHaveBeenCalledTimes(1);
+
+    axiosGetMock.mockResolvedValueOnce({
+      data: { title: 'S', subject: 'Some Stories', flavor: 'textStories' },
+    });
+    extractObsDataMock.mockResolvedValueOnce({ stories: {} });
+    formatObsDataMock.mockReturnValueOnce({ type: 'obs' });
+    await getResourceData({ owner: 'u', repo: 'r', ref: 'ref', books: [] }, { quiet: true });
+    expect(extractObsDataMock).toHaveBeenCalledTimes(1);
+  });
+
+  test('throws for a subject and flavor that are not handled', async () => {
+    axiosGetMock.mockResolvedValueOnce({
+      data: { title: 'R', subject: 'Random Subject', flavor: 'x-random', metadata_type: 'rc' },
     });
 
     await expect(
       getResourceData({ owner: 'u', repo: 'r', ref: 'ref', books: [] }, { quiet: true })
-    ).rejects.toThrow(
-      'Conversion of translationCore `Translation Questions` repositories is currently not supported.'
-    );
-  });
-
-  test('throws for unsupported RC subject', async () => {
-    axiosGetMock.mockResolvedValueOnce({
-      data: {
-        title: 'RC Resource',
-        subject: 'Random Subject',
-        ingredients: [{ identifier: 'x' }],
-        metadata_type: 'rc',
-      },
+    ).rejects.toMatchObject({
+      code: 'UNSUPPORTED',
+      message: 'Conversion of `Random Subject` resources is currently not supported.',
     });
-
-    await expect(
-      getResourceData({ owner: 'u', repo: 'r', ref: 'ref', books: [] }, { quiet: true })
-    ).rejects.toThrow('Conversion of `Random Subject` resources is currently not supported.');
   });
 
-  test('throws for unsupported metadata types', async () => {
-    axiosGetMock.mockResolvedValueOnce({
-      data: {
-        title: 'Bad Repo',
-        subject: 'Aligned Bible',
-        ingredients: [],
-        metadata_type: 'unsupported',
-      },
-    });
-
-    await expect(
-      getResourceData({ owner: 'x', repo: 'y', ref: 'z', books: [] }, { quiet: true })
-    ).rejects.toThrow('Not a valid repository that can be convert.');
-  });
-
-  test('throws when metadata cannot be inferred from top-level or repo fields', async () => {
+  test('throws when neither a subject nor a flavor can be found', async () => {
     axiosGetMock.mockResolvedValueOnce({ data: {} });
 
     await expect(
       getResourceData({ owner: 'x', repo: 'y', ref: 'z', books: [] }, { quiet: true })
-    ).rejects.toThrow('Unable to determine its type and/or ingredients.');
+    ).rejects.toMatchObject({
+      code: 'INVALID_INPUT',
+      message: expect.stringContaining('Unable to determine its type.'),
+    });
   });
 
   test('reuses a passed CatalogSet without re-fetching /catalog/entry or /catalog/bp', async () => {

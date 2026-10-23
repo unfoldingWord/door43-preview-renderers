@@ -15,7 +15,7 @@ A headless JavaScript library for fetching unfoldingWord Bible translation resou
 
 ## Pipeline at a glance
 
-The renderer is a **composable chain**. Each stage takes the previous stage's output, so you can run the whole thing or resume from any cached intermediate. Stage 2 can also read repositories checked out on disk (`getResourceDataFromDirectory`):
+The renderer is a **composable chain**. Each stage takes the previous stage's output, so you can run the whole thing or resume from any cached intermediate. Stage 2 reads every resource as the Scripture Burrito DCS converts it to, and can also read burritos unpacked on disk (`getResourceDataFromDirectory`):
 
 ```
 resolveResource(query, opts)         → owner/repo/ref  (network; optional stage 0: language + subject → publisher + release)
@@ -203,7 +203,7 @@ The shape depends on `type` (`usfm`, `tsv`, `obs`, `ta`, `tw`); TSV resources ca
 
 ### `getResourceDataFromDirectory(catalogEntries, dirPath, options?)`
 
-Stage 2 from repositories checked out on disk, one folder per repository (`en_tn`, `en_ult`, …): the same ResourceData, no DCS requests for content. Pass the CatalogSet from `getAllCatalogEntries()` (or one saved earlier). On the command line: `--dir <path>`, with `--catalog <file>` to skip the catalog request too. [More →](docs/get-resource-data.md)
+Stage 2 from burritos unpacked on disk (the DCS SB archives, `/sb/{ref}.zip`, unzipped), one folder per repository (`en_tn`, `en_ult`, …): the same ResourceData, no DCS requests for content. Pass the CatalogSet from `getAllCatalogEntries()` (or one saved earlier). On the command line: `--dir <path>`, with `--catalog <file>` to skip the catalog request too. [More →](docs/get-resource-data.md)
 
 ### `renderHtmlData(resourceData, options?)`
 

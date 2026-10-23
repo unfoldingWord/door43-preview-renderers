@@ -1,6 +1,6 @@
 import MarkdownIt from 'markdown-it';
 import { dcsApiUrlFrom } from '../options.js';
-import { fetchContent } from '../dcsApi.js';
+import { dcsContentSource, readLicense } from '../contentSource.js';
 
 const md = new MarkdownIt();
 
@@ -45,19 +45,19 @@ export async function generateCopyrightAndLicenseHtml(catalogEntry, builtWith = 
 
   let html = '<h1>Copyrights &amp; Licensing</h1>\n';
 
-  // Fetch and render the LICENSE.md file
-  const owner = catalogEntry.repo?.owner?.username || catalogEntry.owner || '';
-  const repo = catalogEntry.repo?.name || catalogEntry.name || '';
-  const ref = catalogEntry.branch_or_tag_name || catalogEntry.commit_sha || 'master';
-
+  // Fetch and render the resource's license, from its burrito
   let licenseHtml = '';
   try {
-    const licenseContent = await fetchContent(owner, repo, ref, 'LICENSE.md', dcsApiUrl);
+    // No tag or branch: its commit, else the default branch.
+    const entry = catalogEntry.branch_or_tag_name
+      ? catalogEntry
+      : { ...catalogEntry, branch_or_tag_name: catalogEntry.commit_sha };
+    const licenseContent = await readLicense(dcsContentSource(dcsApiUrl), entry);
     if (licenseContent) {
       licenseHtml = md.render(licenseContent);
     }
   } catch {
-    // LICENSE.md not found — use license field from data if available
+    // No burrito or no license — use license field from data if available
   }
 
   if (licenseHtml) {

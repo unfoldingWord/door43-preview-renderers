@@ -1,54 +1,50 @@
 import yaml from 'js-yaml';
-import { readLicenseFromZip } from './dcsApi.js';
 import { contentSourceFor } from './contentSource.js';
+import { archiveRoot, readArchiveLicense, readArchiveMetadata } from './burrito.js';
 import { loggerFor } from './logger.js';
 
 /**
- * Extract Translation Academy data from RC format (markdown files in article directories)
+ * The manuals of a Translation Academy burrito (`x-peripheralArticles`): the
+ * folders under `ingredients/` that hold articles (`ingredients/translate/figs-metonymy/01.md`).
+ * They are listed in the catalog entry's order, with its titles; a manual the
+ * entry does not list follows, by name, titled by its id.
+ */
+function taManuals(metadata, catalogEntry) {
+  const ids = new Set();
+  for (const path of Object.keys(metadata.ingredients || {})) {
+    const match = path.match(/^ingredients\/([^/]+)\/[^/]+\/01\.md$/);
+    if (match) ids.add(match[1]);
+  }
+  const listed = (catalogEntry.ingredients || []).filter((i) => ids.has(i.identifier));
+  const rest = [...ids].filter((id) => !listed.some((i) => i.identifier === id)).sort();
+  return [
+    ...listed.map((i) => ({ id: i.identifier, title: i.title || i.identifier })),
+    ...rest.map((id) => ({ id, title: id })),
+  ];
+}
+
+/**
+ * Extract Translation Academy data from its burrito (markdown files in article directories)
  */
 export async function extractRcTaData(catalogEntry, options = {}) {
-  const ingredients = catalogEntry.ingredients;
-
-  if (!ingredients || ingredients.length === 0) {
-    throw new Error('No ingredients found in catalog entry');
-  }
-
-  // The repository's files: its DCS archive, or a local checkout.
+  // The burrito: its DCS archive, or a folder on disk.
   const zip = await contentSourceFor(options).readArchive(catalogEntry);
-
-  const repoName = catalogEntry.name;
-
-  // Find the actual base directory in the zip (GitHub adds a hash to the folder name)
-  const rootFolders = Object.keys(zip.files)
-    .filter((name) => !name.includes('/') || name.endsWith('/'))
-    .map((name) => name.split('/')[0]);
-  const actualRepoName =
-    rootFolders.find((name) => name.startsWith(repoName.split('/').pop())) || repoName;
+  const metadata = await readArchiveMetadata(zip);
+  const root = archiveRoot(zip);
 
   const manuals = {};
 
-  // Process each ingredient (subdirectory/manual)
-  for (const ingredient of ingredients) {
-    const manualId = ingredient.identifier;
-    const path = ingredient.path.replace(/^\.\//, '');
-    const manualTitle = ingredient.title;
-
-    const actualBasePath = `${actualRepoName}/${path}`;
-    const basePath = `${repoName}/${path}`;
+  for (const { id: manualId, title: manualTitle } of taManuals(metadata, catalogEntry)) {
+    const basePath = `${root}ingredients/${manualId}`;
 
     // Load toc.yaml if it exists
     let toc = { title: 'Table of Contents', sections: [] };
-    const tocPaths = [`${actualBasePath}/toc.yaml`, `${basePath}/toc.yaml`];
-    for (const tocPath of tocPaths) {
-      const tocFile = zip.file(tocPath);
-      if (tocFile) {
-        const tocContent = await tocFile.async('string');
-        try {
-          toc = yaml.load(tocContent) || toc;
-        } catch (e) {
-          loggerFor(options).warn(`Failed to parse toc.yaml at ${tocPath}: ${e.message}`);
-        }
-        break;
+    const tocFile = zip.file(`${basePath}/toc.yaml`);
+    if (tocFile) {
+      try {
+        toc = yaml.load(await tocFile.async('string')) || toc;
+      } catch (e) {
+        loggerFor(options).warn(`Failed to parse toc.yaml at ${basePath}/toc.yaml: ${e.message}`);
       }
     }
 
@@ -60,37 +56,31 @@ export async function extractRcTaData(catalogEntry, options = {}) {
 
     // Load config.yaml if it exists
     let config = {};
-    const configPaths = [`${actualBasePath}/config.yaml`, `${basePath}/config.yaml`];
-    for (const configPath of configPaths) {
-      const configFile = zip.file(configPath);
-      if (configFile) {
-        const configContent = await configFile.async('string');
-        try {
-          config = yaml.load(configContent) || {};
-        } catch (e) {
-          loggerFor(options).warn(`Failed to parse config.yaml at ${configPath}: ${e.message}`);
-        }
-        break;
+    const configFile = zip.file(`${basePath}/config.yaml`);
+    if (configFile) {
+      try {
+        config = yaml.load(await configFile.async('string')) || {};
+      } catch (e) {
+        loggerFor(options).warn(
+          `Failed to parse config.yaml at ${basePath}/config.yaml: ${e.message}`
+        );
       }
     }
 
     // Find all article directories (directories with 01.md files)
     const articleDirs = new Set();
+    const prefix = `${basePath}/`;
     Object.keys(zip.files).forEach((name) => {
-      const match = name.match(new RegExp(`^(${actualBasePath}|${basePath})/([^/]+)/01\\.md$`));
+      if (!name.startsWith(prefix)) return;
+      const match = name.slice(prefix.length).match(/^([^/]+)\/01\.md$/);
       if (match) {
-        articleDirs.add(match[2]);
+        articleDirs.add(match[1]);
       }
     });
 
     // Process each article directory
     for (const articleId of Array.from(articleDirs)) {
-      let articlePath = `${actualBasePath}/${articleId}`;
-
-      // Check which base path exists
-      if (!zip.file(`${articlePath}/01.md`)) {
-        articlePath = `${basePath}/${articleId}`;
-      }
+      const articlePath = `${basePath}/${articleId}`;
 
       // Get title
       let title = '';
@@ -167,7 +157,7 @@ export async function extractRcTaData(catalogEntry, options = {}) {
     title: catalogEntry.title,
     abbreviation: catalogEntry.abbreviation || catalogEntry.repo?.abbreviation || '',
     version: catalogEntry.branch_or_tag_name || catalogEntry.ref || '',
-    license: await readLicenseFromZip(zip),
+    license: await readArchiveLicense(zip, metadata),
     manuals,
   };
 }

@@ -1,12 +1,25 @@
 import { jest } from '@jest/globals';
 
-// The copyright page fetches LICENSE.md through dcsApi; stub that one call so
+// The copyright page reads the license from the resource's burrito through
+// dcsApi (metadata.json, then the license ingredient); stub those two calls so
 // the renderer is exercised offline. (dcsApi itself is covered elsewhere.)
-const fetchContentMock = jest.fn();
+const fetchJsonMock = jest.fn();
+const fetchTextMock = jest.fn();
 jest.unstable_mockModule('../dcsApi.js', () => ({
-  fetchContent: fetchContentMock,
-  fetchLicense: jest.fn(),
+  fetchJson: fetchJsonMock,
+  fetchText: fetchTextMock,
 }));
+
+const LICENSED = {
+  identification: { primary: { dcs: { 'unfoldingWord/en_tn': { revision: 'rev1' } } } },
+  ingredients: { 'ingredients/LICENSE.md': { mimeType: 'text/markdown' } },
+};
+// metadata.json with a license ingredient (dcsApi caches it, so every read of it
+// answers the same), and that license's text.
+const license = (text) => {
+  fetchJsonMock.mockResolvedValue(LICENSED);
+  fetchTextMock.mockResolvedValueOnce(text);
+};
 
 const { generateCopyrightAndLicenseHtml, copyrightCss } =
   await import('../renderers/copyrightAndLicenseRenderer.js');
@@ -31,20 +44,21 @@ const ultEntry = {
 
 describe('generateCopyrightAndLicenseHtml', () => {
   beforeEach(() => {
-    fetchContentMock.mockReset();
+    fetchJsonMock.mockReset();
+    fetchTextMock.mockReset();
   });
 
   test('renders LICENSE.md from the main entry as HTML under the page heading', async () => {
-    fetchContentMock.mockResolvedValueOnce('# License\n\n**CC BY-SA 4.0** applies.');
+    license('# License\n\n**CC BY-SA 4.0** applies.');
 
     const html = await generateCopyrightAndLicenseHtml(mainEntry);
 
-    expect(fetchContentMock).toHaveBeenCalledWith(
-      'unfoldingWord',
-      'en_tn',
-      'v91',
-      'LICENSE.md',
-      'https://git.door43.org/api/v1'
+    expect(fetchJsonMock).toHaveBeenCalledWith(
+      'https://git.door43.org/api/v1/repos/unfoldingWord/en_tn/sb/raw/metadata.json?ref=v91'
+    );
+    // Read at the commit metadata.json was converted from.
+    expect(fetchTextMock).toHaveBeenCalledWith(
+      'https://git.door43.org/api/v1/repos/unfoldingWord/en_tn/sb/raw/ingredients/LICENSE.md?ref=rev1'
     );
     expect(html.startsWith('<h1>Copyrights &amp; Licensing</h1>\n')).toBe(true);
     expect(html).toContain('<h1>License</h1>');
@@ -52,9 +66,7 @@ describe('generateCopyrightAndLicenseHtml', () => {
   });
 
   test('escapes raw HTML inside fetched license markdown', async () => {
-    fetchContentMock.mockResolvedValueOnce(
-      '# License\n\n<script>alert(1)</script> and <b>bold</b>'
-    );
+    license('# License\n\n<script>alert(1)</script> and <b>bold</b>');
     const html = await generateCopyrightAndLicenseHtml(mainEntry);
     expect(html).toContain('&lt;script&gt;alert(1)&lt;/script&gt;');
     expect(html).toContain('&lt;b&gt;bold&lt;/b&gt;');
@@ -62,21 +74,17 @@ describe('generateCopyrightAndLicenseHtml', () => {
   });
 
   test('passes a custom DCS API URL through to the license fetch', async () => {
-    fetchContentMock.mockResolvedValueOnce('');
+    license('');
     await generateCopyrightAndLicenseHtml(mainEntry, [], {
       dcsApiUrl: 'https://qa.door43.org/api/v1',
     });
-    expect(fetchContentMock).toHaveBeenCalledWith(
-      'unfoldingWord',
-      'en_tn',
-      'v91',
-      'LICENSE.md',
-      'https://qa.door43.org/api/v1'
+    expect(fetchJsonMock).toHaveBeenCalledWith(
+      'https://qa.door43.org/api/v1/repos/unfoldingWord/en_tn/sb/raw/metadata.json?ref=v91'
     );
   });
 
   test('lists the main entry and every built-with entry with date, version and publisher', async () => {
-    fetchContentMock.mockResolvedValueOnce('');
+    license('');
 
     const html = await generateCopyrightAndLicenseHtml(mainEntry, [ultEntry]);
 
@@ -99,7 +107,7 @@ describe('generateCopyrightAndLicenseHtml', () => {
   });
 
   test('omits date, version and publisher lines that the entry does not carry', async () => {
-    fetchContentMock.mockResolvedValueOnce('');
+    license('');
     const html = await generateCopyrightAndLicenseHtml({ name: 'bare' });
     expect(html).toContain('<div class="built-with-title">bare</div>');
     // The generator footer carries today's date, so look inside the entry only.
@@ -113,15 +121,11 @@ describe('generateCopyrightAndLicenseHtml', () => {
     expect(entry).not.toContain('Published by:');
   });
 
-  test('falls back to master when the entry has no ref, and carries on without a license', async () => {
-    fetchContentMock.mockRejectedValueOnce(new Error('404'));
+  test('reads the default branch when the entry has no ref, and carries on without a license', async () => {
+    fetchJsonMock.mockRejectedValueOnce(new Error('404'));
     const html = await generateCopyrightAndLicenseHtml({ owner: 'o', name: 'r' });
-    expect(fetchContentMock).toHaveBeenCalledWith(
-      'o',
-      'r',
-      'master',
-      'LICENSE.md',
-      'https://git.door43.org/api/v1'
+    expect(fetchJsonMock).toHaveBeenCalledWith(
+      'https://git.door43.org/api/v1/repos/o/r/sb/raw/metadata.json'
     );
     expect(html).toContain('<h1>Copyrights &amp; Licensing</h1>');
     expect(html).not.toContain('<h1>License</h1>');
@@ -129,19 +133,15 @@ describe('generateCopyrightAndLicenseHtml', () => {
   });
 
   test('uses the commit sha as the ref when there is no tag or branch', async () => {
-    fetchContentMock.mockResolvedValueOnce('');
+    license('');
     await generateCopyrightAndLicenseHtml({ owner: 'o', name: 'r', commit_sha: 'abc123' });
-    expect(fetchContentMock).toHaveBeenCalledWith(
-      'o',
-      'r',
-      'abc123',
-      'LICENSE.md',
-      'https://git.door43.org/api/v1'
+    expect(fetchJsonMock).toHaveBeenCalledWith(
+      'https://git.door43.org/api/v1/repos/o/r/sb/raw/metadata.json?ref=abc123'
     );
   });
 
   test('renders the generator footer: linked name, version, and today', async () => {
-    fetchContentMock.mockResolvedValueOnce('');
+    license('');
     const today = new Date().toISOString().split('T')[0];
 
     const html = await generateCopyrightAndLicenseHtml(mainEntry, [], {
@@ -158,7 +158,7 @@ describe('generateCopyrightAndLicenseHtml', () => {
   });
 
   test('renders an unlinked generator name by default, and no version line', async () => {
-    fetchContentMock.mockResolvedValueOnce('');
+    license('');
     const html = await generateCopyrightAndLicenseHtml(mainEntry);
     const footer = html.slice(html.indexOf('<div class="generated-with-footer">'));
     expect(footer).toContain(
@@ -169,7 +169,7 @@ describe('generateCopyrightAndLicenseHtml', () => {
   });
 
   test('escapes HTML in titles and publishers', async () => {
-    fetchContentMock.mockResolvedValueOnce('');
+    license('');
     const html = await generateCopyrightAndLicenseHtml({
       title: 'Notes <b>&</b> "Quotes"',
       owner: "O'Brien <org>",

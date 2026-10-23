@@ -1,14 +1,17 @@
 import { removeAlignments } from './usfm/removeAlignments.js';
 import { ResourceError } from './errors.js';
 import { loggerFor } from './logger.js';
-import { contentSourceFor } from './contentSource.js';
+import { contentSourceFor, readLicense } from './contentSource.js';
+import { bookIngredientPath, burritoBooks } from './burrito.js';
 import { BibleBookData } from './constants.js';
 
 /**
- * Extract aligned Bible data and remove alignments from USFM.
+ * Extract a Bible's books from its burrito (`textTranslation`: one USFM file
+ * per book, found by its `scope`) and remove the alignments. rc, ts and tc
+ * Bibles arrive the same way, DCS having converted them.
  */
 export async function extractRcAlignedBibleData(catalogEntry, books = [], options = {}) {
-  // DCS, or a local checkout (getResourceDataFromDirectory).
+  // DCS, or burritos unpacked on disk (getResourceDataFromDirectory).
   const source = contentSourceFor(options);
   const owner =
     catalogEntry.owner || catalogEntry.repo?.owner?.username || catalogEntry.repo?.owner?.login;
@@ -21,13 +24,11 @@ export async function extractRcAlignedBibleData(catalogEntry, books = [], option
     });
   }
 
-  const ingredientBooks = (catalogEntry.ingredients || [])
-    .map((ingredient) => ingredient.identifier?.toLowerCase())
-    .filter(Boolean);
+  const metadata = await source.readMetadata(catalogEntry);
   const booksToFetch =
     books && books.length > 0
       ? books.map((book) => book.toLowerCase()).filter(Boolean)
-      : ingredientBooks;
+      : burritoBooks(metadata, '.usfm');
 
   const booksContent = {};
 
@@ -40,15 +41,11 @@ export async function extractRcAlignedBibleData(catalogEntry, books = [], option
       continue;
     }
 
-    const ingredient = catalogEntry.ingredients?.find(
-      (ing) => ing.identifier?.toLowerCase() === bookId
-    );
-    if (!ingredient || !ingredient.path) {
+    const filePath = bookIngredientPath(metadata, bookId, '.usfm');
+    if (!filePath) {
       loggerFor(options).warn(`No ingredient found for book: ${bookId}`);
       continue;
     }
-
-    const filePath = ingredient.path.replace(/^\.\//, '');
 
     try {
       const usfmContent = await source.readFile(catalogEntry, filePath);
@@ -64,7 +61,7 @@ export async function extractRcAlignedBibleData(catalogEntry, books = [], option
     });
   }
 
-  const license = await source.readLicense(catalogEntry);
+  const license = await readLicense(source, catalogEntry);
 
   return {
     type: 'usfm',

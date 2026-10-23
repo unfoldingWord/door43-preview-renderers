@@ -6,6 +6,9 @@ supporting resources that subject needs for rendering (aligned Bibles, Translati
 Academy, Translation Words, Translation Words Links, the original-language Bibles),
 and returns a normalized **ResourceData** object.
 
+Every resource is read as the **Scripture Burrito** DCS converts it to: rc, ts and
+tc repositories alike (see [How resources are read](#how-resources-are-read)).
+
 **Source:** `src/getResourceData.js`
 
 ## Signature
@@ -25,10 +28,10 @@ getResourceData(input, options?)
   - **quiet** (boolean): suppress progress logging (default `false`); warnings are still reported
   - **logger** (object): `{ info, warn }` to receive progress and warnings instead of the console
   - **books** (array): book ids, when `input` does not carry them
-  - **archiveMaxBytes** / **archiveTimeoutMs** (numbers): limits for the repository
-    archives that Translation Academy, Translation Words, Open Bible Stories and tS
-    are read from (default 100 MB and 120 s). The archive must be on the
-    `dcsApiUrl` host; redirects are not followed
+  - **archiveMaxBytes** / **archiveTimeoutMs** (numbers): limits for the burrito
+    archives that Translation Academy, Translation Words and Open Bible Stories
+    are read from (default 100 MB and 120 s). The archive URL is built from
+    `dcsApiUrl`; redirects are not followed
   - **extraSubjects** (array): blueprint subjects to fetch as extras beyond the ones
     the subject requires, e.g. `['TSV Translation Questions']` so Translation Notes
     can show each verse's questions (see `includeQuestions` in the
@@ -49,34 +52,35 @@ caller can compute the same set (for a cache key, for instance) without fetching
 `selectAlignedBibles(entries)` and `testamentOf(bookId)`. Their rules are in the
 [options reference](./options.md#catalog-selection-helpers).
 
-## From a local checkout: `getResourceDataFromDirectory`
+## From burritos on disk: `getResourceDataFromDirectory`
 
 `getResourceDataFromDirectory(catalogEntries, dirPath, options?)` returns the same
-ResourceData from repositories checked out on disk (Node only). `dirPath` holds one
-folder per repository, named as its catalog entry names it, checked out at the
-entry's version:
+ResourceData from burritos unpacked on disk (Node only). `dirPath` holds one folder
+per repository, named as its catalog entry names it, each laid out as the DCS SB
+archive of the entry's version (`GET /repos/{owner}/{repo}/sb/{ref}.zip`, which
+holds a `<repo>/` folder, so unzipping the archives into one folder gives this
+layout):
 
 ```
-checkouts/
-  en_tn/            tn_TIT.tsv, LICENSE.md, …
+burritos/
+  en_tn/            metadata.json, ingredients/TIT.tsv, ingredients/LICENSE.md, …
   en_ult/  en_ust/  el-x-koine_ugnt/  en_ta/  en_tw/  en_twl/
 ```
 
-The catalog entries say what each repository is and where its files are; pass the
-CatalogSet from `getAllCatalogEntries()` (save it with the CLI's `--output` to work
-offline later). The blueprint rules apply as online: only the supporting resources
-the subject needs are read, plus any `extraSubjects`.
+The catalog entries say which repositories make up the package; pass the CatalogSet
+from `getAllCatalogEntries()` (save it with the CLI's `--output` to work offline
+later). The blueprint rules apply as online: only the supporting resources the
+subject needs are read, plus any `extraSubjects`.
 
 ```js static
 const set = await getAllCatalogEntries({ owner: 'unfoldingWord', repo: 'en_tn', ref: 'v91', books: ['tit'] });
-const resourceData = await getResourceDataFromDirectory(set, '/path/to/checkouts');
+const resourceData = await getResourceDataFromDirectory(set, '/path/to/burritos');
 ```
 
-Checked on en_tn v91 Titus: read from the v91 archives unpacked this way, with the
-network blocked, the ResourceData is byte-identical to the one from DCS. That
+Checked on en_tn v86 Titus: read from the package's SB archives unpacked this way,
+with DCS unreachable, the ResourceData is byte-identical to the one from DCS. That
 covers the TSV, the aligned Bibles and Greek New Testament (GL quotes included),
-TA, TW and TWL. A Scripture Burrito, tC or tS repository is read the same way (a file by its
-ingredient path, or the whole tree), but has not been compared with DCS.
+TA, TW and TWL. A plain rc checkout (no `metadata.json`) is not read.
 
 ## Errors
 
@@ -88,11 +92,11 @@ messages:
 
 | `code` | When |
 |---|---|
-| `NOT_FOUND` | DCS answered 404, nothing is published (stage 0), or a file is missing from a local checkout |
+| `NOT_FOUND` | DCS answered 404, nothing is published (stage 0), or a file is missing from a burrito on disk |
 | `HTTP` | DCS answered another error status, or a response this library can't use (no data, a search that never ends) |
 | `NETWORK` | no answer: unreachable or timed out |
 | `INVALID_INPUT` | the arguments, a catalog entry, or a resource's content can't be used (e.g. USFM that can't be processed) |
-| `UNSUPPORTED` | a subject, metadata type or flavor that isn't handled |
+| `UNSUPPORTED` | a subject or flavor that isn't handled |
 | `NO_CONTENT` | the resource has none of the requested books |
 
 It also carries `status` and `url` when there was a request, and `cause` when it
@@ -152,14 +156,39 @@ const set = await getAllCatalogEntries({ owner: 'unfoldingWord', repo: 'en_tn', 
 const resourceData = await getResourceData(set);
 ```
 
-## Supported metadata types
+## How resources are read
 
-| Metadata type | Description |
+DCS serves every repository as a Scripture Burrito: an rc, ts or tc repository is
+converted on the fly, and an sb one is served as it is. So every resource is read
+the same way, from DCS's SB endpoints:
+
+| Request | What it reads |
 |---|---|
-| `rc` | Resource Container (the unfoldingWord standard) |
-| `sb` | Scripture Burrito: Bibles of the `textTranslation` flavor (one USFM file per book, read like an RC Bible) and OBS (`textStories`) |
-| `ts` | translationStudio projects (single-book Bibles, OBS) |
-| `tc` | translationCore projects (aligned Bibles with an exported USFM) |
+| `GET /repos/{owner}/{repo}/sb/raw/metadata.json?ref={ref}` | the burrito's metadata: its flavor, ingredients (with each book's `scope`), language and direction |
+| `GET /repos/{owner}/{repo}/sb/raw/{path}?ref={revision}` | one file, e.g. `ingredients/TIT.tsv`: the books a render needs |
+| `GET /repos/{owner}/{repo}/sb/{revision}.zip` | the whole burrito: Translation Academy, Translation Words, Open Bible Stories |
+
+`metadata.json` is read at the catalog entry's ref, and every later read is pinned
+to the commit it names, so a branch that moves during a render cannot mix two
+commits. A book's file is the ingredient whose `scope` names it. The subject still
+routes the resource (Translation Words and Translation Words Links share a flavor);
+a burrito whose subject isn't one of these is routed by its flavor when it is a
+Bible (`textTranslation`) or stories (`textStories`).
+
+| Flavor | Subjects | Files |
+|---|---|---|
+| `textTranslation` | Aligned Bible, Bible, Greek New Testament, Hebrew Old Testament (also ts and tc Bibles) | `ingredients/<BOOK>.usfm` |
+| `x-bcvnotes`, `x-bcvquestions` | TSV Translation Notes / Questions, TSV Study Notes / Questions | `ingredients/<BOOK>.tsv` |
+| `x-bcvarticles` | Translation Words, TSV Translation Words Links, TSV OBS Translation Words Links | the TSVs, and the articles under `ingredients/payload/<category>/` |
+| `x-obsnotes`, `x-obsquestions` | TSV OBS Translation Notes / Study Notes, TSV OBS Translation Questions / Study Questions | `ingredients/OBS.tsv` |
+| `x-peripheralArticles` | Translation Academy | `ingredients/<manual>/<article>/01.md`, with each manual's `toc.yaml` and `config.yaml` |
+| `textStories` | Open Bible Stories (also ts OBS) | `ingredients/content/<NN>.md`, `front.md` |
+
+DCS's conversion points a Translation Words Links row at its article in the payload
+(`./payload/names/paul.md`); it reads back as the rc link the renderers resolve
+(`rc://*/tw/dict/bible/names/paul`). Titles come from the catalog where it gives
+them (the resource, an OBS TSV's one book), else from the burrito
+(`localizedNames` for a Bible book, `identification.name`).
 
 ## Interactive Demo
 
