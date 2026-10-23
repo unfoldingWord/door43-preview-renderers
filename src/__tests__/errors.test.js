@@ -16,6 +16,7 @@ const { extractRcAlignedBibleData } = await import('../rcAlignedBibleHelpers.js'
 const { extractRcTsvData } = await import('../tsvHelpers.js');
 const { resolveRef, findResources } = await import('../findResources.js');
 const lib = await import('../index.js');
+const { burritoMetadata, writeBurrito } = await import('../testing/burrito.js');
 
 /**
  * The error contract (#34, part B): the stages throw a ResourceError with a
@@ -82,7 +83,7 @@ describe('catalog requests', () => {
 });
 
 describe('USFM book failures', () => {
-  const url = 'https://dcs.test/api/v1/repos/o/en_ult/contents/57-TIT.usfm?ref=v1';
+  const url = 'https://dcs.test/api/v1/repos/o/en_ult/sb/raw/ingredients/TIT.usfm?ref=v1';
   const entry = {
     owner: 'o',
     name: 'en_ult',
@@ -93,7 +94,11 @@ describe('USFM book failures', () => {
   const failWith = (error) =>
     extractRcAlignedBibleData(entry, ['tit'], {
       ...quiet,
-      contentSource: { readFile: () => Promise.reject(error) },
+      contentSource: {
+        readMetadata: async () =>
+          burritoMetadata('en_ult', { files: { 'ingredients/TIT.usfm': '' } }),
+        readFile: () => Promise.reject(error),
+      },
     }).catch((e) => e);
 
   test('a timeout is NETWORK and an HTTP failure keeps its status, both with the URL', async () => {
@@ -134,11 +139,15 @@ describe('TSV book failures', () => {
   const failWith = (error) =>
     extractRcTsvData(entry, ['tit'], {
       ...quiet,
-      contentSource: { readFile: () => Promise.reject(error), readLicense: async () => '' },
+      contentSource: {
+        readMetadata: async () =>
+          burritoMetadata('en_tn', { files: { 'ingredients/TIT.tsv': '' } }),
+        readFile: () => Promise.reject(error),
+      },
     }).catch((e) => e);
 
   test('a read failure is a ResourceError with a documented code', async () => {
-    const url = 'https://dcs.test/api/v1/repos/o/en_tn/contents/tn_TIT.tsv?ref=v1';
+    const url = 'https://dcs.test/api/v1/repos/o/en_tn/sb/raw/ingredients/TIT.tsv?ref=v1';
     const notFound = Object.assign(httpError(404), { isAxiosError: true, config: { url } });
     expect(await failWith(notFound)).toMatchObject({ code: 'NOT_FOUND', status: 404, url });
     const missing = Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
@@ -193,10 +202,7 @@ describe('getResourceData throws', () => {
       code: 'INVALID_INPUT',
     });
     await expect(
-      getResourceData(
-        { name: 'x', subject: 'Bible', metadata_type: 'zz', ingredients: [{}] },
-        quiet
-      )
+      getResourceData({ name: 'x', subject: 'Nothing Known', flavor: 'x-unknown' }, quiet)
     ).rejects.toMatchObject({ code: 'UNSUPPORTED' });
     expect(() => renderHtmlData({ type: 'tsv', subject: 'Nothing Known' })).toThrow(
       expect.objectContaining({ code: 'UNSUPPORTED' })
@@ -222,18 +228,24 @@ describe('local data: NO_CONTENT and GL-quote misses', () => {
   });
   beforeAll(() => {
     dir = fs.mkdtempSync(path.join(os.tmpdir(), 'd43-err-'));
-    const w = (rel, text) => {
-      fs.mkdirSync(path.dirname(path.join(dir, rel)), { recursive: true });
-      fs.writeFileSync(path.join(dir, rel), text);
-    };
-    w(
-      'en_tn/tn_TIT.tsv',
-      'Reference\tID\tTags\tSupportReference\tQuote\tOccurrence\tNote\n' +
-        '1:1\ta1\t\t\tΠαῦλος\t1\tFound.\n' +
-        '1:1\ta2\t\t\tζζζζ\t1\tNot in the Greek.\n'
-    );
-    w('en_ult/57-TIT.usfm', usfm('tit.ult.usfm'));
-    w('el-x-koine_ugnt/57-TIT.usfm', usfm('tit.ugnt.usfm'));
+    writeBurrito(dir, 'en_tn', {
+      files: {
+        'ingredients/TIT.tsv':
+          'Reference\tID\tTags\tSupportReference\tQuote\tOccurrence\tNote\n' +
+          '1:1\ta1\t\t\tΠαῦλος\t1\tFound.\n' +
+          '1:1\ta2\t\t\tζζζζ\t1\tNot in the Greek.\n',
+      },
+    });
+    const bible = { flavorType: 'scripture', flavor: 'textTranslation' };
+    writeBurrito(dir, 'en_ult', {
+      ...bible,
+      files: { 'ingredients/TIT.usfm': usfm('tit.ult.usfm') },
+    });
+    writeBurrito(dir, 'el-x-koine_ugnt', {
+      ...bible,
+      language: 'el-x-koine',
+      files: { 'ingredients/TIT.usfm': usfm('tit.ugnt.usfm') },
+    });
   });
   afterAll(() => fs.rmSync(dir, { recursive: true, force: true }));
   const entries = () => [

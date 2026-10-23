@@ -1,17 +1,21 @@
 import JSZip from 'jszip';
-import { fetchContent, fetchLicense } from './dcsApi.js';
+import { fetchJson, fetchText } from './dcsApi.js';
+import { ResourceError } from './errors.js';
 import { dcsApiUrlOf } from './options.js';
+import { burritoRevision, licenseIngredientPath } from './burrito.js';
 
 /**
  * Where the extractors read a resource's files from.
  *
- * Stage 2 reads from DCS; getResourceDataFromDirectory() reads the same files
- * from repositories checked out on disk. The extractors ask a content source
- * for what they need and do not know which one they have:
+ * Every resource is read as a Scripture Burrito. Stage 2 reads from DCS, which
+ * converts rc, ts and tc repositories to SB on the fly; getResourceDataFromDirectory()
+ * reads burritos unpacked on disk. The extractors ask a content source for what
+ * they need and do not know which one they have:
  *
- *   readFile(entry, path)  one file, by its path in the repository (an ingredient path)
- *   readLicense(entry)     LICENSE.md, LICENSE or LICENSE.txt, trimmed; '' when none
- *   readArchive(entry)     the whole repository, as a JSZip (or the same shape:
+ *   readMetadata(entry)    the burrito's metadata.json, parsed
+ *   readFile(entry, path)  one file, by its path in the burrito (an ingredient
+ *                          path such as `ingredients/TIT.tsv`)
+ *   readArchive(entry)     the whole burrito, as a JSZip (or the same shape:
  *                          `files` keyed `<root folder>/<path>`, and `file(name)`
  *                          whose `async('string')` reads it)
  *
@@ -27,7 +31,6 @@ export function entryCoords(entry) {
   };
 }
 
-const LICENSE_FILES = ['LICENSE.md', 'LICENSE', 'LICENSE.txt'];
 const stripDotSlash = (path) => String(path || '').replace(/^\.\//, '');
 
 /** Defaults for a repository archive download: generous (the largest archive the
@@ -38,31 +41,44 @@ export const ARCHIVE_LIMITS = { maxBytes: 100 * 1024 * 1024, timeoutMs: 120000 }
  * GET a URL as bytes with `fetch`, the same way in Node (18+) and the browser:
  *
  *  - `redirect: 'error'`: a redirect fails the request, so it cannot carry the
- *    download off the host the caller checked. (axios's `maxRedirects` is honored
- *    by its Node adapter only; browsers followed redirects.) DCS serves archives
- *    directly: a tag, a branch or a commit answers 200, and the only redirect
- *    seen is http -> https, which the origin check already refuses.
+ *    download off the DCS host. (axios's `maxRedirects` is honored by its Node
+ *    adapter only; browsers followed redirects.) DCS serves SB archives
+ *    directly: a tag, a branch or a commit answers 200.
  *  - `maxBytes`: a declared Content-Length over the cap is refused before
  *    reading, and the body is read as a stream and cancelled as soon as it
  *    passes the cap, so no more than the cap (plus one chunk) is held.
  *  - `timeoutMs`: the request and the read are aborted after that long.
  *
  * @param {string} url
+ * A failure is a ResourceError: the HTTP status (404 is NOT_FOUND), NETWORK when
+ * there was no answer, INVALID_INPUT over the size cap.
+ *
  * @param {{ maxBytes: number, timeoutMs: number }} limits
  * @returns {Promise<Uint8Array>}
  */
 export async function downloadCapped(url, { maxBytes, timeoutMs }) {
-  const tooLarge = () => new Error(`Archive ${url} is larger than ${maxBytes} bytes.`);
+  const tooLarge = () =>
+    new ResourceError(`Archive ${url} is larger than ${maxBytes} bytes.`, {
+      code: 'INVALID_INPUT',
+      url,
+    });
+  const failed = (error) =>
+    new ResourceError(
+      `Could not download ${url}: ${error?.cause?.message || error?.message || error}`,
+      { code: 'NETWORK', url, cause: error }
+    );
   let response;
   try {
     response = await fetch(url, { redirect: 'error', signal: AbortSignal.timeout(timeoutMs) });
   } catch (error) {
-    const reason = error?.cause?.message || error?.message || String(error);
-    throw new Error(`Could not download ${url}: ${reason}`);
+    throw failed(error);
   }
   if (!response.ok) {
     await response.body?.cancel();
-    throw new Error(`Could not download ${url}: HTTP ${response.status}`);
+    throw new ResourceError(`Could not download ${url}: HTTP ${response.status}`, {
+      status: response.status,
+      url,
+    });
   }
   const declared = Number(response.headers.get('content-length'));
   if (Number.isFinite(declared) && declared > maxBytes) {
@@ -84,8 +100,8 @@ export async function downloadCapped(url, { maxBytes, timeoutMs }) {
       chunks.push(value);
     }
   } catch (error) {
-    if (error?.message?.includes('is larger than')) throw error;
-    throw new Error(`Could not download ${url}: ${error?.message || error}`);
+    if (error instanceof ResourceError) throw error;
+    throw failed(error);
   }
   const bytes = new Uint8Array(total);
   let offset = 0;
@@ -96,58 +112,82 @@ export async function downloadCapped(url, { maxBytes, timeoutMs }) {
   return bytes;
 }
 
+const enc = encodeURIComponent;
+const encPath = (path) => stripDotSlash(path).split('/').map(enc).join('/');
+// `?ref=` for a ref; none reads the default branch.
+const refQuery = (ref) => (ref ? `?ref=${enc(ref)}` : '');
+
 /**
- * Read from DCS: the contents API for a file (cached per URL), the repository
- * archive (`zipball_url`) for the whole tree.
+ * Read from DCS, as the burrito DCS converts the repository to:
  *
- * The archive URL comes from the catalog entry, so it is held to the DCS host
- * the caller configured: it must be on the origin of `dcs_api_url`, no redirect
- * is followed, and the download is limited in time and size (see downloadCapped).
+ *   metadata.json and single files  GET /repos/{owner}/{repo}/sb/raw/{path}?ref=
+ *   the whole burrito                GET /repos/{owner}/{repo}/sb/{revision}.zip
  *
- * @param {string} [dcs_api_url='https://git.door43.org/api/v1']
+ * metadata.json is read at the catalog entry's ref; every later read is pinned
+ * to the commit it names, so a branch that moves during a render cannot mix two
+ * commits. Single files go through the request cache in dcsApi.js. The archive
+ * URL is built from `dcsApiUrl`, so it is on the DCS host by construction; no
+ * redirect is followed, and the download is limited in time and size (see
+ * downloadCapped). Failures are ResourceErrors (a 404 is NOT_FOUND).
+ *
+ * @param {string} [dcsApiUrl='https://git.door43.org/api/v1']
  * @param {Object} [limits]
  * @param {number} [limits.maxBytes=ARCHIVE_LIMITS.maxBytes] - Largest archive accepted
  * @param {number} [limits.timeoutMs=ARCHIVE_LIMITS.timeoutMs] - Download time limit
  */
-export function dcsContentSource(dcs_api_url = 'https://git.door43.org/api/v1', limits = {}) {
+export function dcsContentSource(dcsApiUrl = 'https://git.door43.org/api/v1', limits = {}) {
   const limit = (value, fallback) => (Number.isFinite(value) && value > 0 ? value : fallback);
   const maxBytes = limit(limits.maxBytes, ARCHIVE_LIMITS.maxBytes);
   const timeoutMs = limit(limits.timeoutMs, ARCHIVE_LIMITS.timeoutMs);
+  const repoUrl = (entry) => {
+    const { owner, repo } = entryCoords(entry);
+    return `${dcsApiUrl}/repos/${enc(owner)}/${enc(repo)}`;
+  };
+  const readMetadata = async (entry) => {
+    const { owner, repo, ref } = entryCoords(entry);
+    try {
+      return await fetchJson(`${repoUrl(entry)}/sb/raw/metadata.json${refQuery(ref)}`);
+    } catch (error) {
+      throw ResourceError.wrap(`Failed to read the burrito of ${owner}/${repo}@${ref}`, error);
+    }
+  };
+  // The commit to read at: the one metadata.json was converted from.
+  const revision = async (entry) => {
+    const { owner, repo, ref } = entryCoords(entry);
+    return burritoRevision(await readMetadata(entry), owner, repo) || entry.commit_sha || ref;
+  };
   return {
-    readFile(entry, path) {
-      const { owner, repo, ref } = entryCoords(entry);
-      return fetchContent(owner, repo, ref, stripDotSlash(path), dcs_api_url);
-    },
-    readLicense(entry) {
-      const { owner, repo, ref } = entryCoords(entry);
-      return fetchLicense(owner, repo, ref, dcs_api_url);
+    readMetadata,
+    async readFile(entry, path) {
+      const url = `${repoUrl(entry)}/sb/raw/${encPath(path)}${refQuery(await revision(entry))}`;
+      try {
+        return await fetchText(url);
+      } catch (error) {
+        throw ResourceError.wrap(`Failed to read ${stripDotSlash(path)}`, error);
+      }
     },
     async readArchive(entry) {
-      if (!entry.zipball_url) {
-        throw new Error(`Catalog entry ${entryCoords(entry).repo} has no zipball_url.`);
+      const { owner, repo } = entryCoords(entry);
+      const rev = await revision(entry);
+      if (!rev) {
+        throw new ResourceError(`No ref or commit to download ${owner}/${repo} at.`, {
+          code: 'INVALID_INPUT',
+        });
       }
-      let url;
-      try {
-        url = new URL(entry.zipball_url);
-      } catch {
-        throw new Error(`Archive URL ${JSON.stringify(entry.zipball_url)} is not a URL.`);
-      }
-      const host = new URL(dcs_api_url).origin;
-      if (url.origin !== host) {
-        throw new Error(`Archive URL ${url.href} is not on the DCS host ${host}.`);
-      }
-      return JSZip.loadAsync(await downloadCapped(url.href, { maxBytes, timeoutMs }));
+      const url = `${repoUrl(entry)}/sb/${encPath(rev)}.zip`;
+      return JSZip.loadAsync(await downloadCapped(url, { maxBytes, timeoutMs }));
     },
   };
 }
 
 /**
- * Read from repositories checked out under one directory, one folder per
- * repository named as the catalog entry names it (`<dirPath>/en_tn/tn_TIT.tsv`).
- * Node only; `fs` is loaded on first use.
+ * Read from burritos unpacked under one directory, one folder per repository
+ * named as the catalog entry names it, each holding its metadata.json and
+ * ingredients (`<dirPath>/en_tn/metadata.json`, `<dirPath>/en_tn/ingredients/TIT.tsv`):
+ * a DCS SB archive (`/sb/{ref}.zip`) unzipped. Node only; `fs` is loaded on first use.
  *
- * Catalog entries come from DCS or a saved file, so their repository names and
- * ingredient paths are not trusted: a read never leaves the repository's
+ * Catalog entries and metadata.json files are not trusted, so neither are their
+ * repository names and ingredient paths: a read never leaves the repository's
  * folder, by `..` or by a symlink, and never reads a dot entry such as `.git`,
  * whether as a file in the repository or as the repository itself. A
  * repository folder may be a symlink to a clone elsewhere (a "symlink farm"),
@@ -217,21 +257,17 @@ export function directoryContentSource(dirPath) {
   };
 
   return {
+    async readMetadata(entry) {
+      const { fs } = await load();
+      try {
+        return JSON.parse(await fs.readFile(await insideRepo(entry, 'metadata.json'), 'utf8'));
+      } catch (error) {
+        throw ResourceError.wrap(`Failed to read the burrito of ${entryCoords(entry).repo}`, error);
+      }
+    },
     async readFile(entry, filePath) {
       const { fs } = await load();
       return fs.readFile(await insideRepo(entry, filePath), 'utf8');
-    },
-    async readLicense(entry) {
-      const { fs } = await load();
-      for (const name of LICENSE_FILES) {
-        try {
-          const text = await fs.readFile(await insideRepo(entry, name), 'utf8');
-          if (text) return text.trim();
-        } catch (error) {
-          if (error?.code !== 'ENOENT') throw error; // only a missing file means "try the next"
-        }
-      }
-      return '';
     },
     async readArchive(entry) {
       const { fs, path } = await load();
@@ -240,13 +276,12 @@ export function directoryContentSource(dirPath) {
       // The shape the extractors use from JSZip: every entry under the root
       // folder (folders end in '/'), and file(name) to read one.
       const files = { [`${root}/`]: { name: `${root}/`, dir: true } };
-      // In git's tree order, as the DCS archive lists them: by bytes, a folder
-      // compared as its name plus '/' (so `a-b/` comes before `a/`). Extractors
-      // that walk the entries then build the same key order offline as online.
-      const treeKey = (item) => Buffer.from(item.name + (item.isDirectory() ? '/' : ''));
+      // In the order DCS's SB archive lists them: each folder's entries by name,
+      // in bytes, depth first (so `a/` comes before `a-b/`). Extractors that walk
+      // the entries then build the same key order offline as online.
       const walk = async (absolute, relative) => {
         const items = (await fs.readdir(absolute, { withFileTypes: true })).sort((a, b) =>
-          Buffer.compare(treeKey(a), treeKey(b))
+          Buffer.compare(Buffer.from(a.name), Buffer.from(b.name))
         );
         for (const item of items) {
           if (item.name.startsWith('.')) continue; // .git and the like
@@ -292,6 +327,25 @@ export function directoryContentSource(dirPath) {
       };
     },
   };
+}
+
+/**
+ * A burrito's license (its license ingredient, e.g. `ingredients/LICENSE.md`),
+ * trimmed; '' when it lists none or the file cannot be read. A missing license
+ * never fails a render.
+ *
+ * @param {Object} source - A content source
+ * @param {Object} entry - The resource's catalog entry
+ * @returns {Promise<string>}
+ */
+export async function readLicense(source, entry) {
+  const path = licenseIngredientPath(await source.readMetadata(entry));
+  if (!path) return '';
+  try {
+    return (await source.readFile(entry, path)).trim();
+  } catch {
+    return '';
+  }
 }
 
 /**

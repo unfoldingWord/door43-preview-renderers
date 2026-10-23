@@ -1,4 +1,5 @@
 import { contentSourceFor } from './contentSource.js';
+import { archiveRoot, burritoName, readArchiveLicense, readArchiveMetadata } from './burrito.js';
 /**
  * Strip markdown heading syntax from text
  */
@@ -18,89 +19,28 @@ function stripMarkdownEmphasis(text) {
 }
 
 /**
- * Get the folder that holds an OBS catalog entry's stories. DCS lists it as an `obs`
- * ingredient, but a burrito may list only its story and front/back files, so then it is the
- * folder of the first of those, or else where the format keeps its stories.
+ * Extract OBS data from its burrito (`textStories`): one markdown file per story
+ * under `ingredients/content/` (`01.md` … `50.md`), the front matter in
+ * `front.md`. ts OBS repositories arrive the same way, DCS having converted them.
  */
-export function getObsContentPath(catalogEntry) {
-  const ingredients = catalogEntry.ingredients || [];
-  const folder = ingredients.find((ingredient) => ingredient.identifier === 'obs');
-  if (folder) {
-    return folder.path;
-  }
-  const unit = ingredients.find((ingredient) => /^(\d{2}|front|back)$/.test(ingredient.identifier));
-  if (unit) {
-    return unit.path.replace(/\/[^/]*$/, '') || '.';
-  }
-  return { sb: './ingredients', ts: '.' }[catalogEntry.metadata_type] || './content';
-}
-
-/**
- * Extract OBS data from RC or SB format (markdown files)
- */
-export async function extractRcSbObsData(catalogEntry, ingredient, options = {}) {
-  const path = ingredient.path || './content';
-
-  // The repository's files: its DCS archive, or a local checkout.
+export async function extractObsData(catalogEntry, options = {}) {
+  // The burrito: its DCS archive, or a folder on disk.
   const zip = await contentSourceFor(options).readArchive(catalogEntry);
+  const metadata = await readArchiveMetadata(zip);
+  const basePath = `${archiveRoot(zip)}ingredients/content`;
 
-  const repoName = catalogEntry.name;
-  const basePath = `${repoName}/${path.replace(/^\.\//, '')}`;
+  const title = catalogEntry.title || burritoName(metadata);
 
-  // Find the actual base directory in the zip (GitHub adds a hash to the folder name)
-  const rootFolders = Object.keys(zip.files)
-    .filter((name) => !name.includes('/') || name.endsWith('/'))
-    .map((name) => name.split('/')[0]);
-  // Gitea lowercases the repo name in the archive's root folder, so match
-  // case-insensitively and use the actual folder name from the zip.
-  const actualRepoName =
-    rootFolders.find((name) =>
-      name.toLowerCase().startsWith(repoName.split('/').pop().toLowerCase())
-    ) || repoName;
-  const actualBasePath = actualRepoName + '/' + path.replace(/^\.\//, '');
+  const frontFile = zip.file(`${basePath}/front.md`);
+  const front = frontFile ? (await frontFile.async('string')).trim() : '';
 
-  // Extract title
-  let title = catalogEntry.title;
-  const titlePaths = [`${actualBasePath}/front/title.md`, `${basePath}/front/title.md`];
-  for (const titlePath of titlePaths) {
-    const titleFile = zip.file(titlePath);
-    if (titleFile) {
-      title = (await titleFile.async('string')).trim();
-      break;
-    }
-  }
-
-  // Extract front intro
-  let front = '';
-  const introPaths = [`${actualBasePath}/front/intro.md`, `${basePath}/front/intro.md`];
-  for (const introPath of introPaths) {
-    const introFile = zip.file(introPath);
-    if (introFile) {
-      front = (await introFile.async('string')).trim();
-      break;
-    }
-  }
-
-  // Extract license
-  let license = '';
-  const licensePaths = [`${actualRepoName}/LICENSE.md`, `${repoName}/LICENSE.md`];
-  for (const licensePath of licensePaths) {
-    const licenseFile = zip.file(licensePath);
-    if (licenseFile) {
-      license = (await licenseFile.async('string')).trim();
-      break;
-    }
-  }
+  const license = await readArchiveLicense(zip, metadata);
 
   // Extract stories
   const stories = {};
-  const allFiles = Object.keys(zip.files);
-  const storyFiles = allFiles
+  const storyFiles = Object.keys(zip.files)
     .filter(
-      (name) =>
-        (name.startsWith(actualBasePath) || name.startsWith(basePath)) &&
-        name.match(/\/(\d+)\.md$/) &&
-        !name.includes('/front/')
+      (name) => name.startsWith(`${basePath}/`) && /^\d+\.md$/.test(name.slice(basePath.length + 1))
     )
     .sort((a, b) => {
       const aNum = parseInt(a.match(/\/(\d+)\.md$/)[1], 10);
@@ -109,12 +49,8 @@ export async function extractRcSbObsData(catalogEntry, ingredient, options = {})
     });
 
   for (const storyPath of storyFiles) {
-    const match = storyPath.match(/\/(\d+)\.md$/);
-    if (!match) continue;
-
-    const storyNum = match[1];
+    const storyNum = storyPath.match(/\/(\d+)\.md$/)[1];
     const content = await zip.file(storyPath).async('string');
-
     stories[parseInt(storyNum, 10)] = parseRcSbObsStory(content, storyNum);
   }
 
@@ -178,127 +114,6 @@ function parseRcSbObsStory(content, storyNum) {
   }
 
   return { title: storyTitle, reference, frames };
-}
-
-/**
- * Extract OBS data from TS format (text files in directories)
- */
-export async function extractTsObsData(catalogEntry, ingredient, options = {}) {
-  const path = ingredient.path || './content';
-
-  // The repository's files: its DCS archive, or a local checkout.
-  const zip = await contentSourceFor(options).readArchive(catalogEntry);
-
-  const repoName = catalogEntry.name;
-
-  // Find the actual base directory in the zip (GitHub adds a hash to the folder name)
-  const rootFolders = Object.keys(zip.files)
-    .filter((name) => !name.includes('/') || name.endsWith('/'))
-    .map((name) => name.split('/')[0]);
-  // Gitea lowercases the repo name in the archive's root folder, so match
-  // case-insensitively and use the actual folder name from the zip.
-  const actualRepoName =
-    rootFolders.find((name) =>
-      name.toLowerCase().startsWith(repoName.split('/').pop().toLowerCase())
-    ) || repoName;
-
-  // Handle path - if it's "." use just the repo name, otherwise append the path
-  const cleanPath = path.replace(/^\.\//, '').replace(/^\.$/, '');
-  const actualBasePath = cleanPath ? `${actualRepoName}/${cleanPath}` : actualRepoName;
-  const basePath = cleanPath ? `${repoName}/${cleanPath}` : repoName;
-
-  // Extract title
-  let title = catalogEntry.title;
-  const titlePaths = [`${actualBasePath}/front/title.txt`, `${basePath}/front/title.txt`];
-  for (const titlePath of titlePaths) {
-    const titleFile = zip.file(titlePath);
-    if (titleFile) {
-      title = (await titleFile.async('string')).trim();
-      break;
-    }
-  }
-
-  // No front intro for TS
-  const front = '';
-
-  // Extract license
-  let license = '';
-  const licensePaths = [`${actualRepoName}/LICENSE.md`, `${repoName}/LICENSE.md`];
-  for (const licensePath of licensePaths) {
-    const licenseFile = zip.file(licensePath);
-    if (licenseFile) {
-      license = (await licenseFile.async('string')).trim();
-      break;
-    }
-  }
-
-  // Extract stories (directories with frame files)
-  const stories = {};
-  const storyDirs = new Set();
-
-  // Find all story directories
-  Object.keys(zip.files).forEach((name) => {
-    const match = name.match(new RegExp(`(${actualBasePath}|${basePath})/(\\d+)/`));
-    if (match) {
-      storyDirs.add(match[2]);
-    }
-  });
-
-  // Sort story directories numerically
-  const sortedStoryDirs = Array.from(storyDirs).sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
-
-  for (const storyNum of sortedStoryDirs) {
-    // Try both paths
-    let storyPath = `${actualBasePath}/${storyNum}`;
-    if (!zip.file(`${storyPath}/title.txt`)) {
-      storyPath = `${basePath}/${storyNum}`;
-    }
-
-    // Get story title
-    let storyTitle = '';
-    const titleFile = zip.file(`${storyPath}/title.txt`);
-    if (titleFile) {
-      storyTitle = (await titleFile.async('string')).trim();
-    }
-
-    // Get reference
-    let reference = '';
-    const refFile = zip.file(`${storyPath}/reference.txt`);
-    if (refFile) {
-      reference = stripMarkdownEmphasis((await refFile.async('string')).trim());
-    }
-
-    // Get frames
-    const frames = {};
-    const frameFiles = Object.keys(zip.files)
-      .filter((name) => name.startsWith(storyPath) && name.match(/\/(\d+)\.txt$/))
-      .sort((a, b) => {
-        const aNum = parseInt(a.match(/\/(\d+)\.txt$/)[1], 10);
-        const bNum = parseInt(b.match(/\/(\d+)\.txt$/)[1], 10);
-        return aNum - bNum;
-      });
-
-    for (const framePath of frameFiles) {
-      const match = framePath.match(/\/(\d+)\.txt$/);
-      if (!match) continue;
-
-      const frameNum = match[1];
-      const text = await zip.file(framePath).async('string');
-
-      // Generate image URL from frame number
-      const imgUrl = `https://cdn.door43.org/obs/jpg/360px/obs-en-${storyNum}-${frameNum}.jpg`;
-
-      frames[parseInt(frameNum, 10)] = {
-        slug: `${storyNum}-${frameNum}`,
-        img: imgUrl,
-        text: text.trim(),
-      };
-    }
-
-    stories[parseInt(storyNum, 10)] = { title: storyTitle, reference, frames };
-  }
-
-  return { title, front, license, stories };
 }
 
 /**

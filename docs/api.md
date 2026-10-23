@@ -1,8 +1,8 @@
 # API Client
 
 The library talks to the Door43 Content Service through its own internal module
-(`src/dcsApi.js`: catalog entries, file contents, licenses, with request-level
-caching). You do not call that directly; `getAllCatalogEntries()` and
+(`src/dcsApi.js`: catalog requests and the files of each resource's Scripture
+Burrito, with request-level caching). You do not call that directly; `getAllCatalogEntries()` and
 `getResourceData()` do.
 
 One small helper for **GitHub** repositories is exported for callers that need

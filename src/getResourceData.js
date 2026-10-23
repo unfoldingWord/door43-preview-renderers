@@ -1,16 +1,10 @@
 import { ResourceError } from './errors.js';
 import { dcsApiUrlOf, splitInternalOptions } from './options.js';
-import {
-  extractRcSbObsData,
-  extractTsObsData,
-  formatObsData,
-  getObsContentPath,
-} from './obsHelpers.js';
+import { extractObsData, formatObsData } from './obsHelpers.js';
 import { extractRcTsvData } from './tsvHelpers.js';
 import { extractRcTwData } from './twHelpers.js';
 import { extractRcTaData } from './taHelpers.js';
 import { extractRcAlignedBibleData } from './rcAlignedBibleHelpers.js';
-import { extractTsBibleData } from './tsBibleHelpers.js';
 import { filterCatalogEntries } from './catalogSelection.js';
 import { directoryContentSource } from './contentSource.js';
 import { getAllCatalogEntries } from './getAllCatalogEntries.js';
@@ -193,148 +187,69 @@ function withLanguage(data, catalogEntry) {
 }
 
 /**
- * Route a resolved catalog entry to the extractor for its metadata type,
- * subject and flavor.
+ * Route a resolved catalog entry to the extractor for its subject.
+ *
+ * Every repository is read as the Scripture Burrito DCS converts it to, so rc,
+ * ts, tc and sb repositories of a subject take the same route. A burrito whose
+ * subject is not one of these is still read by its flavor when that is a Bible
+ * (`textTranslation`) or stories (`textStories`).
  */
 async function extractResourceData(catalogEntry, books, options) {
-  let metadataType = ''; // default
-  let subject = '';
-  let flavorType = '';
-  let flavor = '';
-
-  if (!catalogEntry.subject || !catalogEntry.ingredients || !catalogEntry.metadata_type) {
-    if (
-      catalogEntry.repo?.title &&
-      catalogEntry.repo?.subject &&
-      catalogEntry.repo?.ingredients &&
-      catalogEntry.repo?.metadata_type
-    ) {
-      catalogEntry.title = catalogEntry.repo.title;
-      catalogEntry.subject = catalogEntry.repo.subject;
-      catalogEntry.ingredients = catalogEntry.repo.ingredients;
-      catalogEntry.metadata_type = catalogEntry.repo.metadata_type;
-      catalogEntry.flavor_type = catalogEntry.repo.flavor_type;
-      catalogEntry.flavor = catalogEntry.repo.flavor;
-    } else {
-      throw new ResourceError(
-        `This references an invalid ${catalogEntry.ref_type ? catalogEntry.ref_type : 'entry'}. Unable to determine its type and/or ingredients.`,
-        { code: 'INVALID_INPUT' }
-      );
-    }
+  if (!catalogEntry.subject && catalogEntry.repo?.subject) {
+    catalogEntry.title = catalogEntry.title || catalogEntry.repo.title;
+    catalogEntry.subject = catalogEntry.repo.subject;
+    catalogEntry.ingredients = catalogEntry.ingredients || catalogEntry.repo.ingredients;
+    catalogEntry.metadata_type = catalogEntry.metadata_type || catalogEntry.repo.metadata_type;
+    catalogEntry.flavor_type = catalogEntry.flavor_type || catalogEntry.repo.flavor_type;
+    catalogEntry.flavor = catalogEntry.flavor || catalogEntry.repo.flavor;
   }
-  metadataType = catalogEntry.metadata_type;
-  subject = catalogEntry.subject;
-  flavorType = catalogEntry.flavor_type;
-  flavor = catalogEntry.flavor;
-
-  if (metadataType && subject) {
-    if (!['rc', 'sb', 'ts', 'tc'].includes(metadataType)) {
-      throw new ResourceError(`Not a valid repository that can be convert.`, {
-        code: 'UNSUPPORTED',
-      });
-    }
-    switch (metadataType) {
-      case 'rc':
-        switch (subject) {
-          case 'Aligned Bible':
-          case 'Bible':
-          case 'Greek New Testament':
-          case 'Hebrew Old Testament':
-            return getRcAlignedBibleData(catalogEntry, books, options);
-          case 'Open Bible Stories':
-            return getRcObsData(catalogEntry, options);
-          case 'Translation Academy':
-            return getRcTranslationAcademyData(catalogEntry, options);
-          case 'TSV Study Notes':
-            return getRcTsvStudyNotesData(catalogEntry, books, options);
-          case 'TSV Study Questions':
-            return getRcTsvStudyQuestionsData(catalogEntry, books, options);
-          case 'TSV Translation Notes':
-            return getRcTsvTranslationNotesData(catalogEntry, books, options);
-          case 'TSV Translation Questions':
-            return getRcTsvTranslationQuestionsData(catalogEntry, books, options);
-          case 'Translation Words':
-            return getRcTranslationWordsData(catalogEntry, options);
-          case 'TSV Translation Words Links':
-            return getRcTsvTranslationWordsLinksData(catalogEntry, books, options);
-          case 'TSV OBS Study Notes':
-            return getRcTsvObsStudyNotesData(catalogEntry, options);
-          case 'TSV OBS Study Questions':
-            return getRcTsvObsStudyQuestionsData(catalogEntry, options);
-          case 'TSV OBS Translation Notes':
-            return getRcTsvObsTranslationNotesData(catalogEntry, options);
-          case 'TSV OBS Translation Questions':
-            return getRcTsvObsTranslationQuestionsData(catalogEntry, options);
-          case 'TSV OBS Translation Words Links':
-            return getRcTsvObsTranslationWordsLinksData(catalogEntry, options);
-          default:
-            throw new ResourceError(
-              `Conversion of \`${subject}\` resources is currently not supported.`,
-              { code: 'UNSUPPORTED' }
-            );
-        }
-      case 'sb':
-        switch (flavorType) {
-          case 'scripture':
-            switch (flavor) {
-              case 'textTranslation':
-                return getSbBibleData(catalogEntry, books, options);
-              default:
-                throw new ResourceError(
-                  `Conversion of SB flavor \`${flavor}\` is not currently supported.`,
-                  { code: 'UNSUPPORTED' }
-                );
-            }
-          case 'gloss':
-            switch (catalogEntry.flavor) {
-              case 'textStories':
-                return getSbObsData(catalogEntry, options);
-              default:
-                throw new ResourceError(
-                  `Conversion of SB gloss flavor \`${catalogEntry.flavor}\` is not currently supported.`,
-                  { code: 'UNSUPPORTED' }
-                );
-            }
-          default:
-            throw new ResourceError(
-              `Conversion of SB flavor type \`${flavorType}\` is not currently supported.`,
-              { code: 'UNSUPPORTED' }
-            );
-        }
-      case 'ts':
-        switch (subject) {
-          case 'Open Bible Stories':
-            return getTsObsData(catalogEntry, options);
-          case 'Bible':
-            return getTsBibleData(catalogEntry, books, options);
-          default:
-            throw new ResourceError(
-              'Conversion of translationStudio repositories is currently not supported.',
-              { code: 'UNSUPPORTED' }
-            );
-        }
-      case 'tc':
-        switch (subject) {
-          case 'Aligned Bible':
-          case 'Bible':
-            return getTcBibleData(catalogEntry, books, options);
-          default:
-            throw new ResourceError(
-              `Conversion of translationCore \`${subject}\` repositories is currently not supported.`,
-              { code: 'UNSUPPORTED' }
-            );
-        }
-      default:
-        throw new ResourceError(
-          `Conversion of \`${metadataType}\` repositories is currently not supported.`,
-          { code: 'UNSUPPORTED' }
-        );
-    }
-  } else {
-    throw new ResourceError('Catalog entry is missing required metadata.', {
-      code: 'INVALID_INPUT',
-    });
+  const { subject, flavor } = catalogEntry;
+  if (!subject && !flavor) {
+    throw new ResourceError(
+      `This references an invalid ${catalogEntry.ref_type ? catalogEntry.ref_type : 'entry'}. Unable to determine its type.`,
+      { code: 'INVALID_INPUT' }
+    );
   }
+
+  switch (subject) {
+    case 'Aligned Bible':
+    case 'Bible':
+    case 'Greek New Testament':
+    case 'Hebrew Old Testament':
+      return getRcAlignedBibleData(catalogEntry, books, options);
+    case 'Open Bible Stories':
+      return getRcObsData(catalogEntry, options);
+    case 'Translation Academy':
+      return getRcTranslationAcademyData(catalogEntry, options);
+    case 'TSV Study Notes':
+      return getRcTsvStudyNotesData(catalogEntry, books, options);
+    case 'TSV Study Questions':
+      return getRcTsvStudyQuestionsData(catalogEntry, books, options);
+    case 'TSV Translation Notes':
+      return getRcTsvTranslationNotesData(catalogEntry, books, options);
+    case 'TSV Translation Questions':
+      return getRcTsvTranslationQuestionsData(catalogEntry, books, options);
+    case 'Translation Words':
+      return getRcTranslationWordsData(catalogEntry, options);
+    case 'TSV Translation Words Links':
+      return getRcTsvTranslationWordsLinksData(catalogEntry, books, options);
+    case 'TSV OBS Study Notes':
+      return getRcTsvObsStudyNotesData(catalogEntry, options);
+    case 'TSV OBS Study Questions':
+      return getRcTsvObsStudyQuestionsData(catalogEntry, options);
+    case 'TSV OBS Translation Notes':
+      return getRcTsvObsTranslationNotesData(catalogEntry, options);
+    case 'TSV OBS Translation Questions':
+      return getRcTsvObsTranslationQuestionsData(catalogEntry, options);
+    case 'TSV OBS Translation Words Links':
+      return getRcTsvObsTranslationWordsLinksData(catalogEntry, options);
+  }
+  if (flavor === 'textTranslation') return getRcAlignedBibleData(catalogEntry, books, options);
+  if (flavor === 'textStories') return getRcObsData(catalogEntry, options);
+  throw new ResourceError(
+    `Conversion of \`${subject || flavor}\` resources is currently not supported.`,
+    { code: 'UNSUPPORTED' }
+  );
 }
 
 /**
@@ -348,16 +263,7 @@ async function getRcAlignedBibleData(catalogEntry, books, options) {
  * Get resource data for RC OBS
  */
 async function getRcObsData(catalogEntry, options) {
-  if (!catalogEntry.ingredients?.length) {
-    throw new ResourceError('No ingredients found in catalog entry', { code: 'INVALID_INPUT' });
-  }
-
-  const data = await extractRcSbObsData(
-    catalogEntry,
-    { path: getObsContentPath(catalogEntry) },
-    options
-  );
-  return formatObsData(data, catalogEntry);
+  return formatObsData(await extractObsData(catalogEntry, options), catalogEntry);
 }
 
 /**
@@ -454,8 +360,8 @@ async function getRcTsvTranslationWordsLinksData(catalogEntry, books, options) {
  * Get resource data for RC TSV OBS Study Notes
  */
 async function getRcTsvObsStudyNotesData(catalogEntry, options) {
-  // OBS doesn't use books parameter, extract all ingredients
-  const books = catalogEntry.ingredients.map((i) => i.identifier);
+  // OBS has no books: its one TSV (ingredients/OBS.tsv) is the book `obs`.
+  const books = ['obs'];
   const catalogEntries = await getFilteredCatalogEntries(catalogEntry, books, options);
   return await extractRcTsvData(catalogEntry, books, options, catalogEntries);
 }
@@ -464,8 +370,8 @@ async function getRcTsvObsStudyNotesData(catalogEntry, options) {
  * Get resource data for RC TSV OBS Study Questions
  */
 async function getRcTsvObsStudyQuestionsData(catalogEntry, options) {
-  // OBS doesn't use books parameter, extract all ingredients
-  const books = catalogEntry.ingredients.map((i) => i.identifier);
+  // OBS has no books: its one TSV (ingredients/OBS.tsv) is the book `obs`.
+  const books = ['obs'];
   const catalogEntries = await getFilteredCatalogEntries(catalogEntry, books, options);
   return await extractRcTsvData(catalogEntry, books, options, catalogEntries);
 }
@@ -474,8 +380,8 @@ async function getRcTsvObsStudyQuestionsData(catalogEntry, options) {
  * Get resource data for RC TSV OBS Translation Notes
  */
 async function getRcTsvObsTranslationNotesData(catalogEntry, options) {
-  // OBS doesn't use books parameter, extract all ingredients
-  const books = catalogEntry.ingredients.map((i) => i.identifier);
+  // OBS has no books: its one TSV (ingredients/OBS.tsv) is the book `obs`.
+  const books = ['obs'];
   const catalogEntries = await getFilteredCatalogEntries(catalogEntry, books, options);
   return await extractRcTsvData(catalogEntry, books, options, catalogEntries);
 }
@@ -484,8 +390,8 @@ async function getRcTsvObsTranslationNotesData(catalogEntry, options) {
  * Get resource data for RC TSV OBS Translation Questions
  */
 async function getRcTsvObsTranslationQuestionsData(catalogEntry, options) {
-  // OBS doesn't use books parameter, extract all ingredients
-  const books = catalogEntry.ingredients.map((i) => i.identifier);
+  // OBS has no books: its one TSV (ingredients/OBS.tsv) is the book `obs`.
+  const books = ['obs'];
   const catalogEntries = await getFilteredCatalogEntries(catalogEntry, books, options);
   return await extractRcTsvData(catalogEntry, books, options, catalogEntries);
 }
@@ -498,73 +404,8 @@ async function getRcTsvObsTranslationQuestionsData(catalogEntry, options) {
  * OBS text being in the GL, so there is no quote lookup to do.
  */
 async function getRcTsvObsTranslationWordsLinksData(catalogEntry, options) {
-  // OBS doesn't use books parameter, extract all ingredients
-  const books = catalogEntry.ingredients.map((i) => i.identifier);
+  // OBS has no books: its one TSV (ingredients/OBS.tsv) is the book `obs`.
+  const books = ['obs'];
   const catalogEntries = await getFilteredCatalogEntries(catalogEntry, books, options);
   return await extractRcTsvData(catalogEntry, books, options, catalogEntries);
-}
-
-/**
- * Get resource data for SB Bible (scripture / textTranslation)
- *
- * A Scripture Burrito Bible stores one USFM file per book at the ingredient
- * paths the catalog entry lists (`./ingredients/PHM.usfm`, or `./01-GEN.usfm`
- * for the aligned Bibles) — the same layout as RC and TC Bibles — so the same
- * extractor fetches the books and strips alignments for display. Both
- * `Bible` and `Aligned Bible` subjects arrive here, as DCS publishes both
- * with this flavor.
- */
-async function getSbBibleData(catalogEntry, books, options) {
-  return await extractRcAlignedBibleData(catalogEntry, books, options);
-}
-
-/**
- * Get resource data for SB OBS
- */
-async function getSbObsData(catalogEntry, options) {
-  if (!catalogEntry.ingredients?.length) {
-    throw new ResourceError('No ingredients found in catalog entry', { code: 'INVALID_INPUT' });
-  }
-
-  const data = await extractRcSbObsData(
-    catalogEntry,
-    { path: getObsContentPath(catalogEntry) },
-    options
-  );
-  return formatObsData(data, catalogEntry);
-}
-/**
- * Get resource data for TS OBS
- */
-async function getTsObsData(catalogEntry, options) {
-  if (!catalogEntry.ingredients?.length) {
-    throw new ResourceError('No ingredients found in catalog entry', { code: 'INVALID_INPUT' });
-  }
-
-  const data = await extractTsObsData(
-    catalogEntry,
-    { path: getObsContentPath(catalogEntry) },
-    options
-  );
-  return formatObsData(data, catalogEntry);
-}
-/**
- * Get resource data for TS Bible
- *
- * ts Bible repos hold a single book split into chunk files; extractTsBibleData
- * pieces those chunks back together into USFM.
- */
-async function getTsBibleData(catalogEntry, books, options) {
-  return await extractTsBibleData(catalogEntry, books, options);
-}
-
-/**
- * Get resource data for TC Bible
- *
- * tc Aligned Bible/Bible repos store each book as a USFM file referenced by its
- * ingredient path — structurally identical to RC aligned Bibles — so the same
- * extractor fetches the content and strips alignments for display.
- */
-async function getTcBibleData(catalogEntry, books, options) {
-  return await extractRcAlignedBibleData(catalogEntry, books, options);
 }

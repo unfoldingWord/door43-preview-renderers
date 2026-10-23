@@ -2,15 +2,21 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { directoryContentSource, contentSourceFor, entryCoords } from '../contentSource.js';
+import {
+  directoryContentSource,
+  contentSourceFor,
+  entryCoords,
+  readLicense,
+} from '../contentSource.js';
 import { getResourceDataFromDirectory } from '../getResourceData.js';
+import { writeBurrito } from '../testing/burrito.js';
 
 /**
- * Stage 2′ from repositories checked out on disk. A small Titus Translation
- * Notes package is written to a temp folder, one folder per repository; the
- * aligned Bibles and the Greek New Testament are the GL-quote parity fixtures.
- * Nothing is fetched: the DCS address is unreachable and no entry has a
- * zipball_url, so a read that went online would fail.
+ * Stage 2′ from burritos unpacked on disk. A small Titus Translation Notes
+ * package is written to a temp folder, one folder per repository, each laid out
+ * as DCS's SB archive (metadata.json and ingredients/); the aligned Bibles and
+ * the Greek New Testament are the GL-quote parity fixtures. Nothing is fetched:
+ * the DCS address is unreachable, so a read that went online would fail.
  */
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -24,7 +30,7 @@ const write = (rel, text) => {
   fs.writeFileSync(file, text);
 };
 
-const entry = (name, subject, ingredients, extra = {}) => ({
+const entry = (name, subject, extra = {}) => ({
   name,
   owner: 'unfoldingWord',
   branch_or_tag_name: 'v91',
@@ -32,60 +38,69 @@ const entry = (name, subject, ingredients, extra = {}) => ({
   title: name,
   language: 'en',
   metadata_type: 'rc',
-  ingredients,
   repo: { name, owner: { username: 'unfoldingWord' } },
   ...extra,
 });
 const catalogEntries = () => [
-  entry('en_tn', 'TSV Translation Notes', [{ identifier: 'tit', path: './tn_TIT.tsv' }], {
-    abbreviation: 'tn',
-    language_direction: 'ltr',
+  entry('en_tn', 'TSV Translation Notes', { abbreviation: 'tn', language_direction: 'ltr' }),
+  entry('en_ult', 'Aligned Bible', { abbreviation: 'ult' }),
+  entry('en_ust', 'Aligned Bible', { abbreviation: 'ust' }),
+  entry('el-x-koine_ugnt', 'Greek New Testament', { language: 'el-x-koine' }),
+  // The catalog names and orders a Translation Academy's manuals.
+  entry('en_ta', 'Translation Academy', {
+    ingredients: [{ identifier: 'translate', path: './translate', title: 'Translate' }],
   }),
-  entry('en_ult', 'Aligned Bible', [{ identifier: 'tit', path: './57-TIT.usfm' }], {
-    abbreviation: 'ult',
-  }),
-  entry('en_ust', 'Aligned Bible', [{ identifier: 'tit', path: './57-TIT.usfm' }], {
-    abbreviation: 'ust',
-  }),
-  entry('el-x-koine_ugnt', 'Greek New Testament', [{ identifier: 'tit', path: './57-TIT.usfm' }], {
-    language: 'el-x-koine',
-  }),
-  entry('en_ta', 'Translation Academy', [
-    { identifier: 'translate', path: './translate', title: 'Translate' },
-  ]),
-  entry('en_tw', 'Translation Words', [{ identifier: 'bible', path: './bible' }]),
-  entry('en_twl', 'TSV Translation Words Links', [{ identifier: 'tit', path: './twl_TIT.tsv' }]),
+  entry('en_tw', 'Translation Words'),
+  entry('en_twl', 'TSV Translation Words Links'),
 ];
 
 beforeAll(() => {
-  dir = fs.mkdtempSync(path.join(os.tmpdir(), 'd43-checkouts-'));
-  write(
-    'en_tn/tn_TIT.tsv',
-    'Reference\tID\tTags\tSupportReference\tQuote\tOccurrence\tNote\n' +
-      '1:1\tabc1\t\trc://*/ta/man/translate/figs-abstractnouns\tΠαῦλος\t1\tPaul wrote this. (See: [[rc://*/ta/man/translate/figs-abstractnouns]])\n'
-  );
-  write('en_tn/LICENSE.md', '# License\n\nCC BY-SA 4.0\n');
+  dir = fs.mkdtempSync(path.join(os.tmpdir(), 'd43-burritos-'));
+  writeBurrito(dir, 'en_tn', {
+    files: {
+      'ingredients/TIT.tsv':
+        'Reference\tID\tTags\tSupportReference\tQuote\tOccurrence\tNote\n' +
+        '1:1\tabc1\t\trc://*/ta/man/translate/figs-abstractnouns\tΠαῦλος\t1\tPaul wrote this. (See: [[rc://*/ta/man/translate/figs-abstractnouns]])\n',
+      'ingredients/LICENSE.md': '# License\n\nCC BY-SA 4.0\n',
+    },
+  });
   write('en_tn/.git/HEAD', 'ref: refs/heads/master\n'); // ignored
-  write('en_ult/57-TIT.usfm', usfm('tit.ult.usfm'));
-  write('en_ust/57-TIT.usfm', usfm('tit.ust.usfm'));
-  write('el-x-koine_ugnt/57-TIT.usfm', usfm('tit.ugnt.usfm'));
-  write(
-    'en_ta/translate/toc.yaml',
-    'title: Translate\nsections:\n  - title: Abstract Nouns\n    link: figs-abstractnouns\n'
-  );
-  write(
-    'en_ta/translate/config.yaml',
-    'figs-abstractnouns:\n  recommended: []\n  dependencies: []\n'
-  );
-  write('en_ta/translate/figs-abstractnouns/title.md', 'Abstract Nouns');
-  write('en_ta/translate/figs-abstractnouns/sub-title.md', 'What are abstract nouns?');
-  write('en_ta/translate/figs-abstractnouns/01.md', 'An abstract noun names an idea.');
-  write('en_tw/bible/names/paul.md', '# Paul, Saul\n\n## Facts:\n\nPaul was an apostle.\n');
-  write('en_tw/bible/kt/god.md', '# God\n\n## Definition:\n\nThe one true God.\n');
-  write(
-    'en_twl/twl_TIT.tsv',
-    'Reference\tID\tTags\tOrigWords\tOccurrence\tTWLink\n1:1\ttw1\tname\tΠαῦλος\t1\trc://*/tw/dict/bible/names/paul\n'
-  );
+  const bible = (file) => ({
+    flavorType: 'scripture',
+    flavor: 'textTranslation',
+    files: { 'ingredients/TIT.usfm': usfm(file) },
+  });
+  writeBurrito(dir, 'en_ult', bible('tit.ult.usfm'));
+  writeBurrito(dir, 'en_ust', bible('tit.ust.usfm'));
+  writeBurrito(dir, 'el-x-koine_ugnt', { ...bible('tit.ugnt.usfm'), language: 'el-x-koine' });
+  writeBurrito(dir, 'en_ta', {
+    flavorType: 'peripheral',
+    flavor: 'x-peripheralArticles',
+    files: {
+      'ingredients/translate/toc.yaml':
+        'title: Translate\nsections:\n  - title: Abstract Nouns\n    link: figs-abstractnouns\n',
+      'ingredients/translate/config.yaml':
+        'figs-abstractnouns:\n  recommended: []\n  dependencies: []\n',
+      'ingredients/translate/figs-abstractnouns/title.md': 'Abstract Nouns',
+      'ingredients/translate/figs-abstractnouns/sub-title.md': 'What are abstract nouns?',
+      'ingredients/translate/figs-abstractnouns/01.md': 'An abstract noun names an idea.',
+    },
+  });
+  // Translation Words and Translation Words Links share one burrito layout:
+  // the TSVs, and the articles under ingredients/payload/. DCS's conversion
+  // points each link at its payload article; it reads back as the rc link.
+  const twl =
+    'Reference\tID\tTags\tOrigWords\tOccurrence\tTWLink\n1:1\ttw1\tname\tΠαῦλος\t1\t./payload/names/paul.md\n';
+  const articles = {
+    flavor: 'x-bcvarticles',
+    files: {
+      'ingredients/TIT.tsv': twl,
+      'ingredients/payload/names/paul.md': '# Paul, Saul\n\n## Facts:\n\nPaul was an apostle.\n',
+      'ingredients/payload/kt/god.md': '# God\n\n## Definition:\n\nThe one true God.\n',
+    },
+  };
+  writeBurrito(dir, 'en_tw', articles);
+  writeBurrito(dir, 'en_twl', articles);
 });
 
 afterAll(() => {
@@ -148,29 +163,44 @@ describe('directoryContentSource', () => {
   const ta = { name: 'en_ta' };
 
   test('readFile reads by ingredient path, with or without ./', async () => {
-    expect(await source().readFile({ name: 'en_tn' }, './tn_TIT.tsv')).toContain('abc1');
-    expect(await source().readFile({ repo: { name: 'en_tn' } }, 'LICENSE.md')).toContain('CC BY');
+    expect(await source().readFile({ name: 'en_tn' }, './ingredients/TIT.tsv')).toContain('abc1');
+    expect(
+      await source().readFile({ repo: { name: 'en_tn' } }, 'ingredients/LICENSE.md')
+    ).toContain('CC BY');
     await expect(source().readFile({ name: 'en_tn' }, 'nope.tsv')).rejects.toThrow();
   });
 
-  test("readLicense: the first license file, trimmed; '' when there is none", async () => {
-    expect(await source().readLicense({ name: 'en_tn' })).toBe('# License\n\nCC BY-SA 4.0');
-    expect(await source().readLicense(ta)).toBe('');
+  test('readMetadata parses metadata.json; a missing burrito is NOT_FOUND', async () => {
+    expect((await source().readMetadata({ name: 'en_tn' })).ingredients).toHaveProperty([
+      'ingredients/TIT.tsv',
+    ]);
+    await expect(source().readMetadata({ name: 'en_none' })).rejects.toMatchObject({
+      name: 'ResourceError',
+      code: 'NOT_FOUND',
+    });
   });
 
-  test("readArchive lists the tree as the DCS archive does, in git's order", async () => {
-    write('en_ta/translate/a/01.md', 'a');
-    write('en_ta/translate/a-b/01.md', 'a-b');
+  test("the license is the burrito's license ingredient, trimmed; '' when it lists none", async () => {
+    expect(await readLicense(source(), { name: 'en_tn' })).toBe('# License\n\nCC BY-SA 4.0');
+    expect(await readLicense(source(), ta)).toBe('');
+  });
+
+  test('readArchive lists the tree as the DCS SB archive does, by name per folder', async () => {
+    write('en_ta/ingredients/translate/a/01.md', 'a');
+    write('en_ta/ingredients/translate/a-b/01.md', 'a-b');
     const zip = await source().readArchive(ta);
     const names = Object.keys(zip.files);
     expect(names[0]).toBe('en_ta/');
-    expect(names).toContain('en_ta/translate/figs-abstractnouns/01.md');
-    // Git compares a folder as its name plus '/', so `a-b/` comes before `a/`.
-    expect(names.indexOf('en_ta/translate/a-b/')).toBeLessThan(names.indexOf('en_ta/translate/a/'));
-    expect(await zip.file('en_ta/translate/figs-abstractnouns/01.md').async('string')).toBe(
-      'An abstract noun names an idea.'
+    expect(names).toContain('en_ta/metadata.json');
+    expect(names).toContain('en_ta/ingredients/translate/figs-abstractnouns/01.md');
+    // Each folder's entries by name, depth first: `a/` and its files before `a-b/`.
+    expect(names.indexOf('en_ta/ingredients/translate/a/01.md')).toBeLessThan(
+      names.indexOf('en_ta/ingredients/translate/a-b/')
     );
-    expect(zip.file('en_ta/translate/')).toBeNull();
+    expect(
+      await zip.file('en_ta/ingredients/translate/figs-abstractnouns/01.md').async('string')
+    ).toBe('An abstract noun names an idea.');
+    expect(zip.file('en_ta/ingredients/translate/')).toBeNull();
     expect(zip.file('en_ta/missing.md')).toBeNull();
   });
 
@@ -181,7 +211,7 @@ describe('directoryContentSource', () => {
 
   test('archive files read as text only', async () => {
     const zip = await source().readArchive(ta);
-    const file = zip.file('en_ta/translate/figs-abstractnouns/01.md');
+    const file = zip.file('en_ta/ingredients/translate/figs-abstractnouns/01.md');
     await expect(file.async('uint8array')).rejects.toThrow('Unsupported read type');
   });
 
@@ -193,7 +223,7 @@ describe('directoryContentSource', () => {
     const tn = { name: 'en_tn' };
     await expect(source().readFile(tn, './../outside.txt')).rejects.toThrow('outside');
     await expect(source().readFile(tn, 'a/../../outside.txt')).rejects.toThrow('outside');
-    await expect(source().readFile({ name: '../en_tn' }, 'tn_TIT.tsv')).rejects.toThrow(
+    await expect(source().readFile({ name: '../en_tn' }, 'ingredients/TIT.tsv')).rejects.toThrow(
       'single, visible folder name'
     );
     await expect(source().readArchive({ name: 'x/..' })).rejects.toThrow(
@@ -205,12 +235,16 @@ describe('directoryContentSource', () => {
     // that does (#70 review).
     fs.symlinkSync(path.join(dir, 'en_tn', '.git', 'HEAD'), path.join(dir, 'en_tn', 'head.tsv'));
     await expect(source().readFile(tn, 'head.tsv')).rejects.toThrow('hidden file');
+    const gitlic = writeBurrito(dir, 'en_gitlic', { files: { 'ingredients/LICENSE.md': 'x' } });
     write('en_gitlic/.git/config', '[remote] url = https://token@example.com');
+    fs.rmSync(path.join(gitlic, 'ingredients', 'LICENSE.md'));
     fs.symlinkSync(
-      path.join(dir, 'en_gitlic', '.git', 'config'),
-      path.join(dir, 'en_gitlic', 'LICENSE.md')
+      path.join(gitlic, '.git', 'config'),
+      path.join(gitlic, 'ingredients', 'LICENSE.md')
     );
-    await expect(source().readLicense({ name: 'en_gitlic' })).rejects.toThrow('hidden file');
+    const lic = { name: 'en_gitlic' };
+    await expect(source().readFile(lic, 'ingredients/LICENSE.md')).rejects.toThrow('hidden file');
+    expect(await readLicense(source(), lic)).toBe(''); // nothing from .git leaks into a render
     // A symlink that stays inside the repository is still read.
     expect(await source().readFile(tn, 'alias.tsv')).toBe('inner');
   });
@@ -222,7 +256,7 @@ describe('directoryContentSource', () => {
     const refused = 'single, visible folder name';
     await expect(source().readFile({ name: '.git' }, 'config')).rejects.toThrow(refused);
     await expect(source().readArchive({ name: '.git' })).rejects.toThrow(refused);
-    await expect(source().readLicense({ name: '.git' })).rejects.toThrow(refused);
+    await expect(source().readMetadata({ name: '.git' })).rejects.toThrow(refused);
     await expect(source().readFile({ name: '.ssh' }, 'id_rsa')).rejects.toThrow(refused);
     // A visible name that is a symlink to a hidden folder in the checkout.
     await expect(source().readFile({ name: 'en_link' }, 'config')).rejects.toThrow(
@@ -241,7 +275,6 @@ describe('directoryContentSource', () => {
             branch_or_tag_name: 'v1',
             subject: 'Bible',
             metadata_type: 'rc',
-            ingredients: [{ identifier: 'tit', path: './config' }],
           },
         ],
         dir,
@@ -275,12 +308,6 @@ describe('directoryContentSource', () => {
     expect(zip.file('en_arch/dangling.md')).toBeNull();
   });
 
-  test('readLicense: only a missing file falls through to the next name', async () => {
-    fs.mkdirSync(path.join(dir, 'en_lic', 'LICENSE.md'), { recursive: true });
-    write('en_lic/LICENSE.txt', 'later');
-    await expect(source().readLicense({ name: 'en_lic' })).rejects.toThrow();
-  });
-
   test('the Node modules are loaded outside browser bundles (webpackIgnore)', () => {
     const text = fs.readFileSync(path.join(here, '..', 'contentSource.js'), 'utf8');
     const imports = text.match(/import\([^)]*'node:[^']+'\)/g);
@@ -307,9 +334,5 @@ describe('content source helpers', () => {
     const given = { readFile() {} };
     expect(contentSourceFor({ contentSource: given })).toBe(given);
     expect(typeof contentSourceFor({}).readArchive).toBe('function');
-  });
-
-  test('the DCS source refuses an archive read without a zipball_url', async () => {
-    await expect(contentSourceFor({}).readArchive({ name: 'x' })).rejects.toThrow('zipball_url');
   });
 });

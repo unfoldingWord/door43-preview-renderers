@@ -1,4 +1,5 @@
-import { contentSourceFor, entryCoords } from './contentSource.js';
+import { contentSourceFor, entryCoords, readLicense } from './contentSource.js';
+import { bookIngredientPath, bookSort, bookTitle, burritoName } from './burrito.js';
 import { ResourceError } from './errors.js';
 import { loggerFor } from './logger.js';
 import { dcsApiUrlOf } from './options.js';
@@ -60,6 +61,16 @@ function normalizeTsvColumns(rows, singleBibleRepo = null) {
     } else if (normalized.OrigWords) {
       normalized.Quote = normalized.OrigWords;
       delete normalized.OrigWords;
+    }
+
+    // A Translation Words link as DCS's SB conversion writes it, to the article
+    // in the burrito's payload (`./payload/names/paul.md`), back to the rc link
+    // the renderers resolve (`rc://*/tw/dict/bible/names/paul`).
+    const payloadLink = String(normalized.TWLink || '').match(
+      /^\.\/payload\/([^/]+)\/([^/]+?)\.md$/
+    );
+    if (payloadLink) {
+      normalized.TWLink = `rc://*/tw/dict/bible/${payloadLink[1]}/${payloadLink[2]}`;
     }
 
     // Normalize note column name
@@ -129,19 +140,17 @@ function buildBibleLinks(catalogEntries) {
 }
 
 /**
- * Fetch the raw USFM (alignment markers intact) of one book from a catalog entry.
- * Returns undefined when the entry has no ingredient for the book or the read
+ * Fetch the raw USFM (alignment markers intact) of one book of a Bible's burrito.
+ * Returns undefined when the burrito has no ingredient for the book or a read
  * fails (also when a directory source refuses it); that Bible then gives no GL
  * quotes. Nothing is downloaded in its place.
  */
 async function fetchBookUsfm(entry, bookId, contentSource, logger) {
-  const ingredient = entry.ingredients?.find(
-    (ing) => ing.identifier?.toLowerCase() === bookId.toLowerCase()
-  );
-  if (!ingredient?.path) return undefined;
   const { owner, repo, ref } = entryCoords(entry);
   try {
-    return await contentSource.readFile(entry, ingredient.path);
+    const path = bookIngredientPath(await contentSource.readMetadata(entry), bookId, '.usfm');
+    if (!path) return undefined;
+    return await contentSource.readFile(entry, path);
   } catch (e) {
     logger.warn(`Could not read ${owner}/${repo}/${ref} ${bookId} for GL quotes: ${e.message}`);
     return undefined;
@@ -240,11 +249,21 @@ function groupByChapterVerse(rows) {
 }
 
 /**
+ * The title of an OBS TSV's one book: as the catalog lists that ingredient,
+ * else the resource's title, else the burrito's name.
+ */
+function obsTsvTitle(catalogEntry, metadata) {
+  const listed = (catalogEntry.ingredients || []).find((i) => i.identifier === 'obs');
+  return listed?.title || catalogEntry.title || burritoName(metadata);
+}
+
+/**
  * Common function to extract and format TSV data
  */
 export async function extractRcTsvData(catalogEntry, books, options = {}, catalogEntries = []) {
-  // DCS, or a local checkout (getResourceDataFromDirectory).
+  // DCS, or burritos unpacked on disk (getResourceDataFromDirectory).
   const contentSource = contentSourceFor(options);
+  const metadata = await contentSource.readMetadata(catalogEntry);
 
   const result = {
     type: 'tsv',
@@ -255,7 +274,7 @@ export async function extractRcTsvData(catalogEntry, books, options = {}, catalo
     title: catalogEntry.title,
     abbreviation: catalogEntry.abbreviation || catalogEntry.repo?.abbreviation || '',
     version: catalogEntry.branch_or_tag_name || catalogEntry.ref || '',
-    license: await contentSource.readLicense(catalogEntry),
+    license: await readLicense(contentSource, catalogEntry),
     books: {},
     extras: {},
   };
@@ -276,15 +295,12 @@ export async function extractRcTsvData(catalogEntry, books, options = {}, catalo
 
   // Process each requested book
   for (const bookId of books) {
-    // Find the ingredient for this book
-    const ingredient = catalogEntry.ingredients.find((ing) => ing.identifier === bookId);
-    if (!ingredient) {
+    // The book's TSV: the ingredient whose scope names it (OBS: the one OBS.tsv)
+    const filePath = bookIngredientPath(metadata, bookId, '.tsv');
+    if (!filePath) {
       loggerFor(options).warn(`No ingredient found for book: ${bookId}`);
       continue;
     }
-
-    // Extract the file path (remove leading ./)
-    const filePath = ingredient.path.replace(/^\.\//, '');
 
     // Fetch and parse the TSV
     let tsvContent;
@@ -311,9 +327,9 @@ export async function extractRcTsvData(catalogEntry, books, options = {}, catalo
 
     // Add book data
     result.books[bookId] = {
-      title: ingredient.title,
-      identifier: ingredient.identifier,
-      sort: ingredient.sort,
+      title: bookId === 'obs' ? obsTsvTitle(catalogEntry, metadata) : bookTitle(metadata, bookId),
+      identifier: bookId,
+      sort: bookSort(bookId),
       chapters: chapters,
       // Quotes whose aligned words were not found for a Bible: those rows fall
       // back to the original-language quote. Listed so an app can say why.
