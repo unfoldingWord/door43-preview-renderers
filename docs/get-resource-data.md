@@ -178,7 +178,7 @@ Bible (`textTranslation`) or stories (`textStories`).
 | Flavor | Subjects | Files |
 |---|---|---|
 | `textTranslation` | Aligned Bible, Bible, Greek New Testament, Hebrew Old Testament (also ts and tc Bibles) | `ingredients/<BOOK>.usfm` |
-| `x-bcvnotes`, `x-bcvquestions` | TSV Translation Notes / Questions (TSV Study Notes / Questions are read the same way; no release was available to check their flavor) | `ingredients/<BOOK>.tsv` |
+| `x-bcvnotes`, `x-bcvquestions` | TSV Translation Notes / Questions, TSV Study Notes / Questions | `ingredients/<BOOK>.tsv` |
 | `x-bcvarticles` | Translation Words, TSV Translation Words Links, TSV OBS Translation Words Links | the TSVs, and the articles under `ingredients/payload/<category>/` |
 | `x-obsnotes`, `x-obsquestions` | TSV OBS Translation Notes / Study Notes, TSV OBS Translation Questions / Study Questions | `ingredients/OBS.tsv` |
 | `x-peripheralArticles` | Translation Academy | `ingredients/<manual>/<article>/01.md`, with each manual's `toc.yaml` and `config.yaml` |
