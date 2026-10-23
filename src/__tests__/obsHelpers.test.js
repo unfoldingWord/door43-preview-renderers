@@ -101,6 +101,25 @@ describe('OBS extraction from its burrito (textStories)', () => {
     expect(Object.keys(data.stories)).toEqual(['1', '2', '10']);
   });
 
+  test('a burrito made in SB keeps its stories in ingredients/, as its ingredients list (#87 review)', async () => {
+    writeBurrito(dir, 'xx_obs', {
+      flavorType: 'gloss',
+      flavor: 'textStories',
+      files: {
+        'ingredients/front.md': '# Front\n',
+        'ingredients/01.md': story(
+          '1. Creation',
+          [['https://x.test/a.jpg', 'In the beginning.']],
+          'Gen 1'
+        ),
+      },
+    });
+    const data = await read(obsEntry('xx_obs', { metadata_type: 'sb' }));
+    expect(data.front).toBe('# Front');
+    expect(Object.keys(data.stories)).toEqual(['1']);
+    expect(data.stories[1].frames[1].text).toBe('In the beginning.');
+  });
+
   test('formatObsData sorts stories and frames numerically', () => {
     const data = formatObsData(
       {

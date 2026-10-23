@@ -151,6 +151,42 @@ describe('getResourceDataFromDirectory', () => {
     expect(data.extras.ta).toBeDefined();
   });
 
+  test("a TSV book takes the catalog's title, else the burrito's (#87 review)", async () => {
+    writeBurrito(dir, 'es-419_tn', {
+      language: 'es-419',
+      files: { 'ingredients/TIT.tsv': 'Reference\tID\tNote\n1:1\tabc1\tPablo.\n' },
+    });
+    const tn = (extra) =>
+      entry('es-419_tn', 'TSV Translation Notes', { language: 'es-419', ...extra });
+    const listed = await getResourceDataFromDirectory(
+      [tn({ ingredients: [{ identifier: 'tit', path: './TIT.tsv', title: 'Tito' }] })],
+      dir,
+      { ...offline, books: ['tit'] }
+    );
+    expect(listed.books.tit.title).toBe('Tito'); // no localizedNames in the burrito
+    const unlisted = await getResourceDataFromDirectory([tn()], dir, {
+      ...offline,
+      books: ['TIT'],
+    });
+    expect(unlisted.books.TIT.title).toBe('Titus'); // the library's title, any case
+  });
+
+  test('every book of a Bible whose ingredients carry no scope, by file name (#87 review)', async () => {
+    writeBurrito(dir, 'en_noscope', {
+      flavorType: 'scripture',
+      flavor: 'textTranslation',
+      files: { 'ingredients/TIT.usfm': usfm('tit.ult.usfm') },
+      scopes: { 'ingredients/TIT.usfm': null },
+    });
+    const data = await getResourceDataFromDirectory(
+      [entry('en_noscope', 'Aligned Bible', { abbreviation: 'ult' })],
+      dir,
+      { ...offline, books: [] }
+    );
+    expect(Object.keys(data.books)).toEqual(['tit']);
+    expect(data.books.tit).toContain('\\v 1 Paul');
+  });
+
   test('refuses arguments that name no entries or no directory', async () => {
     await expect(getResourceDataFromDirectory([], dir)).rejects.toThrow('catalog entries');
     await expect(getResourceDataFromDirectory({}, dir)).rejects.toThrow('catalog entries');

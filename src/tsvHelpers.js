@@ -258,6 +258,18 @@ function obsTsvTitle(catalogEntry, metadata) {
 }
 
 /**
+ * A book's title as the catalog lists that ingredient (`Tito`), or undefined;
+ * the burrito's title is the fallback.
+ */
+function catalogBookTitle(catalogEntry, bookId) {
+  const id = String(bookId).toLowerCase();
+  const listed = (catalogEntry.ingredients || []).find(
+    (i) => String(i.identifier).toLowerCase() === id
+  );
+  return listed?.title;
+}
+
+/**
  * Common function to extract and format TSV data
  */
 export async function extractRcTsvData(catalogEntry, books, options = {}, catalogEntries = []) {
@@ -292,6 +304,9 @@ export async function extractRcTsvData(catalogEntry, books, options = {}, catalo
   // A published TSV with exactly one GL Bible may carry unsuffixed
   // "GLQuote"/"GLOccurrence" columns — the single repo name keys them.
   const singleBibleRepo = bibleLinks.length === 1 ? bibleLinks[0].split('/')[1] : null;
+  // Quote lookups read through this extraction's source, so each Bible's
+  // metadata.json (and the commit it names) is read once for every book.
+  const glOptions = { ...options, contentSource };
 
   // Process each requested book
   for (const bookId of books) {
@@ -317,7 +332,7 @@ export async function extractRcTsvData(catalogEntry, books, options = {}, catalo
     if (bibleLinks.length > 0 && hasQuotes(normalizedRows)) {
       try {
         glQuoteMisses =
-          (await convertQuotes(normalizedRows, bookId, bibleEntriesForGl, options)).missed || [];
+          (await convertQuotes(normalizedRows, bookId, bibleEntriesForGl, glOptions)).missed || [];
       } catch (e) {
         loggerFor(options).warn(`GL quote lookup failed for ${bookId}: ${e.message}`);
       }
@@ -327,7 +342,10 @@ export async function extractRcTsvData(catalogEntry, books, options = {}, catalo
 
     // Add book data
     result.books[bookId] = {
-      title: bookId === 'obs' ? obsTsvTitle(catalogEntry, metadata) : bookTitle(metadata, bookId),
+      title:
+        bookId === 'obs'
+          ? obsTsvTitle(catalogEntry, metadata)
+          : catalogBookTitle(catalogEntry, bookId) || bookTitle(metadata, bookId),
       identifier: bookId,
       sort: bookSort(bookId),
       chapters: chapters,

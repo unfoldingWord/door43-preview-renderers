@@ -113,7 +113,17 @@ export async function downloadCapped(url, { maxBytes, timeoutMs }) {
 }
 
 const enc = encodeURIComponent;
-const encPath = (path) => stripDotSlash(path).split('/').map(enc).join('/');
+// A path or revision from metadata.json, as URL path segments. `.` and `..`
+// would still walk the URL after encoding, so they are refused.
+const encPath = (path) => {
+  const parts = stripDotSlash(path).split('/');
+  if (parts.some((part) => part === '.' || part === '..')) {
+    throw new ResourceError(`Path ${JSON.stringify(path)} has a "." or ".." segment.`, {
+      code: 'INVALID_INPUT',
+    });
+  }
+  return parts.map(enc).join('/');
+};
 // `?ref=` for a ref; none reads the default branch.
 const refQuery = (ref) => (ref ? `?ref=${enc(ref)}` : '');
 
@@ -123,9 +133,10 @@ const refQuery = (ref) => (ref ? `?ref=${enc(ref)}` : '');
  *   metadata.json and single files  GET /repos/{owner}/{repo}/sb/raw/{path}?ref=
  *   the whole burrito                GET /repos/{owner}/{repo}/sb/{revision}.zip
  *
- * metadata.json is read at the catalog entry's ref; every later read is pinned
- * to the commit it names, so a branch that moves during a render cannot mix two
- * commits. Single files go through the request cache in dcsApi.js. The archive
+ * metadata.json is read at the catalog entry's ref once per entry object for
+ * the life of this source (not just the request cache's TTL), and every later
+ * read is pinned to the commit it names, so a branch that moves during a
+ * render cannot mix two commits. Single files go through the request cache in dcsApi.js. The archive
  * URL is built from `dcsApiUrl`, so it is on the DCS host by construction; no
  * redirect is followed, and the download is limited in time and size (see
  * downloadCapped). Failures are ResourceErrors (a 404 is NOT_FOUND).
@@ -143,13 +154,21 @@ export function dcsContentSource(dcsApiUrl = 'https://git.door43.org/api/v1', li
     const { owner, repo } = entryCoords(entry);
     return `${dcsApiUrl}/repos/${enc(owner)}/${enc(repo)}`;
   };
-  const readMetadata = async (entry) => {
+  // entry -> its metadata.json. Kept for the source's life (one extraction, as
+  // contentSourceFor makes one per call) so that a read after the request
+  // cache's TTL still resolves the commit the extractor's metadata named. A
+  // failure is forgotten so the next read retries.
+  const pinned = new WeakMap();
+  const readMetadata = (entry) => {
+    if (pinned.has(entry)) return pinned.get(entry);
     const { owner, repo, ref } = entryCoords(entry);
-    try {
-      return await fetchJson(`${repoUrl(entry)}/sb/raw/metadata.json${refQuery(ref)}`);
-    } catch (error) {
+    const url = `${repoUrl(entry)}/sb/raw/metadata.json${refQuery(ref)}`;
+    const read = fetchJson(url).catch((error) => {
+      pinned.delete(entry);
       throw ResourceError.wrap(`Failed to read the burrito of ${owner}/${repo}@${ref}`, error);
-    }
+    });
+    pinned.set(entry, read);
+    return read;
   };
   // The commit to read at: the one metadata.json was converted from.
   const revision = async (entry) => {

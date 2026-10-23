@@ -19,15 +19,28 @@ function stripMarkdownEmphasis(text) {
 }
 
 /**
+ * The folder a burrito keeps its stories in: the one its story ingredients
+ * (`NN.md`, `front.md`) are listed under. DCS's conversion uses
+ * `ingredients/content`; a burrito made in SB may keep them in `ingredients/`.
+ */
+function obsContentFolder(metadata) {
+  const story = Object.keys(metadata?.ingredients || {}).find((p) =>
+    /^ingredients\/(?:.+\/)?(?:\d+|front)\.md$/.test(p)
+  );
+  return story ? story.slice(0, story.lastIndexOf('/')) : 'ingredients/content';
+}
+
+/**
  * Extract OBS data from its burrito (`textStories`): one markdown file per story
- * under `ingredients/content/` (`01.md` … `50.md`), the front matter in
- * `front.md`. ts OBS repositories arrive the same way, DCS having converted them.
+ * (`01.md` … `50.md`) and the front matter in `front.md`, in the folder its
+ * ingredients name (see obsContentFolder). ts OBS repositories arrive as DCS
+ * converts them.
  */
 export async function extractObsData(catalogEntry, options = {}) {
   // The burrito: its DCS archive, or a folder on disk.
   const zip = await contentSourceFor(options).readArchive(catalogEntry);
   const metadata = await readArchiveMetadata(zip);
-  const basePath = `${archiveRoot(zip)}ingredients/content`;
+  const basePath = `${archiveRoot(zip)}${obsContentFolder(metadata)}`;
 
   const title = catalogEntry.title || burritoName(metadata);
 

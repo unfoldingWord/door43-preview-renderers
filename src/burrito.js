@@ -1,4 +1,5 @@
 import { BibleBookData } from './constants.js';
+import { ResourceError } from './errors.js';
 
 /**
  * Reading a Scripture Burrito's metadata.json.
@@ -56,13 +57,21 @@ export function bookIngredientPath(metadata, bookId, ext) {
   return code === 'OBS' && paths.length === 1 ? paths[0] : undefined;
 }
 
-/** The book ids a burrito holds files for, with that extension, in canon order. */
+/**
+ * The book ids a burrito holds files for, with that extension, in canon order:
+ * by `scope`, or, for an ingredient without one, by its file name
+ * (`ingredients/TIT.usfm`), the same matches bookIngredientPath makes.
+ */
 export function burritoBooks(metadata, ext) {
   const ingredients = metadata?.ingredients || {};
   const ids = new Set();
   for (const [path, ingredient] of Object.entries(ingredients)) {
     if (!path.toLowerCase().endsWith(ext)) continue;
-    for (const code of Object.keys(ingredient?.scope || {})) ids.add(code.toLowerCase());
+    const scoped = Object.keys(ingredient?.scope || {});
+    for (const code of scoped) ids.add(code.toLowerCase());
+    if (scoped.length) continue;
+    const named = path.slice(path.lastIndexOf('/') + 1, -ext.length).toLowerCase();
+    if (BibleBookData[named]) ids.add(named);
   }
   const canon = Object.keys(BibleBookData);
   return [...ids].sort((a, b) => {
@@ -79,7 +88,12 @@ export function burritoBooks(metadata, ext) {
 export function bookTitle(metadata, bookId) {
   const short = metadata?.localizedNames?.[`book-${String(bookId).toLowerCase()}`]?.short;
   const lang = burritoLanguage(metadata);
-  return short?.[lang] || (short && Object.values(short)[0]) || BibleBookData[bookId]?.title || '';
+  return (
+    short?.[lang] ||
+    (short && Object.values(short)[0]) ||
+    BibleBookData[String(bookId).toLowerCase()]?.title ||
+    ''
+  );
 }
 
 /** A book's canonical sort number (`57` for Titus, from its USFM number), else 0. */
@@ -121,8 +135,14 @@ export function archiveRoot(zip) {
  */
 export async function readArchiveMetadata(zip) {
   const root = archiveRoot(zip);
-  if (root === undefined) throw new Error('The archive has no metadata.json.');
-  return JSON.parse(await zip.file(`${root}metadata.json`).async('string'));
+  if (root === undefined) {
+    throw new ResourceError('The archive has no metadata.json.', { code: 'INVALID_INPUT' });
+  }
+  try {
+    return JSON.parse(await zip.file(`${root}metadata.json`).async('string'));
+  } catch (error) {
+    throw ResourceError.wrap("The archive's metadata.json cannot be read", error);
+  }
 }
 
 /** The license of a loaded burrito archive, trimmed; '' when it has none. */

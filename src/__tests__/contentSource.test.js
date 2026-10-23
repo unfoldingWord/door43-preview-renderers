@@ -150,6 +150,29 @@ describe('dcsContentSource', () => {
     );
   });
 
+  test('an entry stays at its first metadata.json after the request cache expires (#87 review)', async () => {
+    const s = source();
+    const e = entry('en_tw', 'master');
+    await s.readMetadata(e);
+    clearFetchCache(); // as when the TTL runs out mid-render and the branch may have moved
+    requests.length = 0;
+    expect(await s.readFile(e, 'ingredients/payload/kt/god.md')).toBe('# God');
+    await s.readArchive(e);
+    expect(requests).toEqual([
+      '/api/v1/repos/o/en_tw/sb/raw/ingredients/payload/kt/god.md?ref=rev-en_tw',
+      '/api/v1/repos/o/en_tw/sb/rev-en_tw.zip',
+    ]); // no second metadata.json request
+  });
+
+  test('a "." or ".." path segment is refused before any request (#87 review)', async () => {
+    requests.length = 0;
+    await expect(source().readFile(entry('en_tw'), 'ingredients/../../x')).rejects.toMatchObject({
+      name: 'ResourceError',
+      code: 'INVALID_INPUT',
+    });
+    expect(requests).toEqual([]);
+  });
+
   test('without a ref, the default branch is read', async () => {
     requests.length = 0;
     await source().readMetadata({ owner: 'o', name: 'en_tw' });
