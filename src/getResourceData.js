@@ -6,7 +6,7 @@ import { extractRcTwData } from './twHelpers.js';
 import { extractRcTaData } from './taHelpers.js';
 import { extractRcAlignedBibleData } from './rcAlignedBibleHelpers.js';
 import { filterCatalogEntries } from './catalogSelection.js';
-import { directoryContentSource } from './contentSource.js';
+import { contentSourceFor, directoryContentSource, readRevision } from './contentSource.js';
 import { getAllCatalogEntries } from './getAllCatalogEntries.js';
 import axios from 'axios';
 import { loggerFor } from './logger.js';
@@ -122,7 +122,13 @@ export async function getResourceData(input, rawOptions = {}, internal = {}) {
     throw new ResourceError('Catalog entry not found.', { code: 'NOT_FOUND' });
   }
 
-  return withLanguage(await extractResourceData(catalogEntry, books, context), catalogEntry);
+  // One content source for the whole call, shared with the extractors and the
+  // extras: each burrito's metadata.json is read once, so every file of it is
+  // read at the commit it named, and that commit is the data's `revision`.
+  context.contentSource = context.contentSource || contentSourceFor(context);
+
+  const data = await extractResourceData(catalogEntry, books, context);
+  return withLanguage(await withRevision(data, context.contentSource, catalogEntry), catalogEntry);
 }
 
 /**
@@ -161,6 +167,24 @@ export async function getResourceDataFromDirectory(catalogEntries, dirPath, opti
   return getResourceData({ catalogEntries: set.catalogEntries, source: set.source }, options, {
     contentSource: directoryContentSource(dirPath),
   });
+}
+
+/**
+ * Record the commit the data was read at as `revision` (the burrito's, as the
+ * content source pinned it, else the catalog entry's `commit_sha`), so a later
+ * read for the same resource, such as generateCopyrightAndLicenseHtml's
+ * license, can ask for that commit rather than a branch that may have moved.
+ * Left off when no commit is known.
+ */
+async function withRevision(data, source, catalogEntry) {
+  if (!data || typeof data !== 'object' || data.revision) return data;
+  let revision;
+  try {
+    revision = await readRevision(source, catalogEntry);
+  } catch {
+    return data; // the data was read; only its commit is unknown
+  }
+  return revision ? { ...data, revision } : data;
 }
 
 /**

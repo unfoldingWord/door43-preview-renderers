@@ -102,6 +102,10 @@ beforeAll(async () => {
       return pump();
     }
     if (repo === 'slow') return; // never answers
+    if (repo === 'nozip') {
+      res.writeHead(404); // its metadata.json is there, its archive is not
+      return res.end();
+    }
     res.writeHead(500);
     res.end();
   });
@@ -212,6 +216,15 @@ describe('dcsContentSource.readArchive limits', () => {
     await expect(source({ timeoutMs: 300 }).readArchive(entry('slow'))).rejects.toMatchObject({
       code: 'NETWORK',
       message: expect.stringContaining('Could not download'),
+    });
+  });
+
+  test('a 404 for the archive alone is NOT_FOUND', async () => {
+    await expect(source().readArchive(entry('nozip'))).rejects.toMatchObject({
+      name: 'ResourceError',
+      code: 'NOT_FOUND',
+      status: 404,
+      url: `${dcs.origin}/api/v1/repos/o/nozip/sb/rev-nozip.zip`,
     });
   });
 

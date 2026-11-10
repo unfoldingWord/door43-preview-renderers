@@ -65,6 +65,22 @@ describe('generateCopyrightAndLicenseHtml', () => {
     expect(html).toContain('<strong>CC BY-SA 4.0</strong> applies.');
   });
 
+  test('a license given in the options is used as is, and nothing is fetched', async () => {
+    const html = await generateCopyrightAndLicenseHtml(mainEntry, [], { license: '# Given' });
+    expect(html).toContain('<h1>Given</h1>');
+    expect(fetchJsonMock).not.toHaveBeenCalled();
+    expect(fetchTextMock).not.toHaveBeenCalled();
+  });
+
+  test('a revision in the options is the commit the license is read at, not the branch', async () => {
+    license('# License');
+    await generateCopyrightAndLicenseHtml(mainEntry, [], { revision: 'abc123' });
+    expect(fetchJsonMock).toHaveBeenCalledWith(
+      'https://git.door43.org/api/v1/repos/unfoldingWord/en_tn/sb/raw/metadata.json?ref=abc123'
+    );
+    expect(fetchJsonMock.mock.calls.some(([url]) => url.includes('ref=v91'))).toBe(false);
+  });
+
   test('escapes raw HTML inside fetched license markdown', async () => {
     license('# License\n\n<script>alert(1)</script> and <b>bold</b>');
     const html = await generateCopyrightAndLicenseHtml(mainEntry);

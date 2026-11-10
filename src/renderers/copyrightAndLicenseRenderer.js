@@ -30,6 +30,11 @@ function formatDate(isoDate) {
  * @param {Array<Object>} builtWith - Array of catalog entries for resources used in rendering
  * @param {Object} [options] - Options
  * @param {string} [options.dcsApiUrl] - DCS API base URL
+ * @param {string} [options.license] - The license text, already read (ResourceData's
+ *   `license`): nothing is fetched
+ * @param {string} [options.revision] - The commit to read the license at (ResourceData's
+ *   `revision`), so it comes from the commit the data was read at even if the
+ *   entry's branch has moved since
  * @param {string} [options.generatorName] - Name of the generating tool
  * @param {string} [options.generatorVersion] - Version of the generating tool
  * @param {string} [options.generatorUrl] - URL of the generating tool
@@ -45,14 +50,18 @@ export async function generateCopyrightAndLicenseHtml(catalogEntry, builtWith = 
 
   let html = '<h1>Copyrights &amp; Licensing</h1>\n';
 
-  // Fetch and render the resource's license, from its burrito
+  // The resource's license: as given, else read from its burrito at the commit
+  // given, else at the entry's tag or branch, its commit, or the default branch.
   let licenseHtml = '';
   try {
-    // No tag or branch: its commit, else the default branch.
-    const entry = catalogEntry.branch_or_tag_name
-      ? catalogEntry
-      : { ...catalogEntry, branch_or_tag_name: catalogEntry.commit_sha };
-    const licenseContent = await readLicense(dcsContentSource(dcsApiUrl), entry);
+    const ref = options.revision || catalogEntry.branch_or_tag_name || catalogEntry.commit_sha;
+    const licenseContent =
+      typeof options.license === 'string'
+        ? options.license
+        : await readLicense(dcsContentSource(dcsApiUrl), {
+            ...catalogEntry,
+            branch_or_tag_name: ref,
+          });
     if (licenseContent) {
       licenseHtml = md.render(licenseContent);
     }

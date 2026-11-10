@@ -108,7 +108,12 @@ A Promise resolving to a **ResourceData** object. Every shape carries `type`,
 `subject`, `title`, `abbreviation`, `version`, and `license`, and, when the catalog
 entry gives them, `language` (e.g. `ar`), `languageTitle`, `direction` (`'ltr'` or
 `'rtl'`) and `isGatewayLanguage`. Each extra carries its own (an English Bible
-`ltr`, the Hebrew Old Testament `rtl`). The content differs by `type`:
+`ltr`, the Hebrew Old Testament `rtl`). It also carries `revision`: the commit
+its files were read at (the one its burrito's `metadata.json` names, else the
+catalog entry's `commit_sha`). A later read for the same resource can ask for
+that commit even if its branch has moved since, for example
+`generateCopyrightAndLicenseHtml(entry, builtWith, { revision: data.revision })`,
+or `{ license: data.license }` to read nothing at all. The content differs by `type`:
 
 | `type` | Subjects | Content |
 |---|---|---|

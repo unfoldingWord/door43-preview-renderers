@@ -121,7 +121,7 @@ const data = await getResourceData({ owner: 'adipatealberto', repo: 'pid_rut_tex
 - **`renderHtmlData()`** — the subject-aware HTML sections pipeline. [Learn more →](renderers.md)
 - Subject renderers: `renderAlignedBibleHtml`, `renderObsHtml`, `renderTranslationNotesHtml`, `renderTsvQuestionsHtml`, `renderTranslationWordsLinksHtml`, `renderTranslationAcademyHtml`, `renderTranslationWordsHtml`.
 - **`renderHTML()`** — compose HtmlData into one document for screen or print. [Learn more →](render-html.md)
-- **`generateCopyrightAndLicenseHtml()`** / **`copyrightCss`** — copyright and license page (LICENSE.md is converted from Markdown to HTML).
+- **`generateCopyrightAndLicenseHtml()`** / **`copyrightCss`** — copyright and license page (the license is converted from Markdown to HTML). Pass `options.license` (ResourceData's `license`) to fetch nothing, or `options.revision` (ResourceData's `revision`) to read the license at the commit the data was read at.
 
 ### Print and PDF
 

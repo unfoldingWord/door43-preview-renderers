@@ -439,7 +439,9 @@ describe('getResourceData', () => {
 
     const result = await getResourceData(catalogSet, { quiet: true });
 
-    expect(axiosGetMock).not.toHaveBeenCalled(); // no /catalog/entry round-trip
+    // No /catalog/entry round-trip. (The data's revision is read from the
+    // burrito's metadata.json, which a real extractor has already read.)
+    expect(axiosGetMock.mock.calls.filter(([url]) => url.includes('/catalog/'))).toEqual([]);
     expect(getAllCatalogEntriesMock).not.toHaveBeenCalled(); // no /catalog/bp re-fetch
     expect(extractRcTsvDataMock).toHaveBeenCalled();
     expect(result).toEqual({ type: 'tsv' });

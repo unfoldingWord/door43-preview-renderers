@@ -112,6 +112,12 @@ export async function downloadCapped(url, { maxBytes, timeoutMs }) {
   return bytes;
 }
 
+/** The commit a burrito was converted from, else the entry's own; undefined when neither names one. */
+function commitOf(metadata, entry) {
+  const { owner, repo } = entryCoords(entry);
+  return burritoRevision(metadata, owner, repo) || entry.commit_sha || undefined;
+}
+
 const enc = encodeURIComponent;
 // A path or revision from metadata.json, as URL path segments. `.` and `..`
 // would still walk the URL after encoding, so they are refused.
@@ -171,10 +177,8 @@ export function dcsContentSource(dcsApiUrl = 'https://git.door43.org/api/v1', li
     return read;
   };
   // The commit to read at: the one metadata.json was converted from.
-  const revision = async (entry) => {
-    const { owner, repo, ref } = entryCoords(entry);
-    return burritoRevision(await readMetadata(entry), owner, repo) || entry.commit_sha || ref;
-  };
+  const revision = async (entry) =>
+    commitOf(await readMetadata(entry), entry) || entryCoords(entry).ref;
   return {
     readMetadata,
     async readFile(entry, path) {
@@ -365,6 +369,20 @@ export async function readLicense(source, entry) {
   } catch {
     return '';
   }
+}
+
+/**
+ * The commit a resource is read at through this source: the one its burrito's
+ * metadata.json names (a DCS source reads metadata.json once per entry, so
+ * this is the commit its files were read at), else the catalog entry's
+ * `commit_sha`; undefined when neither names one.
+ *
+ * @param {Object} source - A content source
+ * @param {Object} entry - The resource's catalog entry
+ * @returns {Promise<string|undefined>}
+ */
+export async function readRevision(source, entry) {
+  return commitOf(await source.readMetadata(entry), entry);
 }
 
 /**
