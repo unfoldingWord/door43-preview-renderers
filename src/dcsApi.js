@@ -68,29 +68,6 @@ function remember(key, start) {
   return entry.promise;
 }
 
-/** Decode a base64 body - works in both browser and Node.js. */
-function decodeBase64(base64Content) {
-  if (typeof window !== 'undefined' && window.atob) {
-    // Browser environment
-    return decodeURIComponent(
-      atob(base64Content)
-        .split('')
-        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-        .join('')
-    );
-  }
-  // Node.js environment
-  return Buffer.from(base64Content, 'base64').toString('utf-8');
-}
-
-/**
- * Fetch and decode base64 file content from DCS.
- *
- * The body is validated and decoded inside the remembered work, so a
- * response that is not a usable contents record (no `content` string, e.g.
- * a directory listing or an error page served as 200) is forgotten and
- * rejected rather than cached for the TTL.
- */
 /**
  * Time limit for a DCS API request. A request is shared while in flight, so
  * without one a stalled request would hold every caller of that URL until the
@@ -99,17 +76,26 @@ function decodeBase64(base64Content) {
  */
 export const REQUEST_TIMEOUT_MS = 30000;
 
-export async function fetchContent(owner, repo, ref, filePath, dcs_api_url) {
-  const url = `${dcs_api_url}/repos/${owner}/${repo}/contents/${filePath}?ref=${ref}`;
+/**
+ * GET a file's raw text (a burrito ingredient from `/sb/raw/`) once per TTL
+ * window. A body that is not a string is not cached.
+ */
+export async function fetchText(url) {
   return remember(url, (forget) =>
-    axios.get(url, { timeout: REQUEST_TIMEOUT_MS }).then((response) => {
-      const base64Content = response?.data?.content;
-      if (typeof base64Content !== 'string') {
-        forget();
-        throw new ResourceError(`No file content in response from ${url}`, { code: 'HTTP', url });
-      }
-      return decodeBase64(base64Content);
-    })
+    axios
+      .get(url, {
+        timeout: REQUEST_TIMEOUT_MS,
+        responseType: 'text',
+        transformResponse: [(data) => data], // keep JSON files as text
+      })
+      .then((response) => {
+        const body = response?.data;
+        if (typeof body !== 'string') {
+          forget();
+          throw new ResourceError(`Unexpected response from ${url}`, { code: 'HTTP', url });
+        }
+        return body;
+      })
   );
 }
 
@@ -128,64 +114,4 @@ export async function fetchJson(url) {
       return body;
     })
   );
-}
-
-/**
- * Fetch a repository's license file from DCS.
- *
- * Tries the common license filenames in order and returns the first that
- * exists (trimmed). Returns an empty string if none are found. The outcome is
- * cached per repo/ref for the TTL, so the main resource and its extras share
- * one lookup. "No license" is cached only when every candidate was a 404; an
- * empty result caused by a 5xx or network error is not, so the next call retries.
- *
- * @param {string} owner - Repository owner
- * @param {string} repo - Repository name
- * @param {string} ref - Git reference
- * @param {string} dcs_api_url - DCS API base URL
- * @returns {Promise<string>} License content, or '' if not found
- */
-export async function fetchLicense(owner, repo, ref, dcs_api_url) {
-  const key = `license:${dcs_api_url}/repos/${owner}/${repo}?ref=${ref}`;
-  return remember(key, async (forget) => {
-    const licensePaths = ['LICENSE.md', 'LICENSE', 'LICENSE.txt'];
-    let transient = false;
-    for (const licensePath of licensePaths) {
-      try {
-        const license = await fetchContent(owner, repo, ref, licensePath, dcs_api_url);
-        if (license) {
-          return license.trim();
-        }
-      } catch (e) {
-        // A 404 confirms absence; anything else may heal. Try the next path.
-        if (e?.response?.status !== 404) transient = true;
-      }
-    }
-    if (transient) forget();
-    return '';
-  });
-}
-
-/**
- * Read the license file from an already-loaded repository zip.
- *
- * Matches a LICENSE file at the archive root (`<rootFolder>/LICENSE[.md|.txt]`)
- * case-insensitively, so it works regardless of how DCS cases the root folder.
- * Use this for zip-based extractors (TA, TW, OBS) to avoid an extra request.
- *
- * @param {JSZip} zip - A loaded JSZip instance for the repo archive
- * @returns {Promise<string>} License content, or '' if not found
- */
-export async function readLicenseFromZip(zip) {
-  const licenseName = Object.keys(zip.files).find((name) =>
-    /^[^/]+\/LICENSE(\.md|\.txt)?$/i.test(name)
-  );
-  if (!licenseName) {
-    return '';
-  }
-  const file = zip.file(licenseName);
-  if (!file) {
-    return '';
-  }
-  return (await file.async('string')).trim();
 }

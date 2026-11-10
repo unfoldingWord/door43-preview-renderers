@@ -1,31 +1,16 @@
-import { readLicenseFromZip } from './dcsApi.js';
 import { contentSourceFor } from './contentSource.js';
+import { archiveRoot, readArchiveLicense, readArchiveMetadata } from './burrito.js';
 
 /**
- * Extract Translation Words data from RC format (markdown files in directories)
+ * Extract Translation Words data from its burrito. A Translation Words burrito
+ * (`x-bcvarticles`, shared with Translation Words Links) keeps the articles
+ * under `ingredients/payload/`, one folder per category (`kt/god.md`).
  */
 export async function extractRcTwData(catalogEntry, options = {}) {
-  const ingredient = catalogEntry.ingredients && catalogEntry.ingredients[0];
-
-  if (!ingredient) {
-    throw new Error('No ingredients found in catalog entry');
-  }
-
-  const path = ingredient.path || './bible';
-
-  // The repository's files: its DCS archive, or a local checkout.
+  // The burrito: its DCS archive, or a folder on disk.
   const zip = await contentSourceFor(options).readArchive(catalogEntry);
-
-  const repoName = catalogEntry.name;
-  const basePath = `${repoName}/${path.replace(/^\.\//, '')}`;
-
-  // Find the actual base directory in the zip (GitHub adds a hash to the folder name)
-  const rootFolders = Object.keys(zip.files)
-    .filter((name) => !name.includes('/') || name.endsWith('/'))
-    .map((name) => name.split('/')[0]);
-  const actualRepoName =
-    rootFolders.find((name) => name.startsWith(repoName.split('/').pop())) || repoName;
-  const actualBasePath = actualRepoName + '/' + path.replace(/^\.\//, '');
+  const metadata = await readArchiveMetadata(zip);
+  const basePath = `${archiveRoot(zip)}ingredients/payload`;
 
   // Define subdirectories and their titles
   const subdirs = {
@@ -45,8 +30,7 @@ export async function extractRcTwData(catalogEntry, options = {}) {
     // Find all markdown files in this subdirectory
     const mdFiles = Object.keys(zip.files).filter(
       (name) =>
-        (name.startsWith(`${actualBasePath}/${subdir}/`) ||
-          name.startsWith(`${basePath}/${subdir}/`)) &&
+        name.startsWith(`${basePath}/${subdir}/`) &&
         name.endsWith('.md') &&
         !name.endsWith('/intro.md')
     );
@@ -117,7 +101,7 @@ export async function extractRcTwData(catalogEntry, options = {}) {
     title: catalogEntry.title,
     abbreviation: catalogEntry.abbreviation || catalogEntry.repo?.abbreviation || '',
     version: catalogEntry.branch_or_tag_name || catalogEntry.ref || '',
-    license: await readLicenseFromZip(zip),
+    license: await readArchiveLicense(zip, metadata),
     articles,
   };
 }

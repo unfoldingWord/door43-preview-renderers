@@ -10,12 +10,13 @@ jest.unstable_mockModule('axios', () => ({ default: { get: axiosGetMock } }));
 jest.unstable_mockModule('../twlQuoteTrimming.js', () => ({ applyTwlQuoteTrimming: jest.fn() }));
 
 const { extractRcTsvData } = await import('../tsvHelpers.js');
-const { fetchContent, fetchLicense, clearFetchCache, setFetchCacheTtl, fetchCacheSize } =
+const { fetchText, clearFetchCache, setFetchCacheTtl, fetchCacheSize } =
   await import('../dcsApi.js');
+const { dcsContentSource, readLicense } = await import('../contentSource.js');
+const { burritoMetadata } = await import('../testing/burrito.js');
 
 // --- fixtures --------------------------------------------------------------
 const API = 'https://git.door43.org/api/v1';
-const b64 = (s) => Buffer.from(s, 'utf8').toString('base64');
 
 const TN_TSV = [
   'Reference\tID\tTags\tSupportReference\tQuote\tOccurrence\tNote',
@@ -34,7 +35,7 @@ const ULT_USFM =
 const UGNT_USFM = '\\id TIT\n\\c 1\n\\p\n\\v 1 \\w Παῦλος|lemma="Παῦλος" strong="G39720"\\w*\n';
 const LICENSE = 'Creative Commons Attribution-ShareAlike 4.0';
 
-function entry(subject, name, ref, ingredients, extra = {}) {
+function entry(subject, name, ref, extra = {}) {
   return {
     subject,
     name,
@@ -44,39 +45,51 @@ function entry(subject, name, ref, ingredients, extra = {}) {
     metadata_type: 'rc',
     title: name,
     abbreviation: name.replace('en_', ''),
-    ingredients,
     repo: { name, owner: { username: 'unfoldingWord' }, abbreviation: name.replace('en_', '') },
     ...extra,
   };
 }
-const titIngredient = (path) => [{ identifier: 'tit', path, title: 'Titus', sort: 57 }];
 
-const tnEntry = entry('TSV Translation Notes', 'en_tn', 'v91', titIngredient('./tn_TIT.tsv'));
-const tqEntry = entry('TSV Translation Questions', 'en_tq', 'v91', titIngredient('./tq_TIT.tsv'));
-const ultEntry = entry('Aligned Bible', 'en_ult', 'v91', titIngredient('./57-TIT.usfm'));
-const ugntEntry = entry(
-  'Greek New Testament',
-  'el-x-koine_ugnt',
-  'v0.34',
-  titIngredient('./57-TIT.usfm'),
-  {
-    language: 'el-x-koine',
-  }
-);
+const tnEntry = entry('TSV Translation Notes', 'en_tn', 'v91');
+const tqEntry = entry('TSV Translation Questions', 'en_tq', 'v91');
+const ultEntry = entry('Aligned Bible', 'en_ult', 'v91');
+const ugntEntry = entry('Greek New Testament', 'el-x-koine_ugnt', 'v0.34', {
+  language: 'el-x-koine',
+});
 
+// Each repository's burrito, as DCS serves it: metadata.json at the release,
+// every file at the commit it names (`rev-<repo>`).
+const BURRITOS = {
+  en_tn: { ref: 'v91', files: { 'ingredients/TIT.tsv': TN_TSV } },
+  en_tq: { ref: 'v91', files: { 'ingredients/TIT.tsv': TQ_TSV } },
+  en_ult: { ref: 'v91', files: { 'ingredients/TIT.usfm': ULT_USFM } },
+  'el-x-koine_ugnt': { ref: 'v0.34', files: { 'ingredients/TIT.usfm': UGNT_USFM } },
+};
+const repoUrl = (repo) => `${API}/repos/unfoldingWord/${repo}/sb/raw`;
+const fileUrl = (repo, path) => `${repoUrl(repo)}/${path}?ref=rev-${repo}`;
 const URLS = {
-  tn: `${API}/repos/unfoldingWord/en_tn/contents/tn_TIT.tsv?ref=v91`,
-  tq: `${API}/repos/unfoldingWord/en_tq/contents/tq_TIT.tsv?ref=v91`,
-  ult: `${API}/repos/unfoldingWord/en_ult/contents/57-TIT.usfm?ref=v91`,
-  ugnt: `${API}/repos/unfoldingWord/el-x-koine_ugnt/contents/57-TIT.usfm?ref=v0.34`,
+  tn: fileUrl('en_tn', 'ingredients/TIT.tsv'),
+  tq: fileUrl('en_tq', 'ingredients/TIT.tsv'),
+  ult: fileUrl('en_ult', 'ingredients/TIT.usfm'),
+  ugnt: fileUrl('el-x-koine_ugnt', 'ingredients/TIT.usfm'),
 };
 
 function respond(url) {
-  if (url === URLS.tn) return { data: { content: b64(TN_TSV) } };
-  if (url === URLS.tq) return { data: { content: b64(TQ_TSV) } };
-  if (url === URLS.ult) return { data: { content: b64(ULT_USFM) } };
-  if (url === URLS.ugnt) return { data: { content: b64(UGNT_USFM) } };
-  if (url.includes('/contents/LICENSE.md?')) return { data: { content: b64(LICENSE) } };
+  for (const [repo, { ref, files }] of Object.entries(BURRITOS)) {
+    const all = { ...files, 'ingredients/LICENSE.md': LICENSE };
+    if (url === `${repoUrl(repo)}/metadata.json?ref=${ref}`) {
+      return {
+        data: burritoMetadata(repo, {
+          owner: 'unfoldingWord',
+          files: all,
+          revision: `rev-${repo}`,
+        }),
+      };
+    }
+    for (const [path, text] of Object.entries(all)) {
+      if (url === fileUrl(repo, path)) return { data: text };
+    }
+  }
   const err = new Error(`404 ${url}`);
   err.response = { status: 404 };
   throw err;
@@ -107,7 +120,8 @@ describe('extractRcTsvData download accounting', () => {
     expect(counts[URLS.ult]).toBe(1);
     expect(counts[URLS.ugnt]).toBe(1);
     expect(counts[URLS.tn]).toBe(1);
-    // Licenses: one lookup per repo, shared by the resource and its extras.
+    // metadata.json and the license: one read per repo, shared by the resource
+    // and its extras.
     for (const [url, n] of Object.entries(counts)) {
       expect({ url, n }).toEqual({ url, n: 1 });
     }
@@ -211,8 +225,8 @@ describe('extractRcTsvData download accounting', () => {
     // the extras ask for these repos' licenses (the quote preload does not).
     const together = concurrentSets.some(
       (urls) =>
-        urls.some((u) => u.includes('/en_ult/contents/LICENSE')) &&
-        urls.some((u) => u.includes('/el-x-koine_ugnt/contents/LICENSE'))
+        urls.some((u) => u.includes('/en_ult/sb/raw/ingredients/LICENSE')) &&
+        urls.some((u) => u.includes('/el-x-koine_ugnt/sb/raw/ingredients/LICENSE'))
     );
     expect(together).toBe(true);
     expect(Object.keys(result.extras)).toEqual(['ugnt', 'ult']);
@@ -221,84 +235,68 @@ describe('extractRcTsvData download accounting', () => {
 
 describe('dcsApi fetch cache', () => {
   test('shares one request per URL until cleared or expired', async () => {
-    const a = fetchContent('unfoldingWord', 'en_ult', 'v91', '57-TIT.usfm', API);
-    const b = fetchContent('unfoldingWord', 'en_ult', 'v91', '57-TIT.usfm', API);
+    const a = fetchText(URLS.ult);
+    const b = fetchText(URLS.ult);
     expect(await a).toBe(ULT_USFM);
     expect(await b).toBe(ULT_USFM);
     expect(axiosGetMock).toHaveBeenCalledTimes(1);
 
     clearFetchCache();
-    await fetchContent('unfoldingWord', 'en_ult', 'v91', '57-TIT.usfm', API);
+    await fetchText(URLS.ult);
     expect(axiosGetMock).toHaveBeenCalledTimes(2);
 
     // A shorter TTL applies to entries made after it is set.
     setFetchCacheTtl(1);
     clearFetchCache();
-    await fetchContent('unfoldingWord', 'en_ult', 'v91', '57-TIT.usfm', API);
+    await fetchText(URLS.ult);
     expect(axiosGetMock).toHaveBeenCalledTimes(3);
     await new Promise((r) => setTimeout(r, 5));
-    await fetchContent('unfoldingWord', 'en_ult', 'v91', '57-TIT.usfm', API);
+    await fetchText(URLS.ult);
     expect(axiosGetMock).toHaveBeenCalledTimes(4);
   });
 
   test('does not cache failures', async () => {
-    await expect(
-      fetchContent('unfoldingWord', 'en_ult', 'v91', 'missing.usfm', API)
-    ).rejects.toThrow('404');
-    await expect(
-      fetchContent('unfoldingWord', 'en_ult', 'v91', 'missing.usfm', API)
-    ).rejects.toThrow('404');
+    const missing = fileUrl('en_ult', 'ingredients/missing.usfm');
+    await expect(fetchText(missing)).rejects.toThrow('404');
+    await expect(fetchText(missing)).rejects.toThrow('404');
     expect(axiosGetMock).toHaveBeenCalledTimes(2);
   });
 
   test('a 200 without a usable body is not cached', async () => {
     axiosGetMock.mockImplementationOnce(async () => ({ data: { message: 'not a file' } }));
-    await expect(
-      fetchContent('unfoldingWord', 'en_ult', 'v91', '57-TIT.usfm', API)
-    ).rejects.toThrow('No file content');
+    await expect(fetchText(URLS.ult)).rejects.toThrow('Unexpected response');
     expect(fetchCacheSize()).toBe(0);
-    expect(await fetchContent('unfoldingWord', 'en_ult', 'v91', '57-TIT.usfm', API)).toBe(ULT_USFM);
+    expect(await fetchText(URLS.ult)).toBe(ULT_USFM);
     expect(axiosGetMock).toHaveBeenCalledTimes(2);
   });
 
   test('TTL 0 still shares an in-flight request, then drops it', async () => {
     setFetchCacheTtl(0);
-    const a = fetchContent('unfoldingWord', 'en_ult', 'v91', '57-TIT.usfm', API);
-    const b = fetchContent('unfoldingWord', 'en_ult', 'v91', '57-TIT.usfm', API);
-    await Promise.all([a, b]);
+    await Promise.all([fetchText(URLS.ult), fetchText(URLS.ult)]);
     expect(axiosGetMock).toHaveBeenCalledTimes(1);
     expect(fetchCacheSize()).toBe(0);
   });
 
   test('expired entries are released even if never requested again', async () => {
     setFetchCacheTtl(1);
-    await fetchContent('unfoldingWord', 'en_ult', 'v91', '57-TIT.usfm', API);
+    await fetchText(URLS.ult);
     expect(fetchCacheSize()).toBe(1);
     await new Promise((r) => setTimeout(r, 5));
-    await fetchContent('unfoldingWord', 'en_tn', 'v91', 'tn_TIT.tsv', API);
+    await fetchText(URLS.tn);
     expect(fetchCacheSize()).toBe(1);
   });
 
   test('a license outage is not remembered as "no license"', async () => {
-    axiosGetMock.mockImplementation(async () => {
+    const source = dcsContentSource(API);
+    const licenseUrl = fileUrl('en_ult', 'ingredients/LICENSE.md');
+    axiosGetMock.mockImplementation(async (url) => {
+      if (url !== licenseUrl) return respond(url);
       const err = new Error('503');
       err.response = { status: 503 };
       throw err;
     });
-    expect(await fetchLicense('unfoldingWord', 'en_ult', 'v91', API)).toBe('');
+    expect(await readLicense(source, ultEntry)).toBe('');
     axiosGetMock.mockImplementation(async (url) => respond(url));
-    expect(await fetchLicense('unfoldingWord', 'en_ult', 'v91', API)).toBe(LICENSE);
-    expect(axiosGetMock).toHaveBeenCalledTimes(4);
-  });
-
-  test('a confirmed missing license (all 404) is cached', async () => {
-    axiosGetMock.mockImplementation(async (url) => {
-      const err = new Error(`404 ${url}`);
-      err.response = { status: 404 };
-      throw err;
-    });
-    expect(await fetchLicense('unfoldingWord', 'en_ult', 'v91', API)).toBe('');
-    expect(await fetchLicense('unfoldingWord', 'en_ult', 'v91', API)).toBe('');
-    expect(axiosGetMock).toHaveBeenCalledTimes(3);
+    expect(await readLicense(source, ultEntry)).toBe(LICENSE);
   });
 });

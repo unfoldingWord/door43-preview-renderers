@@ -4,6 +4,7 @@ import os from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { execFile } from 'child_process';
+import { burritoMetadata, writeBurrito } from '../testing/burrito.js';
 
 /**
  * The CLI end to end: a real child process, a real HTTP server standing in
@@ -14,7 +15,6 @@ import { execFile } from 'child_process';
  */
 
 const CLI = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'cli.js');
-const b64 = (s) => Buffer.from(s, 'utf8').toString('base64');
 
 const tn = {
   owner: 'es-419_gl',
@@ -28,7 +28,6 @@ const tn = {
   released: '2024-07-17T20:13:08Z',
   metadata_type: 'rc',
   abbreviation: 'tn',
-  ingredients: [{ identifier: 'tit', path: './tn_TIT.tsv', title: 'Tito', sort: 57 }],
   repo: { name: 'es-419_tn', owner: { username: 'es-419_gl' }, abbreviation: 'tn' },
 };
 const dep = (owner, name, ref, subject) => ({
@@ -37,7 +36,6 @@ const dep = (owner, name, ref, subject) => ({
   full_name: `${owner}/${name}`,
   branch_or_tag_name: ref,
   subject,
-  ingredients: [{ identifier: 'tit', path: './57-TIT.usfm' }],
   repo: { name, owner: { username: owner } },
 });
 // The package's Translation Questions: not required, fetched only on request.
@@ -46,7 +44,6 @@ const tq = {
   title: 'Preguntas de traducción',
   language: 'es-419',
   metadata_type: 'rc',
-  ingredients: [{ identifier: 'tit', path: './tq_TIT.tsv', title: 'Tito', sort: 57 }],
 };
 // A complete package for Titus, with a dependency listed before the resource.
 const dependencyFirst = (mainRef) => [
@@ -62,6 +59,14 @@ const TSV =
   'Reference\tID\tTags\tSupportReference\tQuote\tOccurrence\tNote\n1:1\ta1\t\t\t\t0\tUna nota.';
 const TQ_TSV =
   'Reference\tID\tTags\tQuote\tOccurrence\tQuestion\tResponse\n1:1\tq1\t\t\t0\t¿Quién escribió?\tPablo.';
+// Each repository's burrito, as DCS converts it: metadata.json at any ref, its
+// files at the commit it names (`rev-<repo>`).
+const burrito = (tsv) => ({
+  owner: 'es-419_gl',
+  language: 'es-419',
+  files: { 'ingredients/TIT.tsv': tsv },
+});
+const BURRITOS = { 'es-419_tn': TSV, 'es-419_tq': TQ_TSV };
 
 let server;
 let api;
@@ -81,11 +86,19 @@ beforeAll(async () => {
     if (u.pathname === '/api/v1/repos/es-419_gl/es-419_tn/releases/latest') {
       return send(200, { tag_name: 'v66' });
     }
-    if (u.pathname === '/api/v1/repos/es-419_gl/es-419_tn/contents/tn_TIT.tsv') {
-      return send(200, { content: b64(TSV) });
-    }
-    if (u.pathname === '/api/v1/repos/es-419_gl/es-419_tq/contents/tq_TIT.tsv') {
-      return send(200, { content: b64(TQ_TSV) });
+    const sb = u.pathname.match(/^\/api\/v1\/repos\/es-419_gl\/([^/]+)\/sb\/raw\/(.+)$/);
+    if (sb && BURRITOS[sb[1]] !== undefined) {
+      const [, repo, file] = sb;
+      if (file === 'metadata.json') {
+        return send(
+          200,
+          burritoMetadata(repo, { ...burrito(BURRITOS[repo]), revision: `rev-${repo}` })
+        );
+      }
+      if (file === 'ingredients/TIT.tsv' && u.searchParams.get('ref') === `rev-${repo}`) {
+        res.writeHead(200, { 'Content-Type': 'text/tab-separated-values' });
+        return res.end(BURRITOS[repo]);
+      }
     }
     return send(404, { message: 'not found' });
   });
@@ -162,11 +175,7 @@ describe('door43-renderers CLI, stage 0 → CatalogSet hand-off', () => {
   test('--catalog with --dir renders from a saved CatalogSet and local checkouts, offline', async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'd43-cli-'));
     try {
-      fs.mkdirSync(path.join(dir, 'es-419_tn'));
-      fs.writeFileSync(
-        path.join(dir, 'es-419_tn', 'tn_TIT.tsv'),
-        TSV.replace('Una nota.', 'Una nota local.')
-      );
+      writeBurrito(dir, 'es-419_tn', burrito(TSV.replace('Una nota.', 'Una nota local.')));
       const setFile = path.join(dir, 'set.json');
       fs.writeFileSync(
         setFile,
@@ -197,12 +206,11 @@ describe('door43-renderers CLI, stage 0 → CatalogSet hand-off', () => {
   test('--include-questions with --catalog and --dir reads the questions from disk too', async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'd43-cli-'));
     try {
-      fs.mkdirSync(path.join(dir, 'es-419_tn'));
-      fs.writeFileSync(path.join(dir, 'es-419_tn', 'tn_TIT.tsv'), TSV);
-      fs.mkdirSync(path.join(dir, 'es-419_tq'));
-      fs.writeFileSync(
-        path.join(dir, 'es-419_tq', 'tq_TIT.tsv'),
-        TQ_TSV.replace('¿Quién escribió?', '¿Quién escribió? (local)')
+      writeBurrito(dir, 'es-419_tn', burrito(TSV));
+      writeBurrito(
+        dir,
+        'es-419_tq',
+        burrito(TQ_TSV.replace('¿Quién escribió?', '¿Quién escribió? (local)'))
       );
       const setFile = path.join(dir, 'set.json');
       fs.writeFileSync(

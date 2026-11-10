@@ -9,6 +9,7 @@ jest.unstable_mockModule('axios', () => ({ default: { get: axiosGetMock } }));
 const { loggerFor } = await import('../logger.js');
 const { getAllCatalogEntries } = await import('../getAllCatalogEntries.js');
 const { getResourceDataFromDirectory } = await import('../getResourceData.js');
+const { writeBurrito } = await import('../testing/burrito.js');
 
 /**
  * Logging per call (#34): `quiet` silences progress only, warnings always reach
@@ -70,13 +71,19 @@ describe('warnings are reported even when quiet', () => {
   let dir;
   beforeAll(() => {
     dir = fs.mkdtempSync(path.join(os.tmpdir(), 'd43-log-'));
-    fs.mkdirSync(path.join(dir, 'en_tn'));
-    fs.writeFileSync(
-      path.join(dir, 'en_tn', 'tn_TIT.tsv'),
-      'Reference\tID\tTags\tSupportReference\tQuote\tOccurrence\tNote\n1:1\ta1\t\t\tΠαῦλος\t1\tA note.\n'
-    );
-    // en_ult is checked out without its Titus file; the Greek NT is not checked out.
-    fs.mkdirSync(path.join(dir, 'en_ult'));
+    writeBurrito(dir, 'en_tn', {
+      files: {
+        'ingredients/TIT.tsv':
+          'Reference\tID\tTags\tSupportReference\tQuote\tOccurrence\tNote\n1:1\ta1\t\t\tΠαῦλος\t1\tA note.\n',
+      },
+    });
+    // en_ult lists its Titus file but it is not there; the Greek NT is not unpacked.
+    const ult = writeBurrito(dir, 'en_ult', {
+      files: { 'ingredients/TIT.usfm': '\\id TIT' },
+      flavorType: 'scripture',
+      flavor: 'textTranslation',
+    });
+    fs.rmSync(path.join(ult, 'ingredients', 'TIT.usfm'));
   });
   afterAll(() => fs.rmSync(dir, { recursive: true, force: true }));
 

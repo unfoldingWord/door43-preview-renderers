@@ -8,6 +8,7 @@ const { findResources, resolveRef, resolveResource, resolveTarget, listLanguages
 const { getAllCatalogEntries } = await import('../getAllCatalogEntries.js');
 const { getResourceData } = await import('../getResourceData.js');
 const { fetchJson, clearFetchCache } = await import('../dcsApi.js');
+const { burritoMetadata } = await import('../testing/burrito.js');
 
 const API = 'https://git.door43.org/api/v1';
 
@@ -647,7 +648,6 @@ describe('resolveTarget', () => {
 
 describe('hand-off into getResourceData', () => {
   test('a reordered blueprint still renders the selected resource, not its first dependency', async () => {
-    const b64 = (t) => Buffer.from(t, 'utf8').toString('base64');
     const tn = {
       ...TN_GL,
       title: 'Notas de traducción',
@@ -669,8 +669,17 @@ describe('hand-off into getResourceData', () => {
         const rest = blueprint(TN_GL).filter((e) => e.name !== 'hbo_uhb' && e.name !== 'es-419_tn');
         return { data: { ok: true, data: [uhb, tn, ...rest] } };
       }
-      if (url === `${API}/repos/es-419_gl/es-419_tn/contents/tn_TIT.tsv?ref=v66`) {
-        return { data: { content: b64(TSV) } };
+      // Its burrito, read at the release and then at the commit metadata.json names.
+      const burrito = burritoMetadata('es-419_tn', {
+        owner: 'es-419_gl',
+        files: { 'ingredients/TIT.tsv': TSV },
+        revision: 'abc123',
+      });
+      if (url === `${API}/repos/es-419_gl/es-419_tn/sb/raw/metadata.json?ref=v66`) {
+        return { data: burrito };
+      }
+      if (url === `${API}/repos/es-419_gl/es-419_tn/sb/raw/ingredients/TIT.tsv?ref=abc123`) {
+        return { data: TSV };
       }
       throw Object.assign(new Error(`404 ${url}`), { response: { status: 404 } });
     });

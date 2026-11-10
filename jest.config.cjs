@@ -8,6 +8,8 @@ module.exports = {
     '!src/**/__tests__/**',
     '!src/cli.js',
     '!src/fixtures/**',
+    // Test helpers (burrito fixtures), not part of the package.
+    '!src/testing/**',
     '!src/renderers/sofria2html.js',
     '!src/assets/**',
     // Re-exports only (no statements to count); the export test checks it.

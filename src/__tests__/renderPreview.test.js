@@ -1,5 +1,6 @@
 import http from 'http';
 import { renderPreview } from '../renderPreview.js';
+import { burritoMetadata } from '../testing/burrito.js';
 
 /**
  * renderPreview end to end, in process: a real HTTP server stands in for DCS
@@ -7,8 +8,6 @@ import { renderPreview } from '../renderPreview.js';
  * `weasyprint` binary is replaced by `cat`, so the "PDF" is the print document
  * WeasyPrint would have been given.
  */
-
-const b64 = (s) => Buffer.from(s, 'utf8').toString('base64');
 
 const tn = {
   owner: 'es-419_gl',
@@ -23,7 +22,6 @@ const tn = {
   released: '2024-07-17T20:13:08Z',
   metadata_type: 'rc',
   abbreviation: 'tn',
-  ingredients: [{ identifier: 'tit', path: './tn_TIT.tsv', title: 'Tito', sort: 57 }],
   repo: { name: 'es-419_tn', owner: { username: 'es-419_gl' }, abbreviation: 'tn' },
 };
 const dep = (owner, name, ref, subject) => ({
@@ -32,7 +30,6 @@ const dep = (owner, name, ref, subject) => ({
   full_name: `${owner}/${name}`,
   branch_or_tag_name: ref,
   subject,
-  ingredients: [{ identifier: 'tit', path: './57-TIT.usfm' }],
   repo: { name, owner: { username: owner } },
 });
 const blueprint = (ref) => [
@@ -45,6 +42,15 @@ const blueprint = (ref) => [
 ];
 const TSV =
   'Reference\tID\tTags\tSupportReference\tQuote\tOccurrence\tNote\n1:1\ta1\t\t\t\t0\tUNA_NOTA.';
+// The notes' burrito, as DCS converts the repository: read at any release, then
+// at the commit it names.
+const TN_BURRITO = burritoMetadata('es-419_tn', {
+  owner: 'es-419_gl',
+  language: 'es-419',
+  files: { 'ingredients/TIT.tsv': TSV },
+  revision: 'abc123',
+  localizedNames: { 'book-tit': { short: { 'es-419': 'Tito' } } },
+});
 
 let server;
 let api;
@@ -64,8 +70,15 @@ beforeAll(async () => {
     if (u.pathname === '/api/v1/repos/es-419_gl/es-419_tn/releases/latest') {
       return send(200, { tag_name: 'v66' });
     }
-    if (u.pathname === '/api/v1/repos/es-419_gl/es-419_tn/contents/tn_TIT.tsv') {
-      return send(200, { content: b64(TSV) });
+    if (u.pathname === '/api/v1/repos/es-419_gl/es-419_tn/sb/raw/metadata.json') {
+      return send(200, TN_BURRITO);
+    }
+    if (
+      u.pathname === '/api/v1/repos/es-419_gl/es-419_tn/sb/raw/ingredients/TIT.tsv' &&
+      u.searchParams.get('ref') === 'abc123'
+    ) {
+      res.writeHead(200, { 'Content-Type': 'text/tab-separated-values' });
+      return res.end(TSV);
     }
     return send(404, { message: 'not found' });
   });

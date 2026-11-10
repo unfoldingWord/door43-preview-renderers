@@ -8,30 +8,32 @@ jest.unstable_mockModule('axios', () => ({
   },
 }));
 
-const { fetchContent } = await import('../dcsApi.js');
+const { fetchText, clearFetchCache } = await import('../dcsApi.js');
 
-describe('dcsApi.fetchContent', () => {
+describe('dcsApi.fetchText', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    clearFetchCache();
   });
 
-  test('fetches and decodes base64 content', async () => {
-    const text = 'Hello Door43';
-    const base64 = Buffer.from(text, 'utf8').toString('base64');
-    axiosGetMock.mockResolvedValueOnce({ data: { content: base64 } });
+  test('fetches a file as raw text, JSON included, and shares the response', async () => {
+    const url = 'https://git.door43.org/api/v1/repos/o/en_tn/sb/raw/metadata.json?ref=v1';
+    axiosGetMock.mockResolvedValueOnce({ data: '{"format":"scripture burrito"}' });
 
-    const result = await fetchContent(
-      'unfoldingWord',
-      'en_ult',
-      'v88',
-      'content/tit.usfm',
-      'https://git.door43.org/api/v1'
-    );
-
+    expect(await fetchText(url)).toBe('{"format":"scripture burrito"}');
+    expect(await fetchText(url)).toBe('{"format":"scripture burrito"}');
+    expect(axiosGetMock).toHaveBeenCalledTimes(1);
     expect(axiosGetMock).toHaveBeenCalledWith(
-      'https://git.door43.org/api/v1/repos/unfoldingWord/en_ult/contents/content/tit.usfm?ref=v88',
-      { timeout: 30000 } // REQUEST_TIMEOUT_MS
+      url,
+      expect.objectContaining({ timeout: 30000, responseType: 'text' })
     );
-    expect(result).toBe(text);
+  });
+
+  test('a body that is not text is refused and not cached', async () => {
+    const url = 'https://git.door43.org/api/v1/repos/o/r/sb/raw/x?ref=v1';
+    axiosGetMock.mockResolvedValueOnce({ data: { not: 'text' } });
+    await expect(fetchText(url)).rejects.toMatchObject({ name: 'ResourceError', code: 'HTTP' });
+    axiosGetMock.mockResolvedValueOnce({ data: 'ok' });
+    expect(await fetchText(url)).toBe('ok');
   });
 });

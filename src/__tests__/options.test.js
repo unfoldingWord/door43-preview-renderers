@@ -8,6 +8,7 @@ import {
   splitInternalOptions,
   DEFAULT_DCS_API_URL,
 } from '../options.js';
+import { writeBurrito } from '../testing/burrito.js';
 
 /**
  * Option names (#34, part C): `dcsApiUrl` is the one name for the DCS API;
@@ -62,11 +63,12 @@ describe("getResourceData never writes to the caller's options", () => {
   let dir;
   beforeAll(() => {
     dir = fs.mkdtempSync(path.join(os.tmpdir(), 'd43-opt-'));
-    fs.mkdirSync(path.join(dir, 'en_tn'));
-    fs.writeFileSync(
-      path.join(dir, 'en_tn', 'tn_TIT.tsv'),
-      'Reference\tID\tTags\tSupportReference\tQuote\tOccurrence\tNote\n1:1\ta\t\t\t\t0\tA note.\n'
-    );
+    writeBurrito(dir, 'en_tn', {
+      files: {
+        'ingredients/TIT.tsv':
+          'Reference\tID\tTags\tSupportReference\tQuote\tOccurrence\tNote\n1:1\ta\t\t\t\t0\tA note.\n',
+      },
+    });
   });
   afterAll(() => fs.rmSync(dir, { recursive: true, force: true }));
 
